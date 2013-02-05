@@ -16,7 +16,7 @@
    (K/pi)<sup>1/2</sup> and is proportional to the radius.
    </li>
    <li><b>PopContext_Edge</b>, a measure of the distance of an object from
-   the edge of the foreground of a binary image.</li></ul>
+   the edge of the foreground of a binary image.</li>
 '''
 # CellProfiler is distributed under the GNU General Public License.
 # See the accompanying file LICENSE for details.
@@ -70,8 +70,7 @@ class MeasurePopulationContext(cpm.CPModule):
             density within a radius from each cell.</li>
             <li><i>%(O_DISTANCE_TO_EDGE)s</i> - calculate the distance of
             each cell from the edge of a binary mask.</li>
-            <li><i>%(O_BOTH)s</i> - make both measurements</li></ul>"""
-            % globals())
+            <li><i>%(O_BOTH)s</i> - make both measurements"""%globals())
         self.radius = cps.Integer(
             "Search radius", 50, minval=1,
             doc = """Count all objects within this radius""")
@@ -231,16 +230,16 @@ class MeasurePopulationContext(cpm.CPModule):
     def display(self, workspace):
         import matplotlib
         nsubplots = 0
-        if self.wants_population_density:
+        if self.wants_population_density():
             nsubplots += 1
-        if self.wants_distance_to_edge:
+        if self.wants_distance_to_edge():
             nsubplots += 1
         figure = workspace.create_or_find_figure(subplots=(nsubplots, 1))
         cmap = cpprefs.get_default_colormap()
         cm = matplotlib.cm.get_cmap(cmap)
         cm.set_bad(color='black')
         axes = None
-        if self.wants_population_density:
+        if self.wants_population_density():
             image = np.ma.MaskedArray(workspace.display_data.count_display,
                                       workspace.display_data.count_display < 0)
             title = "# objects within %d px" % self.radius.value
@@ -249,7 +248,7 @@ class MeasurePopulationContext(cpm.CPModule):
                                          normalize = False,
                                          vmin = 0,
                                          vmax = np.max(image))
-        if self.wants_distance_to_edge:
+        if self.wants_distance_to_edge():
             sm = matplotlib.cm.ScalarMappable(cmap = cm)
             image = np.ma.MaskedArray(workspace.display_data.distances,
                                       workspace.display_data.distances < 0)
