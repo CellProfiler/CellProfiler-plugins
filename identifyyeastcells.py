@@ -121,15 +121,12 @@ import numpy as np
 # Imports from CellProfiler
 #
 ##################################
+
 import bioformats
 
 from cellprofiler.modules import identify as cpmi
-import cellprofiler.module as cpm
-import cellprofiler.image as cpi
 import cellprofiler.measurement as cpmeas
 import cellprofiler.setting as cps
-import cellprofiler.preferences as cpp
-from cellprofiler.gui.help import HELP_ON_MEASURING_DISTANCES
 import cellprofiler.preferences as pref
 from centrosome.filter import laplacian_of_gaussian
 
@@ -1072,7 +1069,7 @@ class IdentifyYeastCells(cpmi.Identify):
                 logger.info("New auto ranking parameters applied.")
         else:
             logger.info("New auto ranking parameters (%f) are not better than current (%f)." % (
-            new_rank_score, self.best_rank_score))
+                new_rank_score, self.best_rank_score))
         self.param_fit_progress += 1
         self.param_fit_progress_partial = 0
 
