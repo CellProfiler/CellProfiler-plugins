@@ -121,38 +121,28 @@ import numpy as np
 # Imports from CellProfiler
 #
 ##################################
-try:
-    import bioformats
+import bioformats
 
-    from cellprofiler.modules import identify as cpmi
-    import cellprofiler.module as cpm
-    import cellprofiler.image as cpi
-    import cellprofiler.measurement as cpmeas
-    import cellprofiler.setting as cps
-    import cellprofiler.preferences as cpp
-    from cellprofiler.gui.help import HELP_ON_MEASURING_DISTANCES
-    import cellprofiler.preferences as pref
-    import centrosome.outline
-    from centrosome.filter import laplacian_of_gaussian
+from cellprofiler.modules import identify as cpmi
+import cellprofiler.module as cpm
+import cellprofiler.image as cpi
+import cellprofiler.measurement as cpmeas
+import cellprofiler.setting as cps
+import cellprofiler.preferences as cpp
+from cellprofiler.gui.help import HELP_ON_MEASURING_DISTANCES
+import cellprofiler.preferences as pref
+from centrosome.filter import laplacian_of_gaussian
 
-    #################################
-    #
-    # Specific imports
-    #
-    ##################################
+#################################
+#
+# Specific imports
+#
+##################################
 
-    from cellstar.utils.params_util import default_parameters, create_size_weights
-    from cellstar.segmentation import Segmentation
-    from cellstar.parameter_fitting.pf_runner import run_pf, run_rank_pf
-    from cellstar.utils.debug_util import memory_profile, speed_profile, explorer_expected
-
-except ImportError as e:
-    # in new version 2.12 all the errors are properly shown in console (Windows)
-    home = expanduser("~")  # in principle it is system independent
-    with open(pj(home, "cs_log.txt"), "a+") as log:
-        log.write("Import exception")
-        log.write(e.message)
-    raise
+from cellstar.utils.params_util import default_parameters, create_size_weights
+from cellstar.segmentation import Segmentation
+from cellstar.parameter_fitting.pf_runner import run_pf, run_rank_pf
+from cellstar.utils.debug_util import memory_profile, speed_profile, explorer_expected
 
 ###################################
 #
@@ -430,16 +420,6 @@ class IdentifyYeastCells(cpmi.Identify):
             you can copy them to another pipeline.
             """)
 
-        self.should_save_outlines = cps.Binary(
-            'Retain outlines of the identified objects?', False,
-            doc="Do you want to use objects outlines in modules downstream?")
-
-        self.save_outlines = cps.OutlineNameProvider(
-            'Name the outline image', "PrimaryOutlines", doc="""\
-            <i>(Used only if outlines are to be saved)</i><br>
-            You can use the outlines of the identified objects in modules downstream,
-            by selecting them from any drop-down image list.""")
-
     PRECISION_PARAMS_START = 20
     PRECISION_PARAMS_END = 26
 
@@ -450,8 +430,6 @@ class IdentifyYeastCells(cpmi.Identify):
                 self.segmentation_precision,
                 self.maximal_cell_overlap,
                 self.background_image_name,
-                self.should_save_outlines,
-                self.save_outlines,
                 self.advanced_parameters,
                 self.background_brighter_then_cell_inside,
                 self.bright_field_image,
@@ -518,13 +496,6 @@ class IdentifyYeastCells(cpmi.Identify):
                 list.append(self.background_image_name)
 
             list.append(self.ignore_mask_image_name)
-
-        list.append(self.should_save_outlines)
-        #
-        # Show the user the scale only if self.should_save_outlines is checked
-        #
-        if self.should_save_outlines:
-            list.append(self.save_outlines)
 
         return list
 
@@ -684,13 +655,6 @@ class IdentifyYeastCells(cpmi.Identify):
             self.__set(F_BACKGROUND, workspace, background_pixels)
 
         workspace.object_set.add_objects(objects, self.object_name.value)
-
-        # Make outlines
-        outline_image = centrosome.outline.outline(objects.segmented)
-        if self.should_save_outlines.value:
-            out_img = cpi.Image(outline_image.astype(bool),
-                                parent_image=input_image)
-            workspace.image_set.add(self.save_outlines.value, out_img)
 
         # Save measurements
 
