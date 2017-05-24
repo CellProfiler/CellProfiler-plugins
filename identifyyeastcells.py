@@ -3,6 +3,7 @@ import threading
 
 import cellprofiler.icons
 from cellprofiler.gui.help import PROTIP_RECOMEND_ICON, PROTIP_AVOID_ICON, TECH_NOTE_ICON
+
 __doc__ = """<b>IdentifyYeastCells</b> identifies yeast (or other round) objects in the image. This module was designed 
 to work on brightfield images. However in some cases it can also be efficient with fluorescent imagery.
 
@@ -85,20 +86,20 @@ Gregory Batt,
 Pawel Rychlikowski,
 Pascal Hersen.
 
-""".format(PROTIP_RECOMEND_ICON=PROTIP_RECOMEND_ICON, PROTIP_AVOID_ICON=PROTIP_AVOID_ICON, TECH_NOTE_ICON=TECH_NOTE_ICON)
+""".format(PROTIP_RECOMEND_ICON=PROTIP_RECOMEND_ICON, PROTIP_AVOID_ICON=PROTIP_AVOID_ICON,
+           TECH_NOTE_ICON=TECH_NOTE_ICON)
 
 # Module documentation variables:
-__authors__="""Filip Mroz,
+__authors__ = """Filip Mroz,
 Adam Kaczmarek,
 Szymon Stoma    
 """
-__contact__="fafafft@gmail.com"
-__license__="Cecill-C"
-__date__="2017.05.24"
-__version__="1.3.0"
-__docformat__= "restructuredtext en"
-__revision__="$Id$"
-
+__contact__ = "fafafft@gmail.com"
+__license__ = "Cecill-C"
+__date__ = "2017.05.24"
+__version__ = "1.3.0"
+__docformat__ = "restructuredtext en"
+__revision__ = "$Id$"
 
 #################################
 #
@@ -109,6 +110,7 @@ from os.path import expanduser
 from os.path import join as pj
 from os.path import isfile
 import logging
+
 logger = logging.getLogger(__name__)
 
 import math
@@ -133,25 +135,24 @@ try:
     import centrosome.outline
     from centrosome.filter import laplacian_of_gaussian
 
-#################################
-#
-# Specific imports
-#
-##################################
+    #################################
+    #
+    # Specific imports
+    #
+    ##################################
 
     from cellstar.utils.params_util import default_parameters, create_size_weights
     from cellstar.segmentation import Segmentation
     from cellstar.parameter_fitting.pf_runner import run_pf, run_rank_pf
     from cellstar.utils.debug_util import memory_profile, speed_profile, explorer_expected
 
-except ImportError as e: 
+except ImportError as e:
     # in new version 2.12 all the errors are properly shown in console (Windows)
-    home = expanduser("~") # in principle it is system independent
-    with open(pj(home,"cs_log.txt"), "a+") as log:
+    home = expanduser("~")  # in principle it is system independent
+    with open(pj(home, "cs_log.txt"), "a+") as log:
         log.write("Import exception")
         log.write(e.message)
     raise
-
 
 ###################################
 #
@@ -169,15 +170,16 @@ C_OBJECT_FEATURES = "Features"
 
 FTR_OBJECT_QUALITY = "Quality"
 '''The object quality - floating number the higher the better'''
-M_OBJECT_FEATURES_OBJECT_QUALITY= '%s_%s' % (C_OBJECT_FEATURES, FTR_OBJECT_QUALITY)
+M_OBJECT_FEATURES_OBJECT_QUALITY = '%s_%s' % (C_OBJECT_FEATURES, FTR_OBJECT_QUALITY)
+
 
 def hack_add_from_file_into_EditObjects(dialog_box):
     import wx
     def on_load(event):
         with wx.FileDialog(None,
-           message="Select image with labels",
-           wildcard="Image file (*.tif,*.tiff,*.jpg,*.jpeg,*.png,*.gif,*.bmp)|*.tif;*.tiff;*.jpg;*.jpeg;*.png;*.gif;*.bmp|*.* (all files)|*.*",
-           style=wx.FD_OPEN) as dlg:
+                           message="Select image with labels",
+                           wildcard="Image file (*.tif,*.tiff,*.jpg,*.jpeg,*.png,*.gif,*.bmp)|*.tif;*.tiff;*.jpg;*.jpeg;*.png;*.gif;*.bmp|*.* (all files)|*.*",
+                           style=wx.FD_OPEN) as dlg:
             if dlg.ShowModal() != wx.ID_OK:
                 return
             path = dlg.Path
@@ -197,8 +199,9 @@ def hack_add_from_file_into_EditObjects(dialog_box):
     ID_ACTION_LOAD_FROM_FILE = wx.NewId()
     sizer = dialog_box.toolbar.ContainingSizer
     load_file_button = wx.Button(dialog_box, ID_ACTION_LOAD_FROM_FILE, "Add from file")
-    list(sizer.Children)[-1].Sizer.Add(load_file_button,0, wx.ALIGN_CENTER)
+    list(sizer.Children)[-1].Sizer.Add(load_file_button, 0, wx.ALIGN_CENTER)
     dialog_box.Bind(wx.EVT_BUTTON, on_load, load_file_button)
+
 
 ###################################
 #
@@ -218,43 +221,43 @@ class IdentifyYeastCells(cpmi.Identify):
 
     def create_settings(self):
         self.input_image_name = cps.ImageNameSubscriber(
-            "Select the input image",doc="""
+            "Select the input image", doc="""
             How do you call the images you want to use to identify objects?""")
 
         self.object_name = cps.ObjectNameProvider(
             "Name the primary objects to be identified",
-            "YeastCells",doc="""
+            "YeastCells", doc="""
             How do you want to call the objects identified by this module?""")
-            
+
         self.background_image_name = cps.ImageNameSubscriber(
-            "Select the empty field image",doc="""
+            "Select the empty field image", doc="""
             <i>(Used only when you select "loaded from file" background calculation strategy)</i><br>
             How do you call the image you want to use as background 
             image (same image will be used for every image in the workflow)?
             """)
 
         self.ignore_mask_image_name = cps.ImageNameSubscriber(
-            "Select ignore mask image",doc="""
+            "Select ignore mask image", doc="""
             You can provide a ignore mark with regions in the image which are to be ignored by the algorithm in segmentation.
             """, can_be_blank=True)
 
         self.background_elimination_strategy = cps.Choice(
             'Select the background calculation mode',
-            [BKG_CURRENT, BKG_FILE],doc = """
+            [BKG_CURRENT, BKG_FILE], doc="""
             You can choose from the following options:
             <ul>
             <li><i>loaded from file</i>: Use this option if your background does not change at all for all images in the series. </li>
             <li><i>computed from actual image</i>: This is default option. The algorithm will try to automatically compute the background for
             each individual image. In some specific cases it is better to use manually precomputed background loaded from file.</li>
             </ul>""")
-        
+
         self.average_cell_diameter = cps.Float(
             "Average cell diameter in pixels",
-            30.0, minval=10, doc ='''\
+            30.0, minval=10, doc='''\
             The average cell diameter is used to scale many algorithm parameters. 
             Please use e.g. ImageJ to measure the average cell size in pixels.
             '''
-            )
+        )
 
         self.advanced_cell_filtering = cps.Binary(
             'Do you want to filter cells by area?', False, doc="""
@@ -265,56 +268,55 @@ class IdentifyYeastCells(cpmi.Identify):
 
         self.min_cell_area = cps.Integer(
             "Minimal area of accepted cell in pixels",
-            900, minval=10, doc ='''\
+            900, minval=10, doc='''\
             <i>(Used only when you want to filter cells based on area)</i><br>
             The minimum cell area is used while final filtering of cells. 
             Please use e.g. ImageJ to measure the average cell size in pixels.
             '''
-            )
+        )
 
         self.max_cell_area = cps.Integer(
             "Maximum area of accepted cell in pixels",
-            5*900, minval=10, doc ='''\
+            5 * 900, minval=10, doc='''\
             <i>(Used only when you want to filter cells based on area)</i><br>
             The maximum cell area is used while final filtering of cells. 
             Please use e.g. ImageJ to measure the average cell size in pixels.
             '''
-            )
+        )
 
-        
         self.background_brighter_then_cell_inside = cps.Binary(
             'Is the area without cells (background) brighter then cell interiors?', True, doc="""
             Please check if the area inside of the cells is <b>darker</b> than the area without the cells (background). Use e.g. ImageJ to measure 
             average intensity.
             """
-            )
+        )
 
         self.bright_field_image = cps.Binary(
             'Do you want to segment brightfield images?', True, doc="""
             Choose this option if you want to segment a brightfield image. For segmentation of fluorescent images please answer "No". 
             """
-            )
+        )
 
         self.advanced_parameters = cps.Binary(
             'Use advanced configuration parameters?', False, doc="""
             Do you want to use advanced parameters to configure plugin? They allow for more flexibility, and require 
             understanding of the algorithm to configure well.
             """
-            )
+        )
 
         self.segmentation_precision = cps.Integer(
             "Segmentation precision",
-            2,minval=1,maxval=5,doc = '''\
+            2, minval=1, maxval=5, doc='''\
             <i>(Used only when you want to specify advanced parameters)</i><br>
             Describes how thoroughly the algorithm searches for cells. Higher values should 
             make it easier to find smaller cells because the more parameters sets are searched. 
             The cost is longer runtime.
             '''
-            )
+        )
 
         self.specify_precision_details = cps.Binary(
             "Do you want to edit details of segmentation precision?", False,
-            doc = '''<i>(Used only when you want to specify advanced parameters)</i><br>
+            doc='''<i>(Used only when you want to specify advanced parameters)</i><br>
             Do you want to edit details of segmentation precision?<br>
             <img src="memory:{TECH_NOTE_ICON}">&nbsp;These are low level parameters that can be modified
             to further tweak result.
@@ -322,13 +324,13 @@ class IdentifyYeastCells(cpmi.Identify):
 
         self.iterations = cps.Integer(
             "Iterations",
-            6, minval=1, maxval=15, doc = '''\
+            6, minval=1, maxval=15, doc='''\
             <i>(Used only when you want to specify precision details)</i><br>
             Number of segmentation iterations done by CellStar.''')
 
         self.seeds_border = cps.Float(
             "Seeds from border",
-            1, minval=0, maxval=5, doc = '''\
+            1, minval=0, maxval=5, doc='''\
             <i>(Used only when you want to specify precision details)</i><br>
             How many seeds are to be extracted from this source:<br><br>
             val = 0 - no seeds from this source<br>
@@ -340,33 +342,33 @@ class IdentifyYeastCells(cpmi.Identify):
 
         self.seeds_content = cps.Float(
             "Seeds from content",
-            1, minval=0, maxval=5, doc = self.seeds_border.doc)
+            1, minval=0, maxval=5, doc=self.seeds_border.doc)
 
         self.seeds_centroid = cps.Float(
             "Seeds from centroid",
-            1, minval=0, maxval=5, doc = self.seeds_border.doc)
+            1, minval=0, maxval=5, doc=self.seeds_border.doc)
 
         self.contour_points = cps.Integer(
             "Contour points",
-            44, minval=36, maxval=70, doc = '''\
+            44, minval=36, maxval=70, doc='''\
             <i>(Used only when you want to specify precision details)</i><br>
             Number of points in every contour.''')
 
         self.contour_precision = cps.Float(
             "Contour precision",
-            49.75, minval=25, maxval=200, doc = '''\
+            49.75, minval=25, maxval=200, doc='''\
             <i>(Used only when you want to specify precision details)</i><br>
             Number of space points covering average cell diameter.''')
 
         self.weights_number = cps.Integer(
             "Cell size variants",
-            2, minval=1, maxval=4, doc = '''\
+            2, minval=1, maxval=4, doc='''\
             <i>(Used only when you want to specify precision details)</i><br>
             Number of tested difference size weights in every cell grow.''')
 
         self.maximal_cell_overlap = cps.Float(
             "Maximal overlap allowed while final filtering of cells",
-            0.2,minval=0,maxval=1,doc='''\
+            0.2, minval=0, maxval=1, doc='''\
             <i>(Used only when you want to specify advanced parameters)</i><br>
             This parameter is used for cell filtering. The algorithm creates many more cell candidates than finally accepted cells (these
             cells overlap with each other). At the final phase of algorithm the cells are selected from the ensamble of cell candidates based on the 
@@ -374,20 +376,20 @@ class IdentifyYeastCells(cpmi.Identify):
             Use this parameter if you want to allow to choose cells even if they overlap. Important: at the end cells do not overlap - they are 
             trimmed in such a way that the cell of higher "quality" will "borrow" the area of lower "quality" cells. 
             '''
-            )
-        
+        )
+
         self.autoadaptation_steps = cps.Integer(
             "Number of steps in the autoadaptation procedure",
-            1,minval=1,maxval=1000,doc = '''
+            1, minval=1, maxval=1000, doc='''
             Describes how thoroughly we want to adapt the algorithm to current image sets. Higher values should 
             make it easier to correctly discover cells, however you will have to wait longer for the autoadaptation
             procedure to finish. Remember that you do it once for all images, and you can copy the values from other
             pipelines, if you have already found the parameters before. 
             '''
-            )
+        )
 
-        self.use_ground_truth_to_set_params = cps.DoSomething("","Autoadapt parameters",
-            self.ground_truth_editor, doc="""
+        self.use_ground_truth_to_set_params = cps.DoSomething("", "Autoadapt parameters",
+                                                              self.ground_truth_editor, doc="""
             Use this option to autoadapt parameters required for correct contour identification. This procedure should be run once
             for one image in the series. Using your input the algorithm "learns" to recognize cells. When you click this button the window will open.
             Please select one of the images which you would like to segment. If you use background or ignore mask images you will have to provide them as well.
@@ -419,7 +421,9 @@ class IdentifyYeastCells(cpmi.Identify):
             <i>(Used only when you want to specify advanced parameters)</i><br>
             Use this option to display autoadapted parameters.""")
 
-        self.autoadapted_params = cps.Text(text="Autoadapted parameters: ", value="[[0.0442, 304.45, 15.482, 189.40820000000002], [300, 10, 0, 18, 10]]", doc="""
+        self.autoadapted_params = cps.Text(text="Autoadapted parameters: ",
+                                           value="[[0.0442, 304.45, 15.482, 189.40820000000002], [300, 10, 0, 18, 10]]",
+                                           doc="""
             <i>(Used only when you want to specify advanced and autoadapted parameters)</i><br>
             Autoadapted parameters are pasted here from the "learning" preocedure. These parameters are used to characterize cell borders. 
             Edit them only if you know what you are doing. If you found good parameters for your datasets
@@ -427,10 +431,11 @@ class IdentifyYeastCells(cpmi.Identify):
             """)
 
         self.should_save_outlines = cps.Binary(
-            'Retain outlines of the identified objects?', False, doc="Do you want to use objects outlines in modules downstream?")
+            'Retain outlines of the identified objects?', False,
+            doc="Do you want to use objects outlines in modules downstream?")
 
         self.save_outlines = cps.OutlineNameProvider(
-            'Name the outline image',"PrimaryOutlines", doc="""\
+            'Name the outline image', "PrimaryOutlines", doc="""\
             <i>(Used only if outlines are to be saved)</i><br>
             You can use the outlines of the identified objects in modules downstream,
             by selecting them from any drop-down image list.""")
@@ -439,7 +444,7 @@ class IdentifyYeastCells(cpmi.Identify):
     PRECISION_PARAMS_END = 26
 
     def settings(self):
-        return [self.input_image_name, 
+        return [self.input_image_name,
                 self.object_name,
                 self.average_cell_diameter,
                 self.segmentation_precision,
@@ -452,7 +457,7 @@ class IdentifyYeastCells(cpmi.Identify):
                 self.bright_field_image,
                 self.min_cell_area,
                 self.max_cell_area,
-                self.advanced_cell_filtering, 
+                self.advanced_cell_filtering,
                 self.background_elimination_strategy,
                 self.show_autoadapted_params,
                 self.autoadapted_params,
@@ -523,13 +528,11 @@ class IdentifyYeastCells(cpmi.Identify):
 
         return list
 
-
     def on_setting_changed(self, setting, pipeline):
         '''If precision is changed then update all the related settings'''
         if setting == self.segmentation_precision or \
                                 setting == self.specify_precision_details and not self.specify_precision_details.value:
             self.set_ui_from_precision(self.segmentation_precision.value)
-
 
     def is_interactive(self):
         return False
@@ -550,7 +553,7 @@ class IdentifyYeastCells(cpmi.Identify):
 
     def __set(self, field, workspace, value):
         self.get_ws_dictionary(workspace)[field] = value
- 
+
     def upgrade_settings(self, setting_values, variable_revision_number, module_name, from_matlab):
         '''Adjust setting values if they came from a previous revision
 
@@ -587,7 +590,7 @@ class IdentifyYeastCells(cpmi.Identify):
             # fill new ones based on precision
             setting_values = setting_values + [False]
             params_from_precision = self.get_ui_params_from_precision(int(setting_values[3]))
-            setting_values[self.PRECISION_PARAMS_START:self.PRECISION_PARAMS_END+1] = params_from_precision
+            setting_values[self.PRECISION_PARAMS_START:self.PRECISION_PARAMS_END + 1] = params_from_precision
             variable_revision_number = 8
         return setting_values, variable_revision_number, from_matlab
 
@@ -615,7 +618,6 @@ class IdentifyYeastCells(cpmi.Identify):
         columns += [(self.object_name.value, M_OBJECT_FEATURES_OBJECT_QUALITY, cpmeas.COLTYPE_FLOAT)]
 
         return columns
-
 
     def get_categories(self, pipeline, object_name):
         """Return the categories of measurements that this module produces
@@ -668,12 +670,14 @@ class IdentifyYeastCells(cpmi.Identify):
         #
         # Preprocessing
         #
-        input_pixels, background_pixels, ignore_mask_pixels = self.preprocess_images(input_pixels, background_pixels, ignore_mask_pixels)
+        input_pixels, background_pixels, ignore_mask_pixels = self.preprocess_images(input_pixels, background_pixels,
+                                                                                     ignore_mask_pixels)
 
         #
         # Segmentation
         #
-        objects, objects_qualities, background_pixels = self.segmentation(input_pixels, background_pixels, ignore_mask_pixels)
+        objects, objects_qualities, background_pixels = self.segmentation(input_pixels, background_pixels,
+                                                                          ignore_mask_pixels)
         objects.parent_image = input_image
 
         if self.__get(F_BACKGROUND, workspace, None) is None and self.background_elimination_strategy == BKG_FIRST:
@@ -685,7 +689,7 @@ class IdentifyYeastCells(cpmi.Identify):
         outline_image = centrosome.outline.outline(objects.segmented)
         if self.should_save_outlines.value:
             out_img = cpi.Image(outline_image.astype(bool),
-                                parent_image = input_image)
+                                parent_image=input_image)
             workspace.image_set.add(self.save_outlines.value, out_img)
 
         # Save measurements
@@ -743,8 +747,10 @@ class IdentifyYeastCells(cpmi.Identify):
 
         ui_params = [params["segmentation"]["steps"]]
         params_seeding = params["segmentation"]["seeding"]["from"]
-        ui_params.append(params_to_ui(params_seeding, "cellBorderRemovingCurrSegments", "cellBorder", "cellBorderRandom"))
-        ui_params.append(params_to_ui(params_seeding, "cellContentRemovingCurrSegments", "cellContent", "cellContentRandom"))
+        ui_params.append(
+            params_to_ui(params_seeding, "cellBorderRemovingCurrSegments", "cellBorder", "cellBorderRandom"))
+        ui_params.append(
+            params_to_ui(params_seeding, "cellContentRemovingCurrSegments", "cellContent", "cellContentRandom"))
 
         ui_params.append(params_to_ui(params_seeding, "snakesCentroids", "snakesCentroids", "snakesCentroidsRandom"))
 
@@ -756,10 +762,9 @@ class IdentifyYeastCells(cpmi.Identify):
 
     def set_ui_from_precision(self, ui_precision):
         ui_precision_values = self.get_ui_params_from_precision(ui_precision)
-        ui_precision_settings = self.settings()[self.PRECISION_PARAMS_START:self.PRECISION_PARAMS_END+1]
+        ui_precision_settings = self.settings()[self.PRECISION_PARAMS_START:self.PRECISION_PARAMS_END + 1]
         for setting, value in zip(ui_precision_settings, ui_precision_values):
             setting.value = value
-
 
     def prepare_cell_star_object(self, segmentation_precision):
         cellstar = Segmentation(segmentation_precision, self.average_cell_diameter.value)
@@ -770,14 +775,15 @@ class IdentifyYeastCells(cpmi.Identify):
             def calculate_area_multiplier(area):
                 return 4.0 * area / self.average_cell_diameter.value ** 2 / math.pi
 
-            #def calculate_size_multiplier(area):
+            # def calculate_size_multiplier(area):
             #    return calculate_area_multiplier(area) ** 0.5
 
             areas_range = self.min_cell_area.value, self.max_cell_area.value
-            cellstar.parameters["segmentation"]["minArea"] = max(cellstar.parameters["segmentation"]["minArea"], calculate_area_multiplier(areas_range[0]))
+            cellstar.parameters["segmentation"]["minArea"] = max(cellstar.parameters["segmentation"]["minArea"],
+                                                                 calculate_area_multiplier(areas_range[0]))
             cellstar.parameters["segmentation"]["maxArea"] = calculate_area_multiplier(areas_range[1])
             # to some extent change length of rays
-            #cellstar.parameters["segmentation"]["stars"]["maxSize"] = max(cellstar.parameters["segmentation"]["stars"]["maxSize"], min(2.5, calculate_size_multiplier(areas_range[1])))
+            # cellstar.parameters["segmentation"]["stars"]["maxSize"] = max(cellstar.parameters["segmentation"]["stars"]["maxSize"], min(2.5, calculate_size_multiplier(areas_range[1])))
 
         success = cellstar.decode_auto_params(self.autoadapted_params.value)
         if not success:  # if current value is invalid overwrite it with current settings
@@ -810,7 +816,7 @@ class IdentifyYeastCells(cpmi.Identify):
     # Segmentation of the image into yeast cells.
     # Returns: yeast cells, yeast cells qualities, background
     #
-    def segmentation(self, normalized_image, background_pixels, ignore_mask_pixels = None):
+    def segmentation(self, normalized_image, background_pixels, ignore_mask_pixels=None):
         cellstar = self.prepare_cell_star_object(self.decoded_segmentation_precision_value)
 
         if self.input_image_file_name is not None:
@@ -885,7 +891,6 @@ class IdentifyYeastCells(cpmi.Identify):
                                          self.decoded_segmentation_precision_value, self.average_cell_diameter.value,
                                          self.update_partial_iteration_progress))
 
-
                     aft_active.append(
                         AutoFitterThread(run_rank_pf, self.update_rank_params,
                                          input_image, background_image, ignore_mask_image, ground_truth_labels,
@@ -904,15 +909,17 @@ class IdentifyYeastCells(cpmi.Identify):
         # reading GT from dialog_box.labels[0] and image from self.pixel
         progress_max = self.autoadaptation_steps.value * 2  # every step consists of: snake params and ranking params fitting
 
-        with wx.ProgressDialog("Fitting parameters..", "Iterations remaining", progress_max * 100,  # show percents of change
+        with wx.ProgressDialog("Fitting parameters..", "Iterations remaining", progress_max * 100,
+                               # show percents of change
                                style=wx.PD_CAN_ABORT | wx.PD_ELAPSED_TIME | wx.PD_REMAINING_TIME) as dialog:
             def update(steps):
                 return dialog.Update(steps * 100)[0]
 
             def wait(time):
-                return wx.Sleep(int(time+0.5))
+                return wx.Sleep(int(time + 0.5))
 
-            self.fit_parameters(input_image, background_image, ignore_mask_image, ground_truth_labels, progress_max, update, wait)
+            self.fit_parameters(input_image, background_image, ignore_mask_image, ground_truth_labels, progress_max,
+                                update, wait)
 
     def get_param_fitting_input_images_from_image_set(self):
         """
@@ -938,7 +945,8 @@ class IdentifyYeastCells(cpmi.Identify):
             # load images from workspace
             input_image = image_set.get_image(self.input_image_name.value, must_be_grayscale=True).pixel_data
             if background_needed:
-                background_image = image_set.get_image(self.background_image_name.value, must_be_grayscale=True).pixel_data
+                background_image = image_set.get_image(self.background_image_name.value,
+                                                       must_be_grayscale=True).pixel_data
             if ignore_mask_needed:
                 ignore_mask_image = image_set.get_image(self.ignore_mask_image_name)
                 ignore_mask = ignore_mask_image.pixel_data > 0
@@ -947,7 +955,6 @@ class IdentifyYeastCells(cpmi.Identify):
         except Exception as ex:
             logger.info("Could not use image from workspace.image_set because: " + str(ex))
             return None
-
 
     def get_param_fitting_input_images_from_user(self):
         import wx
@@ -1010,7 +1017,7 @@ class IdentifyYeastCells(cpmi.Identify):
 
         return input_image, background_image, ignore_mask, labels
 
-    def ground_truth_editor( self ):
+    def ground_truth_editor(self):
         import wx
         from cellprofiler.gui.editobjectsdlg import EditObjectsDialog
 
@@ -1069,7 +1076,9 @@ class IdentifyYeastCells(cpmi.Identify):
                 dlg.ShowModal()
             return
 
-        input_processed, background_processed, ignore_mask_processed = self.preprocess_images(input_image, background_image, ignore_mask)
+        input_processed, background_processed, ignore_mask_processed = self.preprocess_images(input_image,
+                                                                                              background_image,
+                                                                                              ignore_mask)
 
         self.fit_parameters_with_ui(input_processed, background_processed, ignore_mask_processed, labels)
 
@@ -1085,7 +1094,8 @@ class IdentifyYeastCells(cpmi.Identify):
                 self.autoadapted_params.value = Segmentation.encode_auto_params_from_all_params(new_parameters)
                 logger.info("New auto parameters applied.")
         else:
-            logger.info("New auto parameters (%f) are not better than current (%f)." % (new_snake_score,self.best_snake_score))
+            logger.info(
+                "New auto parameters (%f) are not better than current (%f)." % (new_snake_score, self.best_snake_score))
         self.param_fit_progress += 1
         self.param_fit_progress_partial = 0
 
@@ -1097,7 +1107,8 @@ class IdentifyYeastCells(cpmi.Identify):
                 self.autoadapted_params.value = Segmentation.encode_auto_params_from_all_params(new_parameters)
                 logger.info("New auto ranking parameters applied.")
         else:
-            logger.info("New auto ranking parameters (%f) are not better than current (%f)." % (new_rank_score,self.best_rank_score))
+            logger.info("New auto ranking parameters (%f) are not better than current (%f)." % (
+            new_rank_score, self.best_rank_score))
         self.param_fit_progress += 1
         self.param_fit_progress_partial = 0
 
