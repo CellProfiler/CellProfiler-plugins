@@ -23,11 +23,11 @@ To use this module, you will need to make sure that your input image has the fol
 See below for help on the individual settings. The following icons are used to call attention to
 key items:
 <ul>
-<li><img src="memory:%(PROTIP_RECOMEND_ICON)s">&nbsp;Our recommendation or example use case
+<li><img src="memory:{PROTIP_RECOMEND_ICON}">&nbsp;Our recommendation or example use case
 for which a particular setting is best used.</li>
-<li><img src="memory:%(PROTIP_AVOID_ICON)s">&nbsp;Indicates a condition under which 
+<li><img src="memory:{PROTIP_AVOID_ICON}">&nbsp;Indicates a condition under which 
 a particular setting may not work well.</li>
-<li><img src="memory:%(TECH_NOTE_ICON)s">&nbsp;Technical note. Provides more
+<li><img src="memory:{TECH_NOTE_ICON}">&nbsp;Technical note. Provides more
 detailed information on the setting.</li>
 </ul>
 
@@ -85,17 +85,17 @@ Gregory Batt,
 Pawel Rychlikowski,
 Pascal Hersen.
 
-"""%globals()
+""".format(PROTIP_RECOMEND_ICON=PROTIP_RECOMEND_ICON, PROTIP_AVOID_ICON=PROTIP_AVOID_ICON, TECH_NOTE_ICON=TECH_NOTE_ICON)
 
 # Module documentation variables:
 __authors__="""Filip Mroz,
 Adam Kaczmarek,
 Szymon Stoma    
 """
-__contact__=""
+__contact__="fafafft@gmail.com"
 __license__="Cecill-C"
-__date__="<Timestamp>"
-__version__="0.1"
+__date__="2017.05.24"
+__version__="1.3.0"
 __docformat__= "restructuredtext en"
 __revision__="$Id$"
 
@@ -219,49 +219,49 @@ class IdentifyYeastCells(cpmi.Identify):
     def create_settings(self):
         self.input_image_name = cps.ImageNameSubscriber(
             "Select the input image",doc="""
-            How do you call the images you want to use to identify objects?"""%globals())
+            How do you call the images you want to use to identify objects?""")
 
         self.object_name = cps.ObjectNameProvider(
             "Name the primary objects to be identified",
             "YeastCells",doc="""
-            How do you want to call the objects identified by this module?"""%globals())
+            How do you want to call the objects identified by this module?""")
             
         self.background_image_name = cps.ImageNameSubscriber(
             "Select the empty field image",doc="""
             <i>(Used only when you select "loaded from file" background calculation strategy)</i><br>
             How do you call the image you want to use as background 
             image (same image will be used for every image in the workflow)?
-            """%globals())
+            """)
 
         self.ignore_mask_image_name = cps.ImageNameSubscriber(
             "Select ignore mask image",doc="""
             You can provide a ignore mark with regions in the image which are to be ignored by the algorithm in segmentation.
-            """%globals(), can_be_blank=True)
+            """, can_be_blank=True)
 
         self.background_elimination_strategy = cps.Choice(
             'Select the background calculation mode',
             [BKG_CURRENT, BKG_FILE],doc = """
             You can choose from the following options:
             <ul>
-            <li><i>loaded from file</i>: Use this option if your background does not change at all for all images in the serie. </li>
+            <li><i>loaded from file</i>: Use this option if your background does not change at all for all images in the series. </li>
             <li><i>computed from actual image</i>: This is default option. The algorithm will try to automatically compute the background for
             each individual image. In some specific cases it is better to use manually precomputed background loaded from file.</li>
-            </ul>"""%globals())
+            </ul>""")
         
         self.average_cell_diameter = cps.Float(
             "Average cell diameter in pixels",
             30.0, minval=10, doc ='''\
             The average cell diameter is used to scale many algorithm parameters. 
             Please use e.g. ImageJ to measure the average cell size in pixels.
-            '''%globals()
+            '''
             )
 
         self.advanced_cell_filtering = cps.Binary(
             'Do you want to filter cells by area?', False, doc="""
             This parameter is used for cell filtering. The algorithm creates many more cell candidates than finally accepted cells (these
-            cells overlap with each other). At the final phase of algorithm the cells are selected from the ensamble of cell candidates based on the 
+            cells overlap with each other). At the final phase of algorithm the cells are selected from the ensemble of cell candidates based on the 
             "quality" measure. Use this option if you want to absolutely prohibit too small (or too big) cells to be chosen (regardless of "quality"). 
-            """%globals())
+            """)
 
         self.min_cell_area = cps.Integer(
             "Minimal area of accepted cell in pixels",
@@ -269,7 +269,7 @@ class IdentifyYeastCells(cpmi.Identify):
             <i>(Used only when you want to filter cells based on area)</i><br>
             The minimum cell area is used while final filtering of cells. 
             Please use e.g. ImageJ to measure the average cell size in pixels.
-            '''%globals()
+            '''
             )
 
         self.max_cell_area = cps.Integer(
@@ -278,47 +278,47 @@ class IdentifyYeastCells(cpmi.Identify):
             <i>(Used only when you want to filter cells based on area)</i><br>
             The maximum cell area is used while final filtering of cells. 
             Please use e.g. ImageJ to measure the average cell size in pixels.
-            '''%globals()
+            '''
             )
 
         
         self.background_brighter_then_cell_inside = cps.Binary(
             'Is the area without cells (background) brighter then cell interiors?', True, doc="""
-            Please check if the area inside of the cells is <b>darker</b> then the area without the cells (background). Use e.g. ImageJ to measure 
+            Please check if the area inside of the cells is <b>darker</b> than the area without the cells (background). Use e.g. ImageJ to measure 
             average intensity.
-            """%globals()
+            """
             )
 
         self.bright_field_image = cps.Binary(
             'Do you want to segment brightfield images?', True, doc="""
-            Choose this option if you want to segment a brightfiled image. For segmentation of fluorescent images please answer "No". 
-            """%globals()
+            Choose this option if you want to segment a brightfield image. For segmentation of fluorescent images please answer "No". 
+            """
             )
 
         self.advanced_parameters = cps.Binary(
-            'Use advanced configuration parameters', False, doc="""
-            Do you want to use advanced parameters to configure plugin? They allow for more flexibility,
-            however you need to know what you are doing.
-            """%globals()
+            'Use advanced configuration parameters?', False, doc="""
+            Do you want to use advanced parameters to configure plugin? They allow for more flexibility, and require 
+            understanding of the algorithm to configure well.
+            """
             )
 
         self.segmentation_precision = cps.Integer(
             "Segmentation precision",
             2,minval=1,maxval=5,doc = '''\
             <i>(Used only when you want to specify advanced parameters)</i><br>
-            Describes how thouroughly the algorithm searches for cells. Higher values should 
+            Describes how thoroughly the algorithm searches for cells. Higher values should 
             make it easier to find smaller cells because the more parameters sets are searched. 
             The cost is longer runtime.
-            '''%globals()
+            '''
             )
 
         self.specify_precision_details = cps.Binary(
-            '''\
-            <i>(Used only when you want to specify advanced parameters)</i><br>
+            "Do you want to edit details of segmentation precision?", False,
+            doc = '''<i>(Used only when you want to specify advanced parameters)</i><br>
             Do you want to edit details of segmentation precision?<br>
-            <img src="memory:%(TECH_NOTE_ICON)s">&nbsp;These are low level parameters that can be modified
+            <img src="memory:{TECH_NOTE_ICON}">&nbsp;These are low level parameters that can be modified
             to further tweak result.
-            ''', False)
+            '''.format(TECH_NOTE_ICON=TECH_NOTE_ICON))
 
         self.iterations = cps.Integer(
             "Iterations",
@@ -368,31 +368,31 @@ class IdentifyYeastCells(cpmi.Identify):
             "Maximal overlap allowed while final filtering of cells",
             0.2,minval=0,maxval=1,doc='''\
             <i>(Used only when you want to specify advanced parameters)</i><br>
-            This parameter is used for cell filtering. The algorithm creates many more cell candidates then finally accepted cells (these
+            This parameter is used for cell filtering. The algorithm creates many more cell candidates than finally accepted cells (these
             cells overlap with each other). At the final phase of algorithm the cells are selected from the ensamble of cell candidates based on the 
-            "quality" measure. One of the condition checked while filtering is the overlap of the current candidate cell with already chosen cells. 
+            "quality" measure. One of the conditions checked while filtering is the overlap of the current candidate cell with already chosen cells. 
             Use this parameter if you want to allow to choose cells even if they overlap. Important: at the end cells do not overlap - they are 
             trimmed in such a way that the cell of higher "quality" will "borrow" the area of lower "quality" cells. 
-            '''%globals()
+            '''
             )
         
         self.autoadaptation_steps = cps.Integer(
             "Number of steps in the autoadaptation procedure",
             1,minval=1,maxval=1000,doc = '''
-            Describes how thouroughly we want to adapt the algorithm to current image sets. Higher values should 
+            Describes how thoroughly we want to adapt the algorithm to current image sets. Higher values should 
             make it easier to correctly discover cells, however you will have to wait longer for the autoadaptation
             procedure to finish. Remember that you do it once for all images, and you can copy the values from other
-            pipeline, if you have already found the parameters before. 
-            '''%globals()
+            pipelines, if you have already found the parameters before. 
+            '''
             )
 
         self.use_ground_truth_to_set_params = cps.DoSomething("","Autoadapt parameters",
             self.ground_truth_editor, doc="""
             Use this option to autoadapt parameters required for correct contour identification. This procedure should be run once
-            for one image in the series. Using your input the algorithm "learns" to recognized cells. When you click this button the window will open.
+            for one image in the series. Using your input the algorithm "learns" to recognize cells. When you click this button the window will open.
             Please select one of the images which you would like to segment. If you use background or ignore mask images you will have to provide them as well.
             On the input image you should draw few cells (3-6) and click "Done". Then the
-            "learning" procedure will start. Please be patient. Usually single iteration lasts 1-3 min. The more iteration you will choose, the more likely
+            "learning" procedure will start. Please be patient. Usually single iteration lasts 1-3 min. The more iterations you will choose, the more likely
             it is that the algorithm will work better on your images.
             <br><br>
             There is an experimental alternative to selecting existing image files which may be useful when images are "produced" by the pipeline:
@@ -403,28 +403,28 @@ class IdentifyYeastCells(cpmi.Identify):
             </ol>
             <br><br>
             <dl>
-            <dd><img src="memory:%(PROTIP_RECOMEND_ICON)s">&nbsp; Recommendations:        
+            <dd><img src="memory:{PROTIP_RECOMEND_ICON}">&nbsp; Recommendations:        
             <ul>
             <li>Start with single iteration, then check how well the algorithm is able to recognize your cells </li>
             <li>If you have more time, use more iterations. You can always cancel (it will last 1-5 min). The algorithm will
-            then remember the best parameters he learned during the session. </li>
+            then remember the best parameters learned during the session. </li>
             <li>Parameters are stored as a text in "Autoadapted parameters". If you found good parameters for your datasets
             you can copy them to another pipeline.<\li>
             </ul></dd>
             </dl>
-            """%globals())
+            """.format(PROTIP_RECOMEND_ICON=PROTIP_RECOMEND_ICON))
 
         self.show_autoadapted_params = cps.Binary(
             'Do you want to see autoadapted parameters?', False, doc="""
             <i>(Used only when you want to specify advanced parameters)</i><br>
-            Use this option to display autoadapted parameters."""%globals())
+            Use this option to display autoadapted parameters.""")
 
         self.autoadapted_params = cps.Text(text="Autoadapted parameters: ", value="[[0.0442, 304.45, 15.482, 189.40820000000002], [300, 10, 0, 18, 10]]", doc="""
             <i>(Used only when you want to specify advanced and autoadapted parameters)</i><br>
             Autoadapted parameters are pasted here from the "learning" preocedure. These parameters are used to characterize cell borders. 
             Edit them only if you know what you are doing. If you found good parameters for your datasets
             you can copy them to another pipeline.
-            """%globals())
+            """)
 
         self.should_save_outlines = cps.Binary(
             'Retain outlines of the identified objects?', False, doc="Do you want to use objects outlines in modules downstream?")
@@ -433,7 +433,7 @@ class IdentifyYeastCells(cpmi.Identify):
             'Name the outline image',"PrimaryOutlines", doc="""\
             <i>(Used only if outlines are to be saved)</i><br>
             You can use the outlines of the identified objects in modules downstream,
-            by selecting them from any drop-down image list."""%globals())
+            by selecting them from any drop-down image list.""")
 
     PRECISION_PARAMS_START = 20
     PRECISION_PARAMS_END = 26
@@ -458,7 +458,6 @@ class IdentifyYeastCells(cpmi.Identify):
                 self.autoadapted_params,
                 self.autoadaptation_steps,
                 self.ignore_mask_image_name,
-
                 self.specify_precision_details,
                 self.iterations,
                 self.seeds_border,
