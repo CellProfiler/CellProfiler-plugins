@@ -95,7 +95,6 @@ Adam Kaczmarek,
 Szymon Stoma    
 """
 __contact__ = "fafafft@gmail.com"
-__license__ = "Cecill-C"
 __date__ = "2017.05.24"
 __version__ = "1.3.0"
 __docformat__ = "restructuredtext en"
@@ -106,7 +105,6 @@ __revision__ = "$Id$"
 # Imports from useful Python libraries
 #
 #################################
-from os.path import expanduser
 from os.path import join as pj
 from os.path import isfile
 import logging
@@ -139,7 +137,7 @@ from centrosome.filter import laplacian_of_gaussian
 from cellstar.utils.params_util import default_parameters, create_size_weights
 from cellstar.segmentation import Segmentation
 from cellstar.parameter_fitting.pf_runner import run_pf, run_rank_pf
-from cellstar.utils.debug_util import memory_profile, speed_profile, explorer_expected
+from cellstar.utils.debug_util import memory_profile, explorer_expected
 
 ###################################
 #
@@ -449,52 +447,52 @@ class IdentifyYeastCells(cpmi.Identify):
                 ]
 
     def visible_settings(self):
-        list = [self.input_image_name,
-                self.object_name,
-                self.average_cell_diameter,
-                ]
+        visible_settings = [self.input_image_name,
+                            self.object_name,
+                            self.average_cell_diameter,
+                            ]
 
-        list += [self.bright_field_image,
-                 self.background_brighter_then_cell_inside,
-                 self.autoadaptation_steps,
-                 self.use_ground_truth_to_set_params,
-                 self.show_autoadapted_params]
+        visible_settings += [self.bright_field_image,
+                             self.background_brighter_then_cell_inside,
+                             self.autoadaptation_steps,
+                             self.use_ground_truth_to_set_params,
+                             self.show_autoadapted_params]
 
         if self.show_autoadapted_params:
-            list.append(self.autoadapted_params)
+            visible_settings.append(self.autoadapted_params)
 
-        list.append(self.advanced_parameters)
+        visible_settings.append(self.advanced_parameters)
 
         #
         # Show the user the background only if self.provide_background is checked
         #
         if self.advanced_parameters:
-            list.append(self.segmentation_precision)
+            visible_settings.append(self.segmentation_precision)
 
-            list.append(self.specify_precision_details)
+            visible_settings.append(self.specify_precision_details)
             if self.specify_precision_details:
-                list.append(self.iterations)
-                list.append(self.seeds_border)
-                list.append(self.seeds_content)
-                list.append(self.seeds_centroid)
-                list.append(self.contour_points)
-                list.append(self.contour_precision)
-                list.append(self.weights_number)
+                visible_settings.append(self.iterations)
+                visible_settings.append(self.seeds_border)
+                visible_settings.append(self.seeds_content)
+                visible_settings.append(self.seeds_centroid)
+                visible_settings.append(self.contour_points)
+                visible_settings.append(self.contour_precision)
+                visible_settings.append(self.weights_number)
 
-            list.append(self.maximal_cell_overlap)
-            list.append(self.advanced_cell_filtering)
+            visible_settings.append(self.maximal_cell_overlap)
+            visible_settings.append(self.advanced_cell_filtering)
             if self.advanced_cell_filtering:
-                list.append(self.min_cell_area)
-                list.append(self.max_cell_area)
+                visible_settings.append(self.min_cell_area)
+                visible_settings.append(self.max_cell_area)
             # Show the user the background only if self.provide_background is checked
-            list.append(self.background_elimination_strategy)  #
+            visible_settings.append(self.background_elimination_strategy)  #
 
             if self.background_elimination_strategy == BKG_FILE:
-                list.append(self.background_image_name)
+                visible_settings.append(self.background_image_name)
 
-            list.append(self.ignore_mask_image_name)
+            visible_settings.append(self.ignore_mask_image_name)
 
-        return list
+        return visible_settings
 
     def on_setting_changed(self, setting, pipeline):
         '''If precision is changed then update all the related settings'''
