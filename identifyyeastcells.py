@@ -195,7 +195,7 @@ def hack_add_from_file_into_EditObjects(dialog_box):
 ###################################
 
 
-class IdentifyYeastCells(cpmi.Identify):
+class IdentifyYeastCells(cellprofiler.module.ImageSegmentation):
     module_name = "IdentifyYeastCells"
     category = "Yeast Toolbox"
     variable_revision_number = 8
@@ -205,14 +205,13 @@ class IdentifyYeastCells(cpmi.Identify):
     param_fit_progress_partial = 0
 
     def create_settings(self):
-        self.input_image_name = cps.ImageNameSubscriber(
-            "Select the input image", doc="""
-            How do you call the images you want to use to identify objects?""")
+        super(IdentifyYeastCells, self).create_settings()
 
-        self.object_name = cps.ObjectNameProvider(
-            "Name the primary objects to be identified",
-            "YeastCells", doc="""
-            How do you want to call the objects identified by this module?""")
+        self.input_image_name = self.x_name
+        self.input_image_name.doc = "How do you call the images you want to use to identify objects?"
+
+        self.object_name = self.y_name
+        self.object_name.doc = "How do you want to call the objects identified by this module?"
 
         self.background_image_name = cps.ImageNameSubscriber(
             "Select the empty field image", doc="""
@@ -580,7 +579,7 @@ class IdentifyYeastCells(cpmi.Identify):
 
     def get_measurement_columns(self, pipeline):
         '''Column definitions for measurements made by IdentifyPrimAutomatic'''
-        columns = cpmi.get_object_measurement_columns(self.object_name.value)
+        columns = super(IdentifyYeastCells, self).get_measurement_columns(pipeline)
         columns += [(self.object_name.value, M_OBJECT_FEATURES_OBJECT_QUALITY, cpmeas.COLTYPE_FLOAT)]
 
         return columns
@@ -590,8 +589,7 @@ class IdentifyYeastCells(cpmi.Identify):
 
         object_name - return measurements made on this object (or 'Image' for image measurements)
         """
-        result = self.get_object_categories(pipeline, object_name,
-                                            {self.object_name.value: []})
+        result = super(IdentifyYeastCells, self).get_categories(pipeline, object_name)
         result += [C_OBJECT_FEATURES]
         return result
 
@@ -601,9 +599,7 @@ class IdentifyYeastCells(cpmi.Identify):
         object_name - return measurements made on this object (or 'Image' for image measurements)
         category - return measurements made in this category
         """
-
-        result = self.get_object_measurements(pipeline, object_name, category,
-                                              {self.object_name.value: []})
+        result = super(IdentifyYeastCells, self).get_measurements(pipeline, object_name, category)
         if category == C_OBJECT_FEATURES:
             result += [FTR_OBJECT_QUALITY]
         return result
@@ -652,16 +648,9 @@ class IdentifyYeastCells(cpmi.Identify):
         workspace.object_set.add_objects(objects, self.object_name.value)
 
         # Save measurements
-
         workspace.measurements.add_measurement(self.object_name.value, M_OBJECT_FEATURES_OBJECT_QUALITY,
                                                objects_qualities)
-
-        cpmi.add_object_location_measurements(workspace.measurements,
-                                              self.object_name.value,
-                                              objects.segmented)
-
-        cpmi.add_object_count_measurements(workspace.measurements,
-                                           self.object_name.value, np.max(objects.segmented))
+        super(IdentifyYeastCells, self).add_measurements(workspace)
 
     def set_params_from_ui(self, params):
         def update_params(next_name, first_name, random_name, ui_value):
