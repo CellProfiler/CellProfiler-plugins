@@ -781,7 +781,6 @@ class IdentifyYeastCells(cellprofiler.module.ImageSegmentation):
         objects.segmented = segmented_image
         objects.unedited_segmented = segmented_image
         objects.small_removed_segmented = np.zeros(normalized_image.shape)
-        # objects.parent_image = normalized_image has to be cellprofiler image
 
         self.current_workspace.display_data.segmentation_pixels = objects.segmented
 
@@ -904,6 +903,13 @@ class IdentifyYeastCells(cellprofiler.module.ImageSegmentation):
             logger.info("Could not use image from workspace.image_set because: " + str(ex))
             return None
 
+    @staticmethod
+    def load_image_grayscale(path):
+        image = bioformats.load_image(path)
+        if image.ndim == 3:
+            image = np.sum(image, 2) / image.shape[2]
+        return image
+
     def get_param_fitting_input_images_from_user(self):
         import wx
         def get_file_path(message):
@@ -915,12 +921,6 @@ class IdentifyYeastCells(cellprofiler.module.ImageSegmentation):
                     return dlg.Path
                 else:
                     return None
-
-        def load_image_grayscale(path):
-            image = bioformats.load_image(path)
-            if image.ndim == 3:
-                image = np.sum(image, 2) / image.shape[2]
-            return image
 
         input_image = None
         background_image = None
@@ -944,24 +944,24 @@ class IdentifyYeastCells(cellprofiler.module.ImageSegmentation):
         if input_image_path is None:
             return None
         else:
-            input_image = load_image_grayscale(input_image_path)
+            input_image = self.load_image_grayscale(input_image_path)
             label_path = input_image_path + ".lab.png"  # if file attached load labels from file
             if isfile(label_path):
-                labels = (load_image_grayscale(label_path) * 255).astype(int)
+                labels = (self.load_image_grayscale(label_path) * 255).astype(int)
 
         if background_needed:
             background_image_path = get_file_path("Select background image")
             if background_image_path is None:
                 return None
             else:
-                background_image = load_image_grayscale(background_image_path)
+                background_image = self.load_image_grayscale(background_image_path)
 
         if ignore_mask_needed:
             ignore_mask_path = get_file_path("Select ignore mask image")
             if ignore_mask_path is None:
                 return None
             else:
-                ignore_mask = load_image_grayscale(ignore_mask_path) > 0
+                ignore_mask = self.load_image_grayscale(ignore_mask_path) > 0
 
         return input_image, background_image, ignore_mask, labels
 
