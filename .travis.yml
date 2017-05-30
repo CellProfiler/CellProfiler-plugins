@@ -1,0 +1,25 @@
+addons:
+  apt:
+    packages:
+      - libhdf5-serial-dev
+      - python-pip
+  apt: true
+  directories: $HOME/.cache/pip
+dist: trusty
+env:
+  - LC_ALL="en_US.UTF-8" CP_MYSQL_TEST_HOST="127.0.0.1" CP_MYSQL_TEST_USER="root" CP_MYSQL_TEST_PASSWORD=""
+install:
+  - pip install --upgrade pip
+  - pip install --upgrade cython
+  - pip install --upgrade joblib
+  - pip install --upgrade numpy
+  - pip install --upgrade scipy
+  - pip install --editable git+https://github.com/CellProfiler/CellProfiler.git#egg=CellProfiler
+  - pip install -r requirements.txt
+  - pip freeze
+language: python
+notifications:
+  email: false
+python: 2.7
+script: pytest
+sudo: false
