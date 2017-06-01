@@ -122,7 +122,7 @@ import numpy as np
 
 import bioformats
 
-from cellprofiler.modules import identify as cpmi
+import cellprofiler.modules
 import cellprofiler.measurement as cpmeas
 import cellprofiler.setting as cps
 import cellprofiler.preferences as pref
