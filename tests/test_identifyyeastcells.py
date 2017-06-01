@@ -21,6 +21,10 @@ import unittest
 import numpy as np
 import scipy.ndimage
 
+# run in headless mode so wx is not required
+import cellprofiler.preferences
+cellprofiler.preferences.set_headless()
+
 import cellprofiler.image as cpi
 import cellprofiler.measurement as cpmeas
 import identifyyeastcells as YS
