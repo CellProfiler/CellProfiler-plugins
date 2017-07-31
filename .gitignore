@@ -34,3 +34,16 @@ nosetests.xml
 .project
 .pydevproject
 .idea
+
+*.egg-info/
+*.iml
+*.pyc
+.cache/
+.eggs/
+.idea/
+.python-version
+build/
+dist/
+frozen_version.py
+plugins/
+src/
