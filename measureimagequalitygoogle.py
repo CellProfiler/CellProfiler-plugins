@@ -6,9 +6,11 @@ import skimage.util
 import cellprofiler.measurement
 import cellprofiler.module
 import cellprofiler.setting
+import microscopeimagequality.prediction
+import microscopeimagequality.miq
 
 __doc__ = """
-<p>This module can collect measurements indicating possible image abberations,
+<p>This module can collect measurements indicating possible image aberrations,
 e.g. blur (poor focus), intensity, saturation (i.e., the percentage
 of pixels in the image that are minimal and maximal). Details and guidance for
 each of these measures is provided in the settings help.
@@ -17,9 +19,6 @@ each of these measures is provided in the settings help.
 
 C_IMAGE_QUALITY = "ImageQuality"
 F_SCORE = "Score"
-
-def score(image):
-    return 0
 
 class MeasureImageQualityGoogle(cellprofiler.module.Module):
     category = "Measurement"
@@ -41,30 +40,11 @@ class MeasureImageQualityGoogle(cellprofiler.module.Module):
             self.image_name
         ]
 
+    #TODO: display matplotlib plot
     def display(self, workspace, figure=None):
-        layout = (2, 1)
-
-        figure.set_subplots(
-            dimensions=workspace.display_data.dimensions,
-            subplots=layout
-        )
-
-        figure.subplot_imshow(
-            dimensions=workspace.display_data.dimensions,
-            image=workspace.display_data.image,
-            title=C_IMAGE_QUALITY,
-            x=0,
-            y=0
-        )
-
-        figure.subplot_table(
-            col_labels=workspace.display_data.names,
-            dimensions=workspace.display_data.dimensions,
-            statistics=workspace.display_data.statistics,
-            title="Measurement",
-            x=0,
-            y=1
-        )
+        figure.set_subplots((1, 1))
+        figure.subplot_table(0, 0,
+                             workspace.display_data.statistics)
 
     def get_categories(self, pipeline, object_name):
         if object_name == cellprofiler.measurement.IMAGE:
@@ -112,23 +92,32 @@ class MeasureImageQualityGoogle(cellprofiler.module.Module):
         return feature
 
     def measure(self, image, workspace):
+        """
+        get image quality score
+        """
+        #TODO: check if model downloaded
+        microscopeimagequality.miq.download_model()
+        m = microscopeimagequality.prediction.ImageQualityClassifier(microscopeimagequality.miq.DEFAULT_MODEL_PATH, 84, 11)
+        return m.predict(image)[0]
+
+    def run(self, workspace):
+        image_set = workspace.image_set
+        image = image_set.get_image(self.image_name.value, must_be_grayscale=True)
+
         data = image.pixel_data
 
         measurements = workspace.measurements
 
-        measurement_name = self.image_name.value
-
         statistics = []
 
-        name = "{}_{}_{}".format(C_IMAGE_QUALITY, F_SCORE, measurement_name)
+        feature = self.get_feature_name(self.image_name.value)
+        value = str(self.measure(data, workspace))
 
-        value = score(data)
+        statistics.append([feature, value])
 
-        statistics.append(value)
+        measurements.add_image_measurement(self.image_name.value, feature, value)
 
-        measurements.add_image_measurement(name, value)
-
-        return [statistics]
+        workspace.display_data.statistics = statistics
 
     def volumetric(self):
         return True
