@@ -2,13 +2,13 @@ import numpy
 import scipy.ndimage
 import skimage.segmentation
 import skimage.util
-
+import os.path
 import cellprofiler.measurement
 import cellprofiler.module
 import cellprofiler.setting
 import microscopeimagequality.prediction
 import microscopeimagequality.miq
-
+import matplotlib.cm
 __doc__ = """
 <p>This module can collect measurements indicating possible image aberrations,
 e.g. blur (poor focus), intensity, saturation (i.e., the percentage
@@ -43,8 +43,16 @@ class MeasureImageQualityGoogle(cellprofiler.module.Module):
     #TODO: display matplotlib plot
     def display(self, workspace, figure=None):
         figure.set_subplots((1, 1))
-        figure.subplot_table(0, 0,
-                             workspace.display_data.statistics)
+        # figure.subplot_table(0, 0,
+        #                      workspace.display_data.statistics)
+        figure.subplot_imshow(
+            title="Focus Score",
+            colormap=matplotlib.cm.viridis,
+            colorbar=True,
+            image=workspace.display_data.prediction_image,
+            x=0,
+            y=0
+        )
 
     def get_categories(self, pipeline, object_name):
         if object_name == cellprofiler.measurement.IMAGE:
@@ -91,16 +99,13 @@ class MeasureImageQualityGoogle(cellprofiler.module.Module):
 
         return feature
 
-    def measure(self, image, workspace):
-        """
-        get image quality score
-        """
-        #TODO: check if model downloaded
-        microscopeimagequality.miq.download_model()
-        m = microscopeimagequality.prediction.ImageQualityClassifier(microscopeimagequality.miq.DEFAULT_MODEL_PATH, 84, 11)
-        return m.predict(image)[0]
-
     def run(self, workspace):
+        #TODO: check if model downloaded/should be updated
+        if not os.path.exists(microscopeimagequality.miq.DEFAULT_MODEL_PATH):
+            microscopeimagequality.miq.download_model()
+
+        m = microscopeimagequality.prediction.ImageQualityClassifier(microscopeimagequality.miq.DEFAULT_MODEL_PATH, 84, 11)
+
         image_set = workspace.image_set
         image = image_set.get_image(self.image_name.value, must_be_grayscale=True)
 
@@ -111,13 +116,16 @@ class MeasureImageQualityGoogle(cellprofiler.module.Module):
         statistics = []
 
         feature = self.get_feature_name(self.image_name.value)
-        value = str(self.measure(data, workspace))
+        pred = m.predict(data)
+        value = str(pred.predictions)
 
         statistics.append([feature, value])
 
         measurements.add_image_measurement(self.image_name.value, feature, value)
 
-        workspace.display_data.statistics = statistics
+        if self.show_window:
+            workspace.display_data.statistics = statistics
+            workspace.display_data.prediction_image = m.get_annotated_prediction(data)
 
     def volumetric(self):
         return True
