@@ -15,7 +15,8 @@ logger = logging.getLogger(__name__)
 __doc__ = """
 Use an Ilastik pixel classifier to generate a probability image. Each channel represents the probability of the
 pixels in the image belong to a particular class. Use ColorToGray to separate channels for further processing. For
-example, use IdentifyPrimaryObjects on a (single-channel) probability map to generate a segmentation.
+example, use IdentifyPrimaryObjects on a (single-channel) probability map to generate a segmentation. The order of 
+the channels in ColorToGray is the same as the order of the labels within the Ilastik project.
 
 It is recommended that you pre-process any training images with CellProfiler (e.g., RescaleIntensity) and apply the
 same pre-processing steps to your analysis pipeline. You should use SaveImages to export training images as 64-bit
