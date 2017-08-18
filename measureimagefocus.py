@@ -1,0 +1,156 @@
+import os.path
+
+import cellprofiler.measurement
+import cellprofiler.module
+import cellprofiler.preferences
+import cellprofiler.setting
+import microscopeimagequality.miq
+import microscopeimagequality.prediction
+import numpy
+import matplotlib.cm
+import matplotlib.pyplot
+import matplotlib.patches
+
+__doc__ = """This module can collect measurements indicating possible image aberrations,
+e.g. blur (poor focus), intensity, saturation (i.e., the percentage
+of pixels in the image that are minimal and maximal). Details and guidance for
+each of these measures is provided in the settings help."""
+
+C_IMAGE_FOCUS = "ImageFocus"
+F_SCORE = "Score"
+
+
+class MeasureImageFocus(cellprofiler.module.Module):
+    category = "Measurement"
+
+    module_name = "MeasureImageFocus"
+
+    variable_revision_number = 1
+
+    def create_settings(self):
+        self.image_name = cellprofiler.setting.ImageNameSubscriber(
+                "Image",
+                doc="""
+            The name of an image.
+            """
+        )
+
+    def settings(self):
+        return [
+            self.image_name
+        ]
+
+    # TODO: display matplotlib plot
+    def display(self, workspace, figure):
+
+        figure.set_subplots((2, 1))
+
+        patches= workspace.display_data.patches
+
+        figure.subplot_table(0, 0, workspace.display_data.statistics)
+        image = workspace.display_data.image
+
+        ax = figure.subplot_imshow_grayscale(1, 0, image,
+                                title="Focus Score"
+                             )
+        # show patches
+        cmap = matplotlib.cm.viridis
+        for patch in patches:
+            rect = matplotlib.patches.Rectangle(xy=(patch[1], patch[0]), width=patch[3], height=patch[2])
+            rect.set_color(cmap(int(float(patch[4].predictions) * 255 / 10)))
+            rect.set_alpha(float(patch[4].certainties['aggregate']) * 0.9)
+            rect.set_linewidth(0)
+            rect.set_fill(True)
+            ax.add_patch(rect)
+
+        # colorbar
+        sm = matplotlib.pyplot.cm.ScalarMappable(cmap=cmap, norm=matplotlib.pyplot.Normalize(vmin=0, vmax=10))
+        sm.set_array([])
+        cbar = matplotlib.pyplot.colorbar(sm, ax=ax, ticks=[0, 10], shrink=.6)
+        cbar.ax.set_yticklabels(['In focus', 'Unfocused'])
+
+    def get_categories(self, pipeline, object_name):
+        if object_name == cellprofiler.measurement.IMAGE:
+            return [
+                C_IMAGE_FOCUS
+            ]
+
+        return []
+
+    def get_feature_name(self, name):
+        image = self.image_name.value
+
+        return C_IMAGE_FOCUS + "_{}_{}".format(name, image)
+
+    def get_measurements(self, pipeline, object_name, category):
+        name = self.image_name.value
+
+        if object_name == cellprofiler.measurement.IMAGE and category == C_IMAGE_FOCUS:
+            return [
+                C_IMAGE_FOCUS + "_" + F_SCORE + "_{}".format(name)
+            ]
+
+        return []
+
+    def get_measurement_columns(self, pipeline):
+        image = cellprofiler.measurement.IMAGE
+
+        features = [
+            self.get_measurement_name(F_SCORE)
+        ]
+
+        column_type = cellprofiler.measurement.COLTYPE_INTEGER
+
+        return [(image, feature, column_type) for feature in features]
+
+    def get_measurement_images(self, pipeline, object_name, category, measurement):
+        if measurement in self.get_measurements(pipeline, object_name, category):
+            return [self.image_name.value]
+
+        return []
+
+    def get_measurement_name(self, name):
+        feature = self.get_feature_name(name)
+
+        return feature
+
+    def run(self, workspace):
+        # TODO: check if model downloaded/should be updated
+        default_weights_index_file = microscopeimagequality.miq.DEFAULT_MODEL_PATH + '.index'
+        if not os.path.exists(default_weights_index_file):
+            print('weights index file not found at {}'.format(default_weights_index_file))
+            microscopeimagequality.miq.download_model()
+
+        m = microscopeimagequality.prediction.ImageQualityClassifier(microscopeimagequality.miq.DEFAULT_MODEL_PATH, 84,
+                                                                     11)
+
+        image_set = workspace.image_set
+        image = image_set.get_image(self.image_name.value, must_be_grayscale=True)
+
+        data = image.pixel_data
+
+        measurements = workspace.measurements
+
+        statistics = []
+
+        pred = m.predict(data)
+        patches = m.get_patch_predictions(data)
+
+        feature_score = self.get_feature_name('score')
+        score = str(pred.predictions)
+        feature_certainty = self.get_feature_name('certainty')
+        certainty = str(pred.certainties['mean'])
+
+        statistics.append([feature_score, score])
+        statistics.append([feature_certainty, certainty])
+
+        measurements.add_image_measurement(self.image_name.value, feature_score, score)
+        measurements.add_image_measurement(self.image_name.value, feature_certainty, certainty)
+
+        # if self.show_window:
+        workspace.display_data.statistics = statistics
+        workspace.display_data.patches = patches
+        workspace.display_data.image= data
+
+    def volumetric(self):
+        return False
