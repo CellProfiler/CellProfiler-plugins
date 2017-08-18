@@ -57,8 +57,8 @@ class MeasureImageFocus(cellprofiler.module.Module):
         cmap = matplotlib.cm.viridis
         for patch in patches:
             rect = matplotlib.patches.Rectangle(xy=(patch[1], patch[0]), width=patch[3], height=patch[2])
-            rect.set_color(cmap(int(float(patch[4].predictions) * 255 / 10)))
-            rect.set_alpha(float(patch[4].certainties['aggregate']) * 0.9)
+            rect.set_color(cmap(int(float(patch[4][0]) * 255 / 10)))
+            rect.set_alpha(float(patch[4][1]['aggregate']) * 0.9)
             rect.set_linewidth(0)
             rect.set_fill(True)
             ax.add_patch(rect)
@@ -137,15 +137,15 @@ class MeasureImageFocus(cellprofiler.module.Module):
         patches = m.get_patch_predictions(data)
 
         feature_score = self.get_feature_name('score')
-        score = str(pred.predictions)
+        score = str(pred[0])
         feature_certainty = self.get_feature_name('certainty')
-        certainty = str(pred.certainties['mean'])
+        certainty = str(pred[1]['aggregate'])
 
         statistics.append([feature_score, score])
         statistics.append([feature_certainty, certainty])
 
-        measurements.add_image_measurement(self.image_name.value, feature_score, score)
-        measurements.add_image_measurement(self.image_name.value, feature_certainty, certainty)
+        measurements.add_image_measurement(feature_score, score)
+        measurements.add_image_measurement(feature_certainty, certainty)
 
         # if self.show_window:
         workspace.display_data.statistics = statistics
