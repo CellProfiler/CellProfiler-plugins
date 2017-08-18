@@ -674,8 +674,8 @@ def get_one_cell_mask():
 
 def get_two_cell_mask():
     img = np.zeros((50, 50))
-    draw_disc(img, (10, 35), 5, 1)
-    draw_disc(img, (30, 15), 5, 1)
+    draw_disc(img, (10, 25), 5, 1)
+    draw_disc(img, (25, 15), 5, 1)
     return img
 
 

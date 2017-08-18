@@ -113,6 +113,7 @@ logger = logging.getLogger(__name__)
 
 import math
 import numpy as np
+import scipy.ndimage
 
 #################################
 #
@@ -126,7 +127,6 @@ import cellprofiler.modules
 import cellprofiler.measurement as cpmeas
 import cellprofiler.setting as cps
 import cellprofiler.preferences as pref
-from centrosome.filter import laplacian_of_gaussian
 
 #################################
 #
@@ -738,6 +738,35 @@ class IdentifyYeastCells(cellprofiler.module.ImageSegmentation):
             self.autoadapted_params.value = cellstar.encode_auto_params()
         return cellstar
 
+    @staticmethod
+    def normalized_log(image, sigma):
+        '''Perform the Laplacian of Gaussian transform on the image
+
+        image - 2-d image array
+        mask  - binary mask of significant pixels
+        size  - length of side of square kernel to use
+        sigma - standard deviation of the Gaussian
+        '''
+        size = int(sigma * 4) + 1
+
+        half_size = size / 2
+        i, j = np.mgrid[-half_size:half_size + 1,
+               -half_size:half_size + 1].astype(float) / float(sigma)
+        distance = (i ** 2 + j ** 2) / 2
+        gaussian = np.exp(-distance)
+        #
+        # Normalize the Gaussian
+        #
+        gaussian = gaussian / np.sum(gaussian)
+
+        log = (distance - 1) * gaussian
+        #
+        # Normalize the kernel to have a sum of zero
+        #
+        log_norm = log - np.mean(log)
+        output = scipy.ndimage.convolve(image, log_norm, mode='nearest')
+        return output
+
     def preprocess_images(self, input_image, background_image, ignore_mask):
         # Invert images if required.
         if not self.background_brighter_then_cell_inside:
@@ -752,10 +781,8 @@ class IdentifyYeastCells(cellprofiler.module.ImageSegmentation):
         # inverted at this stage)
         if not self.bright_field_image:
             sigma = 4
-            size = int(sigma * 4) + 1
-            mask = np.ones(input_image.shape, bool)
-            edge_pixels = laplacian_of_gaussian(input_image, mask, size, sigma)
             factor = 10
+            edge_pixels = IdentifyYeastCells.normalized_log(input_image, sigma)
             input_image = np.subtract(input_image, factor * edge_pixels)
 
         return input_image, background_image, ignore_mask
