@@ -414,8 +414,8 @@ class IdentifyYeastCells(cellprofiler.module.ImageSegmentation):
             you can copy them to another pipeline.
             """)
 
-    PRECISION_PARAMS_START = 20
-    PRECISION_PARAMS_END = 26
+    PRECISION_PARAMS_START = 18
+    PRECISION_PARAMS_END = 24
 
     def settings(self):
         return [self.input_image_name,
