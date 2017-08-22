@@ -314,7 +314,7 @@ class IdentifyYeastCells(cellprofiler.module.ImageSegmentation):
 
         self.seeds_border = cps.Float(
             "Seeds from border",
-            1, minval=0, maxval=5, doc='''\
+            1.2, minval=0, maxval=5, doc='''\
             <i>(Used only when you want to specify precision details)</i><br>
             How many seeds are to be extracted from this source:<br><br>
             val = 0 - no seeds from this source<br>
@@ -326,11 +326,11 @@ class IdentifyYeastCells(cellprofiler.module.ImageSegmentation):
 
         self.seeds_content = cps.Float(
             "Seeds from content",
-            1, minval=0, maxval=5, doc=self.seeds_border.doc)
+            1.2, minval=0, maxval=5, doc=self.seeds_border.doc)
 
         self.seeds_centroid = cps.Float(
             "Seeds from centroid",
-            1, minval=0, maxval=5, doc=self.seeds_border.doc)
+            1.2, minval=0, maxval=5, doc=self.seeds_border.doc)
 
         self.contour_points = cps.Integer(
             "Contour points",
@@ -681,6 +681,7 @@ class IdentifyYeastCells(cellprofiler.module.ImageSegmentation):
             random = params_seeding[random_name]
             next = params_seeding[next_name]
             first = params_seeding[first_name]
+
             if random != 0:
                 return random + 1
             elif next and first:
@@ -691,16 +692,23 @@ class IdentifyYeastCells(cellprofiler.module.ImageSegmentation):
                 return 0.5
             return 0.0
 
+        def override_random_seeds_number(precision, value):
+            if precision == 2:
+                return max(value, 1.2)
+            elif precision >= 3:
+                return max(value, 1.5)
+            return value
+
         params = default_parameters(self.ui_to_precision_map[ui_precision], 30)
 
         ui_params = [params["segmentation"]["steps"]]
         params_seeding = params["segmentation"]["seeding"]["from"]
-        ui_params.append(
-            params_to_ui(params_seeding, "cellBorderRemovingCurrSegments", "cellBorder", "cellBorderRandom"))
-        ui_params.append(
-            params_to_ui(params_seeding, "cellContentRemovingCurrSegments", "cellContent", "cellContentRandom"))
-
-        ui_params.append(params_to_ui(params_seeding, "snakesCentroids", "snakesCentroids", "snakesCentroidsRandom"))
+        ui_params.append(override_random_seeds_number(ui_precision,
+            params_to_ui(params_seeding, "cellBorderRemovingCurrSegments", "cellBorder", "cellBorderRandom")))
+        ui_params.append(override_random_seeds_number(ui_precision,
+            params_to_ui(params_seeding, "cellContentRemovingCurrSegments", "cellContent", "cellContentRandom")))
+        ui_params.append(override_random_seeds_number(ui_precision,
+            params_to_ui(params_seeding, "snakesCentroids", "snakesCentroids", "snakesCentroidsRandom")))
 
         ui_params.append(params["segmentation"]["stars"]["points"])
         ui_params.append(1.0 / params["segmentation"]["stars"]["step"])
