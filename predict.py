@@ -4,6 +4,7 @@ import tempfile
 
 import h5py  # HDF5 is Ilastik's preferred file format
 import logging
+import skimage
 
 import cellprofiler.image
 import cellprofiler.module
@@ -12,9 +13,10 @@ import cellprofiler.setting
 logger = logging.getLogger(__name__)
 
 __doc__ = """
-Use an Ilastik pixel classifier to generate a probability image. Each channel of represents the probability of the
+Use an Ilastik pixel classifier to generate a probability image. Each channel represents the probability of the
 pixels in the image belong to a particular class. Use ColorToGray to separate channels for further processing. For
-example, use IdentifyPrimaryObjects on a (single-channel) probability map to generate a segmentation.
+example, use IdentifyPrimaryObjects on a (single-channel) probability map to generate a segmentation. The order of 
+the channels in ColorToGray is the same as the order of the labels within the Ilastik project.
 
 It is recommended that you pre-process any training images with CellProfiler (e.g., RescaleIntensity) and apply the
 same pre-processing steps to your analysis pipeline. You should use SaveImages to export training images as 64-bit
@@ -40,12 +42,29 @@ class Predict(cellprofiler.module.ImageProcessing):
             doc="Path to the project file (*.ilp)."
         )
 
+        self.project_type = cellprofiler.setting.Choice(
+            "Select method for constructing file names",
+            [
+                "Pixel Classification",
+                "Autocontext (2-stage)"
+            ],
+            "Pixel Classification",
+            doc="""
+                <p>CellProfiler supports two types of ilastik projects:</p>
+                <ul>
+                <li>Pixel Classification</li>
+                <li>Autocontext (2-stage)</li>
+                </ul>
+                """
+        )
+
     def settings(self):
         settings = super(Predict, self).settings()
 
         settings += [
             self.executable,
-            self.project_file
+            self.project_file,
+            self.project_type
         ]
 
         return settings
@@ -55,7 +74,8 @@ class Predict(cellprofiler.module.ImageProcessing):
 
         visible_settings += [
             self.executable,
-            self.project_file
+            self.project_file,
+            self.project_type
         ]
 
         return visible_settings
@@ -69,13 +89,7 @@ class Predict(cellprofiler.module.ImageProcessing):
 
         fout = tempfile.NamedTemporaryFile(suffix=".h5", delete=False)
 
-        try:
-            with h5py.File(fin.name, "w") as f:
-                f.create_dataset("data", data=x_data)
-
-            fin.close()
-
-            fout.close()
+        if self.project_type.value in ["Pixel Classification"]:
 
             cmd = [
                 self.executable.value,
@@ -86,6 +100,28 @@ class Predict(cellprofiler.module.ImageProcessing):
                 "--output_filename_format", fout.name,
                 fin.name
             ]
+
+        elif self.project_type.value in ["Autocontext (2-stage)"]:
+
+            x_data = skimage.img_as_ubyte(x_data) # done to meet ilastik demand for UINT8. Might be relaxed in future.
+
+            cmd = [
+                self.executable.value,
+                "--headless",
+                "--project", self.project_file.value,
+                "--output_format", "hdf5",
+                "--export_source", "probabilities stage 2",
+                "--output_filename_format", fout.name,
+                fin.name
+            ]
+
+        try:
+            with h5py.File(fin.name, "w") as f:
+                f.create_dataset("data", data=x_data)
+
+            fin.close()
+
+            fout.close()
 
             subprocess.check_call(cmd)
 
