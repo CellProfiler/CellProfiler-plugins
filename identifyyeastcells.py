@@ -198,7 +198,7 @@ def hack_add_from_file_into_EditObjects(dialog_box):
 class IdentifyYeastCells(cellprofiler.module.ImageSegmentation):
     module_name = "IdentifyYeastCells"
     category = "Yeast Toolbox"
-    variable_revision_number = 8
+    variable_revision_number = 9
     current_workspace = ''
     fitting_image_set = None
     param_fit_progress = 0
@@ -555,8 +555,12 @@ class IdentifyYeastCells(cellprofiler.module.ImageSegmentation):
             # fill new ones based on precision
             setting_values = setting_values + [False]
             params_from_precision = self.get_ui_params_from_precision(int(setting_values[3]))
-            setting_values[self.PRECISION_PARAMS_START:self.PRECISION_PARAMS_END + 1] = params_from_precision
+            setting_values[20:26 + 1] = params_from_precision
             variable_revision_number = 8
+        if variable_revision_number == 8:
+            # two settings were removed
+            setting_values = setting_values[:6] + setting_values[8:]
+            variable_revision_number = 9
         return setting_values, variable_revision_number, from_matlab
 
     def display(self, workspace, figure=None):
