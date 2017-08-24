@@ -13,8 +13,10 @@ import matplotlib.patches
 
 __doc__ = """This module can collect measurements indicating possible image aberrations,
 e.g. blur (poor focus), intensity, saturation (i.e., the percentage
-of pixels in the image that are minimal and maximal). Details and guidance for
-each of these measures is provided in the settings help."""
+of pixels in the image that are minimal and maximal).
+It outputs an image focus score, an integer from 0 (in focus) to 10 (out of focus).
+There is also a certainty output indicating how certain the score is.
+"""
 
 C_IMAGE_FOCUS = "ImageFocus"
 F_SCORE = "Score"
