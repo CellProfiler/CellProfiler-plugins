@@ -56,7 +56,7 @@ class MeasureImageFocus(cellprofiler.module.Module):
                                 title="Focus Score"
                              )
         # show patches
-        cmap = matplotlib.cm.viridis
+        cmap = matplotlib.cm.jet
         for patch in patches:
             rect = matplotlib.patches.Rectangle(xy=(patch[1], patch[0]), width=patch[3], height=patch[2])
             rect.set_color(cmap(int(float(patch[4][0]) * 255 / 10)))
