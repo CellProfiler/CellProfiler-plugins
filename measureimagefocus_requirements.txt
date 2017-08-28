@@ -1,0 +1,11 @@
+six
+scipy
+scikit-image
+numpy
+nose
+matplotlib
+click
+Pillow
+dask
+tensorflow
+microscopeimagequality
