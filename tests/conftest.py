@@ -6,6 +6,13 @@ import cellprofiler.workspace
 import numpy
 import skimage.data
 import pytest
+import cellprofiler.preferences
+
+
+@pytest.fixture(autouse=True, scope="session")
+def setup_and_teardown():
+    cellprofiler.preferences.set_headless()
+    yield
 
 
 @pytest.fixture(
