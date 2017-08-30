@@ -1,3 +1,10 @@
+# Something in CellProfiler is importing wx before we can set
+# headless mode. Setting headless here efore importing anything
+# else from CellProfiler.
+import cellprofiler.preferences
+
+cellprofiler.preferences.set_headless()
+
 import cellprofiler.image
 import cellprofiler.measurement
 import cellprofiler.object

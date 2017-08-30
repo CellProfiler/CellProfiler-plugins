@@ -1,4 +1,3 @@
-import cellprofiler.preferences
 import numpy
 import numpy.testing
 import skimage.color
@@ -7,7 +6,6 @@ import skimage.segmentation
 
 import randomwalkeralgorithm
 
-cellprofiler.preferences.set_headless()
 
 instance = randomwalkeralgorithm.RandomWalkerAlgorithm()
 
