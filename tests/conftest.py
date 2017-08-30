@@ -1,3 +1,10 @@
+# Something in CellProfiler is importing wx before we can set
+# headless mode. Setting headless here efore importing anything
+# else from CellProfiler.
+import cellprofiler.preferences
+
+cellprofiler.preferences.set_headless()
+
 import cellprofiler.image
 import cellprofiler.measurement
 import cellprofiler.object
@@ -6,13 +13,6 @@ import cellprofiler.workspace
 import numpy
 import skimage.data
 import pytest
-import cellprofiler.preferences
-
-
-@pytest.fixture(autouse=True, scope="session")
-def setup_and_teardown():
-    cellprofiler.preferences.set_headless()
-    yield
 
 
 @pytest.fixture(
