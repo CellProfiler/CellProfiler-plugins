@@ -81,12 +81,19 @@ class MeasurementTemplate(cpm.Module):
 
         feature = self.get_measurement_name(input_image_name,metric,bins)
         #Do the actual calculation
-        entropy=self.slice_and_measure_intensity(pixels,labels,indexes,centers,metric,bins)
+        entropy,slicemeasurements=self.slice_and_measure_intensity(pixels,labels,indexes,centers,metric,bins)
         #Add the measurement back into the workspace
         measurements.add_measurement(input_object_name,feature,entropy)
+        
+        for eachbin in range(bins):
+            feature_bin = self.get_measurement_name_bins(input_image_name,metric,bins,eachbin+1)
+            measurements.add_measurement(input_object_name,feature_bin,slicemeasurements[:,eachbin])
 
         emean = numpy.mean(entropy)
         statistics.append([feature, emean])
+        
+        #add statistics at some point
+            
 
 
     ################################
@@ -106,6 +113,7 @@ class MeasurementTemplate(cpm.Module):
         '''For each object, iterate over the pixels that make up the object, assign them to a bin,
         then call calculate_entropy and return it to run.  Needs an update to numpy vector operations'''
         entropylist=[]
+        slicemeasurementlist=[]
         for eachindex in range(len(indexes)):
             objects = numpy.zeros_like(pixels)
             objects[objects==0] = -1
@@ -124,10 +132,12 @@ class MeasurementTemplate(cpm.Module):
                     else:
                         pixeldict[sliceno] += [objects[i1, i2]]
                 objectiter.iternext()
-            entropy=self.calculate_entropy(pixeldict,metric)
+            entropy,slicemeasurements=self.calculate_entropy(pixeldict,metric)
             entropylist.append(entropy)
+            slicemeasurementlist.append(slicemeasurements)
         entropyarray=numpy.array(entropylist)
-        return entropyarray
+        slicemeasurementarray=numpy.array(slicemeasurementlist)
+        return entropyarray,slicemeasurementarray
 
     def calculate_entropy(self,pixeldict,metric):
         '''Calculates either the mean, median, or integrated intensity
@@ -143,17 +153,26 @@ class MeasurementTemplate(cpm.Module):
         slicemeasurements=numpy.array(slicemeasurements, dtype=float)
         #Calculate entropy, and let scipy handle the normalization for you
         entropy=scipy.stats.entropy(slicemeasurements)
-        return entropy
+        return entropy, slicemeasurements
 
 
     def get_feature_name(self,input_image_name,metric,bins):
         '''Return a measurement feature name '''
         return "%s_%s_%d" % (input_image_name, metric, bins)
+    
+    def get_feature_name_bins(self,input_image_name,metric,bins, binno):
+        '''Return a measurement feature name '''
+        return "%s_%s_Bin%d_of_%d" % (input_image_name, metric, binno, bins)
 
     def get_measurement_name(self, input_image_name, metric, bins):
         '''Return the whole measurement name'''
         return '_'.join([ENTROPY,
                          self.get_feature_name(input_image_name,metric,bins)])
+    
+    def get_measurement_name_bins(self, input_image_name, metric, bins, binno):
+        '''Return the whole measurement name'''
+        return '_'.join([ENTROPY,
+                         self.get_feature_name_bins(input_image_name,metric,bins,binno)])
 
 
     def get_measurement_columns(self, pipeline):
@@ -163,10 +182,14 @@ class MeasurementTemplate(cpm.Module):
         input_image_name=self.input_image_name.value
         metric = self.intensity_measurement.value
         bins = self.bin_number.value
-
+        bincollist=[]
+        for eachbin in range(bins):
+            bincollist.append((input_object_name,
+                 self.get_measurement_name_bins(input_image_name,metric,bins,eachbin+1),
+                 cpmeas.COLTYPE_FLOAT))
         return [(input_object_name,
                  self.get_measurement_name(input_image_name,metric,bins),
-                 cpmeas.COLTYPE_FLOAT)]
+                 cpmeas.COLTYPE_FLOAT)]+bincollist
 
 
     def get_categories(self, pipeline, object_name):
@@ -186,7 +209,12 @@ class MeasurementTemplate(cpm.Module):
         """Get the measurements made on the given object in the given category"""
         if (object_name == self.input_object_name and
                     category == ENTROPY):
-            return ["Entropy"]
+            bins=self.bin_number.value
+            metric = self.intensity_measurement.value
+            binmeaslist=[]
+            for eachbin in range(bins):
+                binmeaslist.append(metric+'_Bin'+str(eachbin+1)+'_of_'+str(bins))
+            return ["Entropy"]+binmeaslist
         else:
             return []
 
