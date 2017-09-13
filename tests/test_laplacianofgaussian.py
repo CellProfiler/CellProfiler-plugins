@@ -1,10 +1,11 @@
 import cellprofiler.image
-import cellprofiler.modules.laplacianofgaussian
 import numpy.testing
 import scipy.ndimage.filters
 import skimage.color
 
-instance = cellprofiler.modules.laplacianofgaussian.LaplacianOfGaussian()
+import laplacianofgaussian
+
+instance = laplacianofgaussian.LaplacianOfGaussian()
 
 
 def test_run(image, image_set, module, workspace):
