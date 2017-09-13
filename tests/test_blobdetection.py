@@ -1,7 +1,6 @@
 # coding=utf-8
 
 import cellprofiler.image
-import cellprofiler.modules.blobdetection
 import cellprofiler.workspace
 import numpy
 import numpy.testing
@@ -10,6 +9,8 @@ import skimage.color
 import skimage.data
 import skimage.draw
 import skimage.feature
+
+import blobdetection
 
 
 data = skimage.data.hubble_deep_field()[0:500, 0:500]
@@ -34,7 +35,7 @@ def image(request):
     return cellprofiler.image.Image(image=data, dimensions=dimensions)
 
 
-instance = cellprofiler.modules.blobdetection.BlobDetection()
+instance = blobdetection.BlobDetection()
 
 
 def test_run_dog(image, image_set, module, workspace):
