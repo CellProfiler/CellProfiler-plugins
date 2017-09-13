@@ -1,11 +1,12 @@
 import cellprofiler.image
-import cellprofiler.modules.imagegradient
 import numpy
 import numpy.testing
 import skimage.filters.rank
 import skimage.morphology
 
-instance = cellprofiler.modules.imagegradient.ImageGradient()
+import imagegradient
+
+instance = imagegradient.ImageGradient()
 
 
 def test_run(image, module, image_set, workspace):
