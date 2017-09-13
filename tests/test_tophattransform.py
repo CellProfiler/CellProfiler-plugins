@@ -1,11 +1,12 @@
 import cellprofiler.image
-import cellprofiler.modules.tophattransform
 import numpy.testing
 import pytest
 import skimage.data
 import skimage.morphology
 
-instance = cellprofiler.modules.tophattransform.TopHatTransform()
+import tophattransform
+
+instance = tophattransform.TopHatTransform()
 
 
 @pytest.fixture(

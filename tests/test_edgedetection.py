@@ -1,12 +1,13 @@
 import cellprofiler.image
-import cellprofiler.modules.edgedetection
 import numpy
 import numpy.random
 import numpy.testing
 import skimage.color
 import skimage.filters
 
-instance = cellprofiler.modules.edgedetection.EdgeDetection()
+import edgedetection
+
+instance = edgedetection.EdgeDetection()
 
 
 def test_run_without_mask(image, image_set, module, workspace):

@@ -1,10 +1,11 @@
 import cellprofiler.image
-import cellprofiler.modules.histogramequalization
 import numpy
 import numpy.testing
 import skimage.exposure
 
-instance = cellprofiler.modules.histogramequalization.HistogramEqualization()
+import histogramequalization
+
+instance = histogramequalization.HistogramEqualization()
 
 
 def test_run(image, image_set, module, workspace):

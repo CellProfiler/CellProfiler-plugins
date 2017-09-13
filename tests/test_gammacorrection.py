@@ -1,8 +1,9 @@
-import cellprofiler.modules.gammacorrection
 import numpy.testing
 import skimage.exposure
 
-instance = cellprofiler.modules.gammacorrection.GammaCorrection()
+import gammacorrection
+
+instance = gammacorrection.GammaCorrection()
 
 
 def test_run(image, module, image_set, workspace):
