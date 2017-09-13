@@ -6,7 +6,7 @@ import skimage.morphology
 
 import tophattransform
 
-instance = cellprofiler.modules.tophattransform.TopHatTransform()
+instance = tophattransform.TopHatTransform()
 
 
 @pytest.fixture(
