@@ -1,7 +1,10 @@
 CellProfiler-plugins
 ====================
 
-A home for community-contributed and experimental CellProfiler modules.
+A home for community-contributed and experimental CellProfiler modules. 
+
+## Beginner-level instructions
+Please see help here: https://github.com/CellProfiler/CellProfiler/blob/master/cellprofiler/data/help/other_plugins.rst
 
 ## Use
 1. Clone this repository:
