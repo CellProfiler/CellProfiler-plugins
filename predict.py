@@ -12,14 +12,17 @@ import cellprofiler.setting
 
 logger = logging.getLogger(__name__)
 
-__doc__ = """
-Use an Ilastik pixel classifier to generate a probability image. Each channel represents the probability of the
-pixels in the image belong to a particular class. Use ColorToGray to separate channels for further processing. For
-example, use IdentifyPrimaryObjects on a (single-channel) probability map to generate a segmentation. The order of 
-the channels in ColorToGray is the same as the order of the labels within the Ilastik project.
+__doc__ = """\
+Predict
+=======
 
-It is recommended that you pre-process any training images with CellProfiler (e.g., RescaleIntensity) and apply the
-same pre-processing steps to your analysis pipeline. You should use SaveImages to export training images as 64-bit
+Use an Ilastik pixel classifier to generate a probability image. Each channel represents the probability of the
+pixels in the image belong to a particular class. Use **ColorToGray** to separate channels for further processing. For
+example, use **IdentifyPrimaryObjects** on a (single-channel) probability map to generate a segmentation. The order of 
+the channels in **ColorToGray** is the same as the order of the labels within the Ilastik project.
+
+It is recommended that you pre-process any training images with CellProfiler (e.g., **RescaleIntensity**) and apply the
+same pre-processing steps to your analysis pipeline. You should use **SaveImages** to export training images as 32-bit
 TIFFs.
 """
 
@@ -49,13 +52,12 @@ class Predict(cellprofiler.module.ImageProcessing):
                 "Autocontext (2-stage)"
             ],
             "Pixel Classification",
-            doc="""
-                <p>CellProfiler supports two types of ilastik projects:</p>
-                <ul>
-                <li>Pixel Classification</li>
-                <li>Autocontext (2-stage)</li>
-                </ul>
-                """
+            doc="""\
+CellProfiler supports two types of ilastik projects:
+
+- Pixel Classification
+- Autocontext (2-stage)
+"""
         )
 
     def settings(self):
@@ -90,7 +92,6 @@ class Predict(cellprofiler.module.ImageProcessing):
         fout = tempfile.NamedTemporaryFile(suffix=".h5", delete=False)
 
         if self.project_type.value in ["Pixel Classification"]:
-
             cmd = [
                 self.executable.value,
                 "--headless",
@@ -100,10 +101,8 @@ class Predict(cellprofiler.module.ImageProcessing):
                 "--output_filename_format", fout.name,
                 fin.name
             ]
-
         elif self.project_type.value in ["Autocontext (2-stage)"]:
-
-            x_data = skimage.img_as_ubyte(x_data) # done to meet ilastik demand for UINT8. Might be relaxed in future.
+            x_data = skimage.img_as_ubyte(x_data)  # ilastik requires UINT8. Might be relaxed in future.
 
             cmd = [
                 self.executable.value,
