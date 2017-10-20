@@ -22,8 +22,13 @@ example, use **IdentifyPrimaryObjects** on a (single-channel) probability map to
 the channels in **ColorToGray** is the same as the order of the labels within the Ilastik project.
 
 It is recommended that you pre-process any training images with CellProfiler (e.g., **RescaleIntensity**) and apply the
-same pre-processing steps to your analysis pipeline. You should use **SaveImages** to export training images as 32-bit
+same pre-processing steps to your analysis pipeline. You can use **SaveImages** to export training images as 32-bit
 TIFFs.
+
+Additionally, please ensure CellProfiler is configured to load images in the same format as Ilastik. For example, 
+if your Ilastik classifier is trained on RGB images, use **NamesAndTypes** to load images as RGB by selecting 
+"*Color image*" from the *Select the image type* dropdown. If your classifier expects grayscale images, use 
+**NamesAndTypes** to load images as "*Grayscale image*".
 """
 
 
