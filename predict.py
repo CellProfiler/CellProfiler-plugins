@@ -91,28 +91,24 @@ CellProfiler supports two types of ilastik projects:
 
         fout = tempfile.NamedTemporaryFile(suffix=".h5", delete=False)
 
+        cmd = [
+            self.executable.value,
+            "--headless",
+            "--project", self.project_file.value,
+            "--output_format", "hdf5"
+        ]
+
         if self.project_type.value in ["Pixel Classification"]:
-            cmd = [
-                self.executable.value,
-                "--headless",
-                "--project", self.project_file.value,
-                "--output_format", "hdf5",
-                "--export_source", "Probabilities",
-                "--output_filename_format", fout.name,
-                fin.name
-            ]
+            cmd += ["--export_source", "Probabilities"]
         elif self.project_type.value in ["Autocontext (2-stage)"]:
             x_data = skimage.img_as_ubyte(x_data)  # ilastik requires UINT8. Might be relaxed in future.
 
-            cmd = [
-                self.executable.value,
-                "--headless",
-                "--project", self.project_file.value,
-                "--output_format", "hdf5",
-                "--export_source", "probabilities stage 2",
-                "--output_filename_format", fout.name,
-                fin.name
-            ]
+            cmd = ["--export_source", "probabilities stage 2"]
+
+        cmd += [
+            "--output_filename_format", fout.name,
+            fin.name
+        ]
 
         try:
             with h5py.File(fin.name, "w") as f:
