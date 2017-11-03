@@ -2,7 +2,7 @@ import os
 import subprocess
 import tempfile
 
-import h5py  # HDF5 is Ilastik's preferred file format
+import h5py  # HDF5 is ilastik's preferred file format
 import logging
 import skimage
 
@@ -16,19 +16,51 @@ __doc__ = """\
 Predict
 =======
 
-Use an Ilastik pixel classifier to generate a probability image. Each channel represents the probability of the
-pixels in the image belong to a particular class. Use **ColorToGray** to separate channels for further processing. For
-example, use **IdentifyPrimaryObjects** on a (single-channel) probability map to generate a segmentation. The order of 
-the channels in **ColorToGray** is the same as the order of the labels within the Ilastik project.
+Use an ilastik pixel classifier to generate a probability image. Each
+channel represents the probability of the pixels in the image belong to
+a particular class. Use **ColorToGray** to separate channels for further
+processing. For example, use **IdentifyPrimaryObjects** on a
+(single-channel) probability map to generate a segmentation. The order
+of the channels in **ColorToGray** is the same as the order of the
+labels within the ilastik project.
 
-It is recommended that you pre-process any training images with CellProfiler (e.g., **RescaleIntensity**) and apply the
-same pre-processing steps to your analysis pipeline. You can use **SaveImages** to export training images as 32-bit
-TIFFs.
+CellProfiler automatically scales grayscale and color images to the
+[0.0, 1.0] range on load. Your ilastik classifier should be trained on
+images with the same scale as the prediction images. You can ensure
+consistent scales by:
 
-Additionally, please ensure CellProfiler is configured to load images in the same format as Ilastik. For example, 
-if your Ilastik classifier is trained on RGB images, use **NamesAndTypes** to load images as RGB by selecting 
-"*Color image*" from the *Select the image type* dropdown. If your classifier expects grayscale images, use 
-**NamesAndTypes** to load images as "*Grayscale image*".
+-  using **ImageMath** to convert the images loaded by CellProfiler back
+   to their original scale. Use these settings to rescale an image:
+
+   -  **Operation**: *None*
+   -  **Multiply the first image by**: *RESCALE_VALUE*
+   -  **Set values greater than 1 equal to 1?**: *No*
+
+   where *RESCALE_VALUE* is determined by your image data and the value
+   of *Set intensity range from* in **NamesAndTypes**. For example, the
+   *RESCALE_VALUE* for 32-bit images rescaled by "*Image bit-depth*" is
+   65535 (the maximum value allowed by this data type). Please refer to
+   the help for the setting *Set intensity range from* in
+   **NamesAndTypes** for more information.
+
+   This option is best when your training and prediction images do not
+   require any preprocessing by CellProfiler.
+
+-  preprocessing any training images with CellProfiler (e.g.,
+   **RescaleIntensity**) and applying the same pre-processing steps to
+   your analysis pipeline. You can use **SaveImages** to export training
+   images as 32-bit TIFFs.
+
+   This option requires two CellProfiler pipelines, but is effective
+   when your training and prediction images require preprocessing by
+   CellProfiler.
+
+Additionally, please ensure CellProfiler is configured to load images in
+the same format as ilastik. For example, if your ilastik classifier is
+trained on RGB images, use **NamesAndTypes** to load images as RGB by
+selecting "*Color image*" from the *Select the image type* dropdown. If
+your classifier expects grayscale images, use **NamesAndTypes** to load
+images as "*Grayscale image*".
 """
 
 
@@ -42,26 +74,33 @@ class Predict(cellprofiler.module.ImageProcessing):
 
         self.executable = cellprofiler.setting.Pathname(
             "Executable",
-            doc="Ilastik command line executable name, or location if it is not on your path."
+            doc="ilastik command line executable name, or location if it is not on your path."
         )
 
         self.project_file = cellprofiler.setting.Pathname(
             "Project file",
-            doc="Path to the project file (*.ilp)."
+            doc="Path to the project file (\*.ilp)."
         )
 
         self.project_type = cellprofiler.setting.Choice(
-            "Select method for constructing file names",
+            "Select the project type",
             [
                 "Pixel Classification",
                 "Autocontext (2-stage)"
             ],
             "Pixel Classification",
             doc="""\
-CellProfiler supports two types of ilastik projects:
+Select the project type which matches the project file specified by
+*Project file*. CellProfiler supports two types of ilastik projects:
 
-- Pixel Classification
-- Autocontext (2-stage)
+-  *Pixel Classification*: Classify the pixels of an image given user
+   annotations. `Read more`_.
+
+-  *Autocontext (2-stage)*: Perform pixel classification in multiple
+   stages, sharing predictions between stages to improve results. `Read
+   more <http://ilastik.org/documentation/autocontext/autocontext>`__.
+
+.. _Read more: http://ilastik.org/documentation/pixelclassification/pixelclassification
 """
         )
 
