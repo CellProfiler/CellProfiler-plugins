@@ -1,5 +1,6 @@
 CellProfiler-plugins
 ====================
+[![Build Status](https://travis-ci.org/CellProfiler/CellProfiler-plugins.svg?branch=master)](https://travis-ci.org/CellProfiler/CellProfiler-plugins)
 
 A home for community-contributed and experimental CellProfiler modules. 
 
