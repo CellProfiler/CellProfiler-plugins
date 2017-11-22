@@ -6,12 +6,14 @@ import cellprofiler.preferences
 import cellprofiler.setting
 import microscopeimagequality.miq
 import microscopeimagequality.prediction
-import numpy
 import matplotlib.cm
 import matplotlib.pyplot
 import matplotlib.patches
 
-__doc__ = """This module can collect measurements indicating possible image aberrations,
+__doc__ = """
+For installation instructions and platform support notes, please read measureimagefocus_README.md.
+
+This module can collect measurements indicating possible image aberrations,
 e.g. blur (poor focus), intensity, saturation (i.e., the percentage
 of pixels in the image that are minimal and maximal).
 It outputs an image focus score, an integer from 0 (in focus) to 10 (out of focus).
@@ -20,7 +22,7 @@ There is also a certainty output indicating how certain the score is.
 
 C_IMAGE_FOCUS = "ImageFocus"
 F_SCORE = "Score"
-
+F_CERTAINTY = "Certainty"
 
 class MeasureImageFocus(cellprofiler.module.Module):
     category = "Measurement"
@@ -42,7 +44,6 @@ class MeasureImageFocus(cellprofiler.module.Module):
             self.image_name
         ]
 
-    # TODO: display matplotlib plot
     def display(self, workspace, figure):
 
         figure.set_subplots((2, 1))
@@ -69,7 +70,7 @@ class MeasureImageFocus(cellprofiler.module.Module):
         sm = matplotlib.pyplot.cm.ScalarMappable(cmap=cmap, norm=matplotlib.pyplot.Normalize(vmin=0, vmax=10))
         sm.set_array([])
         cbar = matplotlib.pyplot.colorbar(sm, ax=ax, ticks=[0, 10], shrink=.6)
-        cbar.ax.set_yticklabels(['In focus', 'Unfocused'])
+        cbar.ax.set_yticklabels(['Focused', 'Unfocused'])
 
     def get_categories(self, pipeline, object_name):
         if object_name == cellprofiler.measurement.IMAGE:
@@ -89,7 +90,8 @@ class MeasureImageFocus(cellprofiler.module.Module):
 
         if object_name == cellprofiler.measurement.IMAGE and category == C_IMAGE_FOCUS:
             return [
-                C_IMAGE_FOCUS + "_" + F_SCORE + "_{}".format(name)
+                F_SCORE + "_{}".format(name),
+                F_CERTAINTY + "_{}".format(name)
             ]
 
         return []
@@ -98,7 +100,8 @@ class MeasureImageFocus(cellprofiler.module.Module):
         image = cellprofiler.measurement.IMAGE
 
         features = [
-            self.get_measurement_name(F_SCORE)
+            self.get_feature_name(F_SCORE),
+            self.get_feature_name(F_CERTAINTY)
         ]
 
         column_type = cellprofiler.measurement.COLTYPE_INTEGER
@@ -111,13 +114,7 @@ class MeasureImageFocus(cellprofiler.module.Module):
 
         return []
 
-    def get_measurement_name(self, name):
-        feature = self.get_feature_name(name)
-
-        return feature
-
     def run(self, workspace):
-        # TODO: check if model downloaded/should be updated
         default_weights_index_file = microscopeimagequality.miq.DEFAULT_MODEL_PATH + '.index'
         if not os.path.exists(default_weights_index_file):
             print('weights index file not found at {}'.format(default_weights_index_file))
@@ -138,9 +135,9 @@ class MeasureImageFocus(cellprofiler.module.Module):
         pred = m.predict(data)
         patches = m.get_patch_predictions(data)
 
-        feature_score = self.get_feature_name('score')
+        feature_score = self.get_feature_name(F_SCORE)
         score = str(pred[0])
-        feature_certainty = self.get_feature_name('certainty')
+        feature_certainty = self.get_feature_name(F_CERTAINTY)
         certainty = str(pred[1]['aggregate'])
 
         statistics.append([feature_score, score])
