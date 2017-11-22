@@ -1,4 +1,5 @@
 CellProfiler Microscope Image Focus Module Instructions
+Note: the first time it's run, this module needs to download the model/weights, which can take a while.
 
 OS X
 
@@ -7,6 +8,7 @@ From source (recommended)
 Install CellProfiler from source
 Using a terminal (found in Applications), install CellProfiler from source by running given commands in command line (instructions)
 Get CellProfiler Plugin. In the terminal, run these commands:
+```
 MYDIR=/tmp/; cd MYDIR
 git clone https://github.com/CellProfiler/CellProfiler-plugins.git  
 cd CellProfiler-plugins/
@@ -14,8 +16,13 @@ git fetch origin pull/11/head:image-quality
 git checkout image-quality
 Install dependencies. In the terminal, run
 pip install -r measureimagefocus_requirements.txt
+```
+
 To run CellProfiler, in the terminal run the following; note you may get import errors, but these can be safely ignored:
-cellprofiler --plugins-directory .
+```
+cellprofiler --plugins-directory
+```
+
 In CellProfiler,
 Click "Images" and drag in images of interest [1]
 Edit > Add Module > Measurement > MeasureImageFocus
