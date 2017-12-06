@@ -3,11 +3,6 @@ import numpy.testing
 import skimage.morphology
 import skimage.segmentation
 import pytest
-import pdb
-
-import cellprofiler.image
-import cellprofiler.measurement
-import cellprofiler.object
 
 import mergeobjects
 
