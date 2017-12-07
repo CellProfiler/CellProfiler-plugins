@@ -22,7 +22,7 @@ YES          YES          NO
 
 """
 
-import numpy as np
+import numpy
 import skimage.morphology
 import skimage.segmentation
 
@@ -86,24 +86,24 @@ artifacts that are the result of segmentation.
 
 
 def _merge_neighbors(array, min_obj_size):
-    sizes = np.bincount(array.ravel())
+    sizes = numpy.bincount(array.ravel())
     # Find the indices of all objects below threshold
     mask_sizes = (sizes < min_obj_size) & (sizes != 0)
 
-    merged = np.copy(array)
+    merged = numpy.copy(array)
     # Iterate through each small object, determine most significant adjacent neighbor,
     # and merge the object into that neighbor
-    for n in np.nonzero(mask_sizes)[0]:
+    for n in numpy.nonzero(mask_sizes)[0]:
         mask = array == n
         # "Thick" mode ensures the border bleeds into the neighboring objects
         bound = skimage.segmentation.find_boundaries(mask, mode='thick')
-        neighbors = np.bincount(array[bound].ravel())
+        neighbors = numpy.bincount(array[bound].ravel())
         # If self is the largest neighbor, the object should be removed
         if len(neighbors) >= n:
             neighbors[n] = 0
         # Background should be set to 0
         neighbors[0] = 0
-        max_neighbor = np.argmax(neighbors)
+        max_neighbor = numpy.argmax(neighbors)
         # Set object value to largest neighbor
         merged[merged == n] = max_neighbor
     return merged
@@ -117,9 +117,9 @@ def merge_objects(labels, diameter, slicewise):
     else:
         factor = (4.0 / 3.0) * (radius ** 3)
 
-    min_obj_size = np.pi * factor
+    min_obj_size = numpy.pi * factor
 
     # Only operate slicewise if image is 3D and slicewise requested
     if slicewise and labels.ndim != 2 and labels.shape[-1] not in (3, 4):
-        return np.array([_merge_neighbors(x, min_obj_size) for x in labels])
+        return numpy.array([_merge_neighbors(x, min_obj_size) for x in labels])
     return _merge_neighbors(labels, min_obj_size)
