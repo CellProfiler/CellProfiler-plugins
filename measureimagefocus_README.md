@@ -12,8 +12,6 @@ Get CellProfiler Plugin. In the terminal, run these commands:
 MYDIR=/tmp/; cd MYDIR
 git clone https://github.com/CellProfiler/CellProfiler-plugins.git  
 cd CellProfiler-plugins/
-git fetch origin pull/11/head:image-quality
-git checkout image-quality
 Install dependencies. In the terminal, run
 pip install -r measureimagefocus_requirements.txt
 ```
