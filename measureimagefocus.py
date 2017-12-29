@@ -1,4 +1,5 @@
 import os.path
+import logging
 
 import cellprofiler.measurement
 import cellprofiler.module
@@ -117,7 +118,7 @@ class MeasureImageFocus(cellprofiler.module.Module):
     def run(self, workspace):
         default_weights_index_file = microscopeimagequality.miq.DEFAULT_MODEL_PATH + '.index'
         if not os.path.exists(default_weights_index_file):
-            print('weights index file not found at {}'.format(default_weights_index_file))
+            logging.warning('weights index file not found at {}'.format(default_weights_index_file))
             microscopeimagequality.miq.download_model()
 
         m = microscopeimagequality.prediction.ImageQualityClassifier(microscopeimagequality.miq.DEFAULT_MODEL_PATH, 84,
