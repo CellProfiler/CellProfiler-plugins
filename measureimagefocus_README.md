@@ -18,7 +18,7 @@ pip install -r measureimagefocus_requirements.txt
 
 To run CellProfiler, in the terminal run the following; note you may get import errors, but these can be safely ignored:
 ```
-cellprofiler --plugins-directory
+cellprofiler --plugins-directory MYDIR/CellProfiler-plugins
 ```
 
 In CellProfiler,
