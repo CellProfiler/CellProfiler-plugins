@@ -104,7 +104,7 @@ class MeasureImageFocus(cellprofiler.module.Module):
             self.get_feature_name(F_CERTAINTY)
         ]
 
-        column_type = cellprofiler.measurement.COLTYPE_INTEGER
+        column_type = cellprofiler.measurement.COLTYPE_FLOAT
 
         return [(image, feature, column_type) for feature in features]
 
