@@ -94,7 +94,7 @@ removed. This thresholding is the behavior by default.
 
     def run(self, workspace):
         self.function = lambda labels, diameter, slicewise, remove_below_threshold: \
-            merge_objects(labels, diameter, slicewise)
+            merge_objects(labels, diameter, slicewise, remove_below_threshold)
 
         super(MergeObjects, self).run(workspace)
 
