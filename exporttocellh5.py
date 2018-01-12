@@ -18,14 +18,11 @@ import scipy.ndimage
 import cellprofiler.module as cpm
 import cellprofiler.measurement as cpmeas
 import cellprofiler.setting as cps
-from cellprofiler.gui.help import \
-    USING_METADATA_TAGS_REF, USING_METADATA_HELP_REF
-from cellprofiler.modules.identify import R_PARENT
-from cellprofiler.preferences import \
-    IO_FOLDER_CHOICE_HELP_TEXT, IO_WITH_METADATA_HELP_TEXT
+from cellprofiler.measurement import R_PARENT
 from cellprofiler.setting import YES, NO
-from cellprofiler.gui.help import \
-    USING_METADATA_TAGS_REF, USING_METADATA_HELP_REF
+from cellprofiler.modules._help import \
+    USING_METADATA_TAGS_REF, USING_METADATA_HELP_REF, \
+    IO_FOLDER_CHOICE_HELP_TEXT, IO_WITH_METADATA_HELP_TEXT
 import cellh5
 import cellh5.cellh5write
 import numpy as np
