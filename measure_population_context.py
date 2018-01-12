@@ -1,10 +1,10 @@
 '''<b>MeasurePopulationContext</b> - a module implementing cell density and distance
    from edge.
-   
+
    The module makes two measurements: <br><ul>
    <li><b>PopContext_Count</b> - the number of neighbors within the given radius</li>
    <li><b>PopContext_Density</b>, a calcuation of
-   Ripley's K function (Ripley, <i>Modelling Spatial Patterns</i>, 
+   Ripley's K function (Ripley, <i>Modelling Spatial Patterns</i>,
    Journal of the Royal Statistical Society, Series B 39, 172-192.). This is
    a normalized measure of the density of object centers within a given radius.
    Here, we implement the normalized version which takes edge effects into
@@ -20,23 +20,23 @@
 '''
 # CellProfiler is distributed under the GNU General Public License.
 # See the accompanying file LICENSE for details.
-# 
+#
 # Copyright (c) 2003-2009 Massachusetts Institute of Technology
 # Copyright (c) 2009-2012 Broad Institute
-# 
+#
 # Please see the AUTHORS file for credits.
-# 
+#
 # Website: http://www.cellprofiler.org
 
 import numpy as np
 from scipy.ndimage import distance_transform_edt, gaussian_filter
 from scipy.ndimage import binary_erosion, binary_dilation
 
-import cellprofiler.cpmodule as cpm
-import cellprofiler.measurements as cpmeas
+import cellprofiler.module as cpm
+import cellprofiler.measurement as cpmeas
 import cellprofiler.preferences as cpprefs
-import cellprofiler.settings as cps
-from cellprofiler.modules.identify import M_LOCATION_CENTER_X, M_LOCATION_CENTER_Y
+import cellprofiler.setting as cps
+from cellprofiler.measurement import M_LOCATION_CENTER_X, M_LOCATION_CENTER_Y
 
 O_POPULATION_DENSITY = "Population density"
 O_DISTANCE_TO_EDGE = "Distance to edge"
@@ -51,18 +51,18 @@ M_DENSITY_FMT = "_".join((C_POP_CONTEXT, FTR_DENSITY, "%d"))
 M_COUNT_FMT = "_".join((C_POP_CONTEXT, FTR_COUNT, "%d"))
 M_EDGE_FMT = "_".join((C_POP_CONTEXT, FTR_EDGE, "%s"))
 
-class MeasurePopulationContext(cpm.CPModule):
+class MeasurePopulationContext(cpm.Module):
     module_name = "MeasurePopulationContext"
     category = 'Measurement'
     variable_revision_number = 1
-    
+
     def create_settings(self):
         self.object_name = cps.ObjectNameSubscriber(
             "Input objects", "None",
             doc = """Enter the name of the objects whose population context is
             to be measured.""")
         self.operation = cps.Choice(
-            "Operation", 
+            "Operation",
             choices= (O_POPULATION_DENSITY, O_DISTANCE_TO_EDGE, O_BOTH),
             doc = """Select the measurements you wish to perform. The choices
             are:<br><ul>
@@ -81,48 +81,48 @@ class MeasurePopulationContext(cpm.CPModule):
             that would otherwise be excluded because they were touching
             the border.""")
         self.edge_image = cps.ImageNameSubscriber(
-            "Edge image", 
+            "Edge image",
             doc = """For measuring distance to an edge, this is the reference
             image. Cell distances will be computed to the nearest foreground / 
             background edge in the reference image.""")
-        
+
     def settings(self):
-        return [self.object_name, self.operation, self.radius, 
+        return [self.object_name, self.operation, self.radius,
                 self.object_diameter, self.edge_image]
-    
+
     def visible_settings(self):
         result = [self.object_name, self.operation]
         if self.wants_population_density():
             result += [self.radius, self.object_diameter]
         if self.wants_distance_to_edge():
             result.append(self.edge_image)
-            
+
         return result
-    
+
     def wants_population_density(self):
         return self.operation.value in [O_POPULATION_DENSITY, O_BOTH]
-    
+
     def wants_distance_to_edge(self):
         return self.operation.value in [O_DISTANCE_TO_EDGE, O_BOTH]
-    
+
     def density_feature(self):
         return M_DENSITY_FMT % self.radius.value
-    
+
     def count_feature(self):
         return M_COUNT_FMT % self.radius.value
-    
+
     def edge_feature(self):
         return M_EDGE_FMT % self.edge_image.value
-    
+
     def is_interactive(self):
         return False
-    
+
     def run(self, workspace):
         if self.wants_population_density():
             self.calculate_population_density(workspace)
         if self.wants_distance_to_edge():
             self.calculate_distance_to_edge(workspace)
-            
+
     def calculate_population_density(self, workspace):
         m = workspace.measurements
         j, i = [m.get_current_measurement(self.object_name.value, f)
@@ -153,7 +153,7 @@ class MeasurePopulationContext(cpm.CPModule):
         half_shape = shape / 2
         ii[ii > half_shape[0]] = shape[0] - ii
         jj[jj > half_shape[1]] = shape[1] - jj
-        
+
         atotal = np.pi * radius * radius
         a = atotal * np.ones(len(ii), float)
         ii_close = ii < (radius + object_radius)
@@ -164,9 +164,9 @@ class MeasurePopulationContext(cpm.CPModule):
         chord_angle = 2 * np.arccos((jj[jj_close] - object_radius) / radius)
         chord_area = radius * radius *( chord_angle - np.sin(chord_angle)) / 2
         a[jj_close] -= chord_area
-        
+
         adj = a / atotal
-        
+
         di = ii[:, np.newaxis] - ii[np.newaxis, :]
         dj = jj[:, np.newaxis] - jj[np.newaxis, :]
         d2 = di * di + dj * dj
@@ -190,7 +190,7 @@ class MeasurePopulationContext(cpm.CPModule):
             display = workspace.display_data.count_display = -np.ones(objects.shape, int)
             for labels, indices in objects.get_labels():
                 display[labels != 0] = counts[labels[labels!=0]-1]
-        
+
     def calculate_distance_to_edge(self, workspace):
         m = workspace.measurements
         edge = workspace.image_set.get_image(self.edge_image.value,
@@ -226,8 +226,8 @@ class MeasurePopulationContext(cpm.CPModule):
             workspace.display_data.edge = (
                 binary_dilation(edge, structure=np.ones((3,3), bool)) !=
                 binary_erosion(edge, structure=np.ones((3,3), bool), border_value=1))
-            
-    def display(self, workspace):
+
+    def display(self, workspace, figure):
         import matplotlib
         nsubplots = 0
         if self.wants_population_density():
@@ -263,28 +263,28 @@ class MeasurePopulationContext(cpm.CPModule):
                 edge[:, :, np.newaxis] * edge_color[np.newaxis, np.newaxis, :]
             figure.subplot_imshow(nsubplots-1, 0, image,
                                   title = "Distance to edge")
-            
-        
+
+
     def get_measurement_columns(self, pipeline):
         result = []
         if self.wants_population_density():
-            result += [(self.object_name.value, 
+            result += [(self.object_name.value,
                         self.density_feature(),
                         cpmeas.COLTYPE_FLOAT),
-                       (self.object_name.value, 
+                       (self.object_name.value,
                         self.count_feature(),
                         cpmeas.COLTYPE_INTEGER)]
         if self.wants_distance_to_edge():
-            result += [(self.object_name.value, 
+            result += [(self.object_name.value,
                         self.edge_feature(),
                         cpmeas.COLTYPE_FLOAT)]
         return result
-    
+
     def get_categories(self, pipeline, object_name):
         if object_name == self.object_name:
             return [C_POP_CONTEXT]
         return []
-    
+
     def get_measurements(self, pipeline, object_name, category):
         result = []
         if category not in self.get_categories(pipeline, object_name):
@@ -303,7 +303,7 @@ class MeasurePopulationContext(cpm.CPModule):
         if measurement != FTR_EDGE:
             return []
         return [self.edge_image.value]
-    
+
     def get_measurement_scales(self, pipeline, object_name, category,
                                measurement, image_name):
         if category not in self.get_categories(pipeline, object_name):
