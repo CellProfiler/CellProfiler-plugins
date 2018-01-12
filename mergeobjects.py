@@ -62,12 +62,25 @@ artifacts that are the result of segmentation.
             })
         )
 
+        self.remove_below_threshold = cellprofiler.setting.Binary(
+            text="Remove objects below size threshold",
+            value=True,
+            doc="""\
+Select "*{NO}*" to ensure that objects below the minimum size
+threshold with no larger significant neighbor will not be 
+removed. This thresholding is the behavior by default.
+""".format(**{
+                "NO": cellprofiler.setting.NO
+            })
+        )
+
     def settings(self):
         __settings__ = super(MergeObjects, self).settings()
 
         return __settings__ + [
             self.size,
-            self.slice_wise
+            self.slice_wise,
+            self.remove_below_threshold
         ]
 
     def visible_settings(self):
@@ -75,17 +88,18 @@ artifacts that are the result of segmentation.
 
         return __settings__ + [
             self.size,
-            self.slice_wise
+            self.slice_wise,
+            self.remove_below_threshold
         ]
 
     def run(self, workspace):
-        self.function = lambda labels, diameter, slicewise: \
-            merge_objects(labels, diameter, slicewise)
+        self.function = lambda labels, diameter, slicewise, remove_below_threshold: \
+            merge_objects(labels, diameter, slicewise, remove_below_threshold)
 
         super(MergeObjects, self).run(workspace)
 
 
-def _merge_neighbors(array, min_obj_size):
+def _merge_neighbors(array, min_obj_size, remove_below_threshold):
     sizes = numpy.bincount(array.ravel())
     # Find the indices of all objects below threshold
     mask_sizes = (sizes < min_obj_size) & (sizes != 0)
@@ -99,7 +113,7 @@ def _merge_neighbors(array, min_obj_size):
         bound = skimage.segmentation.find_boundaries(mask, mode='thick')
         neighbors = numpy.bincount(array[bound].ravel())
         # If self is the largest neighbor, the object should be removed
-        if len(neighbors) >= n:
+        if len(neighbors) >= n and remove_below_threshold:
             neighbors[n] = 0
         # Background should be set to 0
         neighbors[0] = 0
@@ -109,7 +123,7 @@ def _merge_neighbors(array, min_obj_size):
     return merged
 
 
-def merge_objects(labels, diameter, slicewise):
+def merge_objects(labels, diameter, slicewise, remove_below_threshold):
     radius = diameter / 2.0
 
     if labels.ndim == 2 or labels.shape[-1] in (3, 4) or slicewise:
@@ -121,5 +135,5 @@ def merge_objects(labels, diameter, slicewise):
 
     # Only operate slicewise if image is 3D and slicewise requested
     if slicewise and labels.ndim != 2 and labels.shape[-1] not in (3, 4):
-        return numpy.array([_merge_neighbors(x, min_obj_size) for x in labels])
-    return _merge_neighbors(labels, min_obj_size)
+        return numpy.array([_merge_neighbors(x, min_obj_size, remove_below_threshold) for x in labels])
+    return _merge_neighbors(labels, min_obj_size, remove_below_threshold)

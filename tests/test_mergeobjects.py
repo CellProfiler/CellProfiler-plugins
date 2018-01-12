@@ -162,3 +162,46 @@ def test_pass_3d_merge_large_object(volume_labels, module, object_set_empty, obj
 
     # We're filling slice-wise here, so each 2D slice should have the object merged
     numpy.testing.assert_array_equal(actual, expected)
+
+
+def test_2d_keep_nonneighbored_objects(image_labels, module, object_set_empty, objects_empty, workspace_empty):
+    labels = image_labels.copy()
+    # Create "small"
+    labels[0:3, 4:6] = 8
+
+    objects_empty.segmented = labels
+
+    module.x_name.value = "InputObjects"
+    module.y_name.value = "OutputObjects"
+    module.size.value = 4.
+    # Modify threshold removal procedure
+    module.remove_below_threshold.value = False
+
+    module.run(workspace_empty)
+
+    actual = object_set_empty.get_objects("OutputObjects").segmented
+    # Object with no neighbors should not be removed
+    expected = labels
+
+    numpy.testing.assert_array_equal(actual, expected)
+
+
+def test_3d_keep_nonneighbored_object(volume_labels, module, object_set_empty, objects_empty, workspace_empty):
+    labels = volume_labels.copy()
+    labels[0:3, 0:3, 4:6] = 8
+
+    objects_empty.segmented = labels
+
+    module.x_name.value = "InputObjects"
+    module.y_name.value = "OutputObjects"
+    module.size.value = 4.
+    # Modify threshold removal procedure
+    module.remove_below_threshold.value = False
+
+    module.run(workspace_empty)
+
+    actual = object_set_empty.get_objects("OutputObjects").segmented
+    # Object with no neighbors should not be removed
+    expected = labels
+
+    numpy.testing.assert_array_equal(actual, expected)
