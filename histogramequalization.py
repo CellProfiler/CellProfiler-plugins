@@ -15,7 +15,7 @@ import skimage.exposure
 
 
 class HistogramEqualization(cellprofiler.module.ImageProcessing):
-    module_name = "Advanced"
+    module_name = "HistogramEqualization"
 
     variable_revision_number = 1
 

@@ -11,7 +11,7 @@ import skimage.exposure
 
 
 class GammaCorrection(cellprofiler.module.ImageProcessing):
-    module_name = "Advanced"
+    module_name = "GammaCorrection"
 
     variable_revision_number = 1
 
