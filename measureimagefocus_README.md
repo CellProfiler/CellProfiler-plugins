@@ -13,7 +13,7 @@ MYDIR=/tmp/; cd MYDIR
 git clone https://github.com/CellProfiler/CellProfiler-plugins.git  
 cd CellProfiler-plugins/
 Install dependencies. In the terminal, run
-pip install -r measureimagefocus_requirements.txt
+pip install -r requirements.txt
 ```
 
 To run CellProfiler, in the terminal run the following; note you may get import errors, but these can be safely ignored:
