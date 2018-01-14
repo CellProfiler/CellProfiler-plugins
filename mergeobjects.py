@@ -2,7 +2,7 @@
 
 """
 MergeObjects
-===========
+============
 
 **MergeObjects** merges objects below a certain threshold into its most prevalent, adjacent neighbor.
 
