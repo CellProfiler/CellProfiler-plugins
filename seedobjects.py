@@ -62,7 +62,7 @@ class SeedObjects(cellprofiler.module.ObjectProcessing):
 
         self.min_dist = cellprofiler.setting.Integer(
             text="Minimum distance between seeds",
-            value=None,
+            value=-1,
             doc="""\
 Minimum number of pixels separating peaks in a region of `2 * min_distance + 1 `
 (i.e. peaks are separated by at least min_distance). 
@@ -88,12 +88,13 @@ The default minimum is the lowest intensity of the image.
         self.exclude_border = cellprofiler.setting.Integer(
             text="Pixels from border to exclude",
             value=0,
+            minval=0,
             doc="Exclude seed generation from within `n` pixels of the image border."
         )
 
         self.max_seeds = cellprofiler.setting.Integer(
             text="Maximum number of seeds",
-            value=numpy.inf,
+            value=-1,
             doc="""\
 Maximum number of seeds to generate. Default is no limit. 
 When the number of seeds exceeds this number, seeds are chosen 
@@ -150,6 +151,13 @@ Volumetric images will require volumetric structuring elements.
 
 
 def generate_seeds(labels, gaussian_sigma, distance_threshold, intensity_threshold, border, max_seeds, s_elem):
+    # Modify settings to correspond to appropriate library defaults
+    if distance_threshold == -1:
+        distance_threshold = None
+
+    if max_seeds == -1:
+        max_seeds = numpy.inf
+
     # Compute the distance transform
     seeds = scipy.ndimage.distance_transform_edt(labels)
 
