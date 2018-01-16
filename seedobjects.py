@@ -62,7 +62,8 @@ class SeedObjects(cellprofiler.module.ObjectProcessing):
 
         self.min_dist = cellprofiler.setting.Integer(
             text="Minimum distance between seeds",
-            value=-1,
+            value=1,
+            minval=0,
             doc="""\
 Minimum number of pixels separating peaks in a region of `2 * min_distance + 1 `
 (i.e. peaks are separated by at least min_distance). 
@@ -71,17 +72,16 @@ To find the maximum number of peaks, set this value to `1`.
         )
 
         self.min_intensity = cellprofiler.setting.Float(
-            text="Minimum relative internal distance",
-            value=1.,
+            text="Minimum absolute internal distance",
+            value=0.,
             minval=0.,
-            maxval=1.,
             doc="""\
-Minimum relative intensity threshold for seed generation. Since this threshold is
+Minimum absolute intensity threshold for seed generation. Since this threshold is
 applied to the distance transformed image, this defines a minimum object
 "size". Objects smaller than this size will not contain seeds. 
 
-Minimum distance calculated as `max_distance(image) * relative_minimum`.
-The default minimum is the lowest intensity of the image.
+By default, the absolute threshold is the minimum value of the image.
+For distance transformed images, this value is `0` (or the background).
 """
         )
 
@@ -154,9 +154,6 @@ Volumetric images will require volumetric structuring elements.
 
 def generate_seeds(labels, gaussian_sigma, distance_threshold, intensity_threshold, border, max_seeds, s_elem):
     # Modify settings to correspond to appropriate library defaults
-    if distance_threshold == -1:
-        distance_threshold = None
-
     if max_seeds == -1:
         max_seeds = numpy.inf
 
