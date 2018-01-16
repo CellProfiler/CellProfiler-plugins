@@ -118,7 +118,8 @@ Volumetric images will require volumetric structuring elements.
             self.min_dist,
             self.min_intensity,
             self.exclude_border,
-            self.max_seeds
+            self.max_seeds,
+            self.structuring_element
         ]
 
     def visible_settings(self):
@@ -129,7 +130,8 @@ Volumetric images will require volumetric structuring elements.
             self.min_dist,
             self.min_intensity,
             self.exclude_border,
-            self.max_seeds
+            self.max_seeds,
+            self.structuring_element
         ]
 
     def run(self, workspace):
