@@ -41,23 +41,63 @@ class ActiveContourModel(cellprofiler.module.ImageSegmentation):
             value=0
         )
 
+        self.advanced_settings = cellprofiler.setting.Binary(
+            text="Advanced settings",
+            value=False
+        )
+
+        self.pre_threshold = cellprofiler.setting.Float(
+            text="Pre-thresholding factor",
+            value=0.9
+        )
+
+        self.connectivity = cellprofiler.setting.Integer(
+            text="Label connectivity",
+            value=1
+        )
+
+        self.cfl_factor = cellprofiler.setting.Float(
+            text="CFL condition maintenance factor",
+            value=0.45
+        )
+
+        self.sdf_smoothing = cellprofiler.setting.Float(
+            text="SDF smoothing factor",
+            value=0.5
+        )
+
     def settings(self):
         __settings__ = super(ActiveContourModel, self).settings()
 
         return __settings__ + [
             self.iterations,
             self.alpha,
-            self.threshold
+            self.threshold,
+            self.advanced_settings,
+            self.pre_threshold,
+            self.connectivity,
+            self.cfl_factor,
+            self.sdf_smoothing
         ]
 
     def visible_settings(self):
         __settings__ = super(ActiveContourModel, self).settings()
 
-        return __settings__ + [
+        __settings__ += [
             self.iterations,
             self.alpha,
-            self.threshold
+            self.threshold,
+            self.advanced_settings
         ]
+        if self.advanced_settings.value:
+            __settings__ += [
+                self.pre_threshold,
+                self.connectivity,
+                self.cfl_factor,
+                self.sdf_smoothing
+            ]
+        return __settings__
+
 
     def run(self, workspace):
         x_name = self.x_name.value
@@ -72,13 +112,13 @@ class ActiveContourModel(cellprofiler.module.ImageSegmentation):
 
         thresholding = skimage.filters.threshold_otsu(x_data)
 
-        thresholding = thresholding * 0.9
+        thresholding = thresholding * self.pre_threshold.value
 
         binary = x_data > thresholding
 
         y_data, phi = chan_vese(x_data, binary, alpha=self.alpha.value, iterations=self.iterations.value, threshold=self.threshold.value)
 
-        y_data = skimage.measure.label(y_data)
+        y_data = skimage.measure.label(y_data, connectivity=self.connectivity.value)
 
         objects = cellprofiler.object.Objects()
 
