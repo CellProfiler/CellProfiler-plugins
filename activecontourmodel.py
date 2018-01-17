@@ -116,7 +116,13 @@ class ActiveContourModel(cellprofiler.module.ImageSegmentation):
 
         binary = x_data > thresholding
 
-        y_data, phi = chan_vese(x_data, binary, alpha=self.alpha.value, iterations=self.iterations.value, threshold=self.threshold.value)
+        y_data, phi = chan_vese(x_data, 
+                binary, 
+                alpha=self.alpha.value, 
+                iterations=self.iterations.value, 
+                threshold=self.threshold.value, 
+                cfl_factor=self.cfl_factor.value,
+                sdf_smoothing=self.sdf_smoothing.value)
 
         y_data = skimage.measure.label(y_data, connectivity=self.connectivity.value)
 
@@ -141,7 +147,7 @@ class ActiveContourModel(cellprofiler.module.ImageSegmentation):
 epsilon = numpy.finfo(numpy.float).eps
 
 
-def chan_vese(image, mask, iterations, alpha, threshold):
+def chan_vese(image, mask, iterations, alpha, threshold, cfl_factor, sdf_smoothing):
     image = skimage.img_as_float(image)
 
     # -- Create a signed distance map (SDF) from mask
@@ -176,13 +182,13 @@ def chan_vese(image, mask, iterations, alpha, threshold):
             gradient_descent = force / numpy.max(numpy.abs(force)) + alpha * curvature
 
             # -- maintain the CFL condition
-            dt = 0.45 / (numpy.max(numpy.abs(gradient_descent)) + epsilon)
+            dt = cfl_factor / (numpy.max(numpy.abs(gradient_descent)) + epsilon)
 
             # -- evolve the curve
             phi.flat[index] += dt * gradient_descent
 
             # -- Keep SDF smooth
-            phi = sussman(phi, 0.5)
+            phi = sussman(phi, sdf_smoothing)
 
             new_mask = phi <= 0
 
