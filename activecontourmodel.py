@@ -46,6 +46,11 @@ class ActiveContourModel(cellprofiler.module.ImageSegmentation):
             value=False
         )
 
+        self.phi_bound = cellprofiler.setting.Float(
+            text="Phi bound",
+            value=1.2
+        )
+
         self.pre_threshold = cellprofiler.setting.Float(
             text="Pre-thresholding factor",
             value=0.9
@@ -74,6 +79,7 @@ class ActiveContourModel(cellprofiler.module.ImageSegmentation):
             self.alpha,
             self.threshold,
             self.advanced_settings,
+            self.phi_bound,
             self.pre_threshold,
             self.connectivity,
             self.cfl_factor,
@@ -91,6 +97,7 @@ class ActiveContourModel(cellprofiler.module.ImageSegmentation):
         ]
         if self.advanced_settings.value:
             __settings__ += [
+                self.phi_bound,
                 self.pre_threshold,
                 self.connectivity,
                 self.cfl_factor,
@@ -121,6 +128,7 @@ class ActiveContourModel(cellprofiler.module.ImageSegmentation):
                 alpha=self.alpha.value, 
                 iterations=self.iterations.value, 
                 threshold=self.threshold.value, 
+                phi_bound=self.phi_bound.value,
                 cfl_factor=self.cfl_factor.value,
                 sdf_smoothing=self.sdf_smoothing.value)
 
@@ -147,7 +155,7 @@ class ActiveContourModel(cellprofiler.module.ImageSegmentation):
 epsilon = numpy.finfo(numpy.float).eps
 
 
-def chan_vese(image, mask, iterations, alpha, threshold, cfl_factor, sdf_smoothing):
+def chan_vese(image, mask, iterations, alpha, threshold, phi_bound, cfl_factor, sdf_smoothing):
     image = skimage.img_as_float(image)
 
     # -- Create a signed distance map (SDF) from mask
@@ -164,7 +172,7 @@ def chan_vese(image, mask, iterations, alpha, threshold, cfl_factor, sdf_smoothi
 
     while iteration < iterations and not stop:
         # get the curve's narrow band
-        index = numpy.flatnonzero(numpy.logical_and(phi <= 1.2, phi >= -1.2))
+        index = numpy.flatnonzero(numpy.logical_and(phi <= phi_bound, phi >= -phi_bound))
 
         if len(index) > 0:
             interior_points = numpy.flatnonzero(phi <= 0)
