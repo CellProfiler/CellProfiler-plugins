@@ -18,6 +18,13 @@ import skimage.measure
 import skimage.segmentation
 
 
+DIFFERENTIAL_METHOD = "Partial differential equation Chan-Vese"
+MORPH_GEODESIC_METHOD = "Morphological geodesic"
+MORPH_CHAN_VESE_METHOD = "Morphological Chan-Vese"
+LEVEL_SET_CIRCLE = "circle"
+LEVEL_SET_CHECKERBOARD = 'checkerboard'
+
+
 class ActiveContourModel(cellprofiler.module.ImageSegmentation):
     module_name = "Active contour model"
 
@@ -26,23 +33,34 @@ class ActiveContourModel(cellprofiler.module.ImageSegmentation):
     def create_settings(self):
         super(ActiveContourModel, self).create_settings()
 
+        self.method = cellprofiler.setting.Choice(
+            text="Active contour method",
+            choices=[DIFFERENTIAL_METHOD,
+                     MORPH_GEODESIC_METHOD,
+                     MORPH_CHAN_VESE_METHOD],
+            value=DIFFERENTIAL_METHOD,
+        )
+
+        # Shared by all three methods
         self.iterations = cellprofiler.setting.Integer(
             text="Iterations",
             value=20
         )
 
-        self.alpha = cellprofiler.setting.Float(
-            text="Alpha",
-            value=0.2
-        )
-
+        # Shared by all three methods
         self.threshold = cellprofiler.setting.Float(
             text="Threshold",
             value=0
         )
 
+        # Pre-processing settings
+        self.pde_alpha = cellprofiler.setting.Float(
+            text="Alpha",
+            value=0.2
+        )
+
         self.advanced_settings = cellprofiler.setting.Binary(
-            text="Advanced settings",
+            text="Advanced settings for PDE method",
             value=False
         )
 
@@ -71,19 +89,66 @@ class ActiveContourModel(cellprofiler.module.ImageSegmentation):
             value=0.5
         )
 
+        # Shared morph settings
+        self.level_set = cellprofiler.setting.Choice(
+            text="Initial level set",
+            choices=[LEVEL_SET_CIRCLE, LEVEL_SET_CHECKERBOARD],
+            value=LEVEL_SET_CIRCLE
+        )
+
+        self.alpha = cellprofiler.setting.Float(
+            text="Alpha",
+            value=100.0
+        )
+
+        self.sigma = cellprofiler.setting.Float(
+            text="Sigma",
+            value=5.0
+        )
+
+        self.smoothing = cellprofiler.setting.Integer(
+            text="Smoothing",
+            value=1,
+            minval=0
+        )
+
+        # Geodesic settings
+        self.balloon = cellprofiler.setting.Float(
+            text="Ballon force",
+            value=0.
+        )
+
+        # Morph Chan-Vese settings
+        self.lambda1 = cellprofiler.setting.Float(
+            text="Outer region weight",
+            value=1.
+        )
+
+        self.lambda2 = cellprofiler.setting.Float(
+            text="Inner region weight",
+            value=1.
+        )
+
     def settings(self):
         __settings__ = super(ActiveContourModel, self).settings()
 
         return __settings__ + [
             self.iterations,
-            self.alpha,
             self.threshold,
+            self.pde_alpha,
             self.advanced_settings,
             self.phi_bound,
             self.pre_threshold,
             self.connectivity,
             self.cfl_factor,
-            self.sdf_smoothing
+            self.sdf_smoothing,
+            self.level_set,
+            self.alpha,
+            self.sigma,
+            self.smoothing,
+            self.balloon,
+            self.lambda1,
+            self.lambda2
         ]
 
     def visible_settings(self):
@@ -91,7 +156,7 @@ class ActiveContourModel(cellprofiler.module.ImageSegmentation):
 
         __settings__ += [
             self.iterations,
-            self.alpha,
+            self.pde_alpha,
             self.threshold,
             self.advanced_settings
         ]
@@ -123,14 +188,14 @@ class ActiveContourModel(cellprofiler.module.ImageSegmentation):
 
         binary = x_data > thresholding
 
-        y_data, phi = chan_vese(x_data, 
-                binary, 
-                alpha=self.alpha.value, 
-                iterations=self.iterations.value, 
-                threshold=self.threshold.value, 
-                phi_bound=self.phi_bound.value,
-                cfl_factor=self.cfl_factor.value,
-                sdf_smoothing=self.sdf_smoothing.value)
+        y_data, phi = chan_vese(x_data,
+                                binary,
+                                alpha=self.pde_alpha.value,
+                                iterations=self.iterations.value,
+                                threshold=self.threshold.value,
+                                phi_bound=self.phi_bound.value,
+                                cfl_factor=self.cfl_factor.value,
+                                sdf_smoothing=self.sdf_smoothing.value)
 
         y_data = skimage.measure.label(y_data, connectivity=self.connectivity.value)
 
