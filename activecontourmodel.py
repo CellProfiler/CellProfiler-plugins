@@ -133,6 +133,7 @@ class ActiveContourModel(cellprofiler.module.ImageSegmentation):
         __settings__ = super(ActiveContourModel, self).settings()
 
         return __settings__ + [
+            self.method,
             self.iterations,
             self.threshold,
             self.pde_alpha,
@@ -154,22 +155,47 @@ class ActiveContourModel(cellprofiler.module.ImageSegmentation):
     def visible_settings(self):
         __settings__ = super(ActiveContourModel, self).settings()
 
+        # Shared by all three methods
         __settings__ += [
+            self.method,
             self.iterations,
-            self.pde_alpha,
             self.threshold,
-            self.advanced_settings
         ]
-        if self.advanced_settings.value:
-            __settings__ += [
-                self.phi_bound,
-                self.pre_threshold,
-                self.connectivity,
-                self.cfl_factor,
-                self.sdf_smoothing
-            ]
-        return __settings__
 
+        # Add PDE settings
+        if self.method.value == DIFFERENTIAL_METHOD:
+            __settings__ += [
+                self.pde_alpha,
+                self.advanced_settings,
+            ]
+            if self.advanced_settings.value:
+                __settings__ += [
+                    self.phi_bound,
+                    self.pre_threshold,
+                    self.connectivity,
+                    self.cfl_factor,
+                    self.sdf_smoothing
+                ]
+
+        # Add common settings
+        elif self.method.value in [MORPH_GEODESIC_METHOD, MORPH_CHAN_VESE_METHOD]:
+            __settings__ += [
+                self.level_set,
+                self.alpha,
+                self.sigma,
+                self.smoothing
+            ]
+            # Add individual settings
+            if self.method.value == MORPH_GEODESIC_METHOD:
+                __settings__ += [
+                    self.balloon
+                ]
+            elif self.method.value == MORPH_CHAN_VESE_METHOD:
+                __settings__ += [
+                    self.lambda1,
+                    self.lambda2
+                ]
+        return __settings__
 
     def run(self, workspace):
         x_name = self.x_name.value
@@ -182,20 +208,50 @@ class ActiveContourModel(cellprofiler.module.ImageSegmentation):
 
         x_data = x.pixel_data
 
-        thresholding = skimage.filters.threshold_otsu(x_data)
+        y_data = None
 
-        thresholding = thresholding * self.pre_threshold.value
+        if self.method.value == DIFFERENTIAL_METHOD:
+            thresholding = skimage.filters.threshold_otsu(x_data)
 
-        binary = x_data > thresholding
+            thresholding = thresholding * self.pre_threshold.value
 
-        y_data, phi = chan_vese(x_data,
-                                binary,
-                                alpha=self.pde_alpha.value,
-                                iterations=self.iterations.value,
-                                threshold=self.threshold.value,
-                                phi_bound=self.phi_bound.value,
-                                cfl_factor=self.cfl_factor.value,
-                                sdf_smoothing=self.sdf_smoothing.value)
+            binary = x_data > thresholding
+
+            y_data, phi = chan_vese(x_data,
+                                    binary,
+                                    alpha=self.pde_alpha.value,
+                                    iterations=self.iterations.value,
+                                    threshold=self.threshold.value,
+                                    phi_bound=self.phi_bound.value,
+                                    cfl_factor=self.cfl_factor.value,
+                                    sdf_smoothing=self.sdf_smoothing.value)
+
+        else:
+            # Perform preprocessing for either method
+            pre_process = skimage.segmentation.inverse_gaussian_gradient(x_data,
+                                                                         alpha=self.alpha.value,
+                                                                         sigma=self.sigma.value)
+            threshold_policy = 'auto' if self.threshold.value == 0 else self.threshold.value
+
+            if self.method.value == MORPH_GEODESIC_METHOD:
+                y_data = skimage.segmentation \
+                    .morphological_geodesic_active_contour(pre_process,
+                                                           iterations=self.iterations.value,
+                                                           smoothing=self.smoothing.value,
+                                                           init_level_set=self.level_set.value,
+                                                           threshold=threshold_policy,
+                                                           balloon=self.balloon.value
+                                                           )
+
+            elif self.method.value == MORPH_CHAN_VESE_METHOD:
+                y_data = skimage.segmentation \
+                    .morphological_chan_vese(pre_process,
+                                             iterations=self.iterations.value,
+                                             smoothing=self.smoothing.value,
+                                             init_level_set=self.level_set.value,
+                                             lambda1=self.lambda1.value,
+                                             lambda2=self.lambda2.value
+                                             )
 
         y_data = skimage.measure.label(y_data, connectivity=self.connectivity.value)
 
