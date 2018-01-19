@@ -22,7 +22,7 @@ DIFFERENTIAL_METHOD = "Partial differential equation Chan-Vese"
 MORPH_GEODESIC_METHOD = "Morphological geodesic"
 MORPH_CHAN_VESE_METHOD = "Morphological Chan-Vese"
 LEVEL_SET_CIRCLE = "circle"
-LEVEL_SET_CHECKERBOARD = 'checkerboard'
+LEVEL_SET_CHECKERBOARD = "checkerboard"
 
 
 class ActiveContourModel(cellprofiler.module.ImageSegmentation):
@@ -47,7 +47,7 @@ class ActiveContourModel(cellprofiler.module.ImageSegmentation):
             value=20
         )
 
-        # Shared by all three methods
+        # Only shared by PDE and GEODESIC
         self.threshold = cellprofiler.setting.Float(
             text="Threshold",
             value=0
@@ -90,12 +90,6 @@ class ActiveContourModel(cellprofiler.module.ImageSegmentation):
         )
 
         # Shared morph settings
-        self.level_set = cellprofiler.setting.Choice(
-            text="Initial level set",
-            choices=[LEVEL_SET_CIRCLE, LEVEL_SET_CHECKERBOARD],
-            value=LEVEL_SET_CIRCLE
-        )
-
         self.alpha = cellprofiler.setting.Float(
             text="Alpha",
             value=100.0
@@ -104,6 +98,33 @@ class ActiveContourModel(cellprofiler.module.ImageSegmentation):
         self.sigma = cellprofiler.setting.Float(
             text="Sigma",
             value=5.0
+        )
+
+        self.level_set = cellprofiler.setting.Choice(
+            text="Initial level set",
+            choices=[LEVEL_SET_CIRCLE, LEVEL_SET_CHECKERBOARD],
+            value=LEVEL_SET_CIRCLE
+        )
+
+        self.adv_level_set = cellprofiler.setting.Binary(
+            text="Advanced level set options",
+            value=False
+        )
+
+        self.circle_center = cellprofiler.setting.Coordinates(
+            text="Circle level set center",
+            value=(-1,-1)
+        )
+
+        self.circle_radius = cellprofiler.setting.Float(
+            text="Circle level set radius",
+            value=-1.
+        )
+
+        self.checkerboard_size = cellprofiler.setting.Integer(
+            text="Checkerboard level set square size",
+            value=5,
+            minval=0
         )
 
         self.smoothing = cellprofiler.setting.Integer(
@@ -143,9 +164,13 @@ class ActiveContourModel(cellprofiler.module.ImageSegmentation):
             self.connectivity,
             self.cfl_factor,
             self.sdf_smoothing,
-            self.level_set,
             self.alpha,
             self.sigma,
+            self.level_set,
+            self.adv_level_set,
+            self.circle_center,
+            self.circle_radius,
+            self.checkerboard_size,
             self.smoothing,
             self.balloon,
             self.lambda1,
@@ -159,13 +184,13 @@ class ActiveContourModel(cellprofiler.module.ImageSegmentation):
         __settings__ += [
             self.method,
             self.iterations,
-            self.threshold,
         ]
 
         # Add PDE settings
         if self.method.value == DIFFERENTIAL_METHOD:
             __settings__ += [
                 self.pde_alpha,
+                self.threshold,
                 self.advanced_settings,
             ]
             if self.advanced_settings.value:
@@ -180,14 +205,29 @@ class ActiveContourModel(cellprofiler.module.ImageSegmentation):
         # Add common settings
         elif self.method.value in [MORPH_GEODESIC_METHOD, MORPH_CHAN_VESE_METHOD]:
             __settings__ += [
-                self.level_set,
                 self.alpha,
                 self.sigma,
+                self.level_set,
+                self.adv_level_set,
                 self.smoothing
             ]
+
+            # Advanced settings for level setting
+            if self.adv_level_set.value:
+                if self.level_set.value == LEVEL_SET_CIRCLE:
+                    __settings__ += [
+                        self.circle_center,
+                        self.circle_radius
+                    ]
+                elif self.level_set.value == LEVEL_SET_CHECKERBOARD:
+                    __settings__ += [
+                        self.checkerboard_size
+                    ]
+
             # Add individual settings
             if self.method.value == MORPH_GEODESIC_METHOD:
                 __settings__ += [
+                    self.threshold,
                     self.balloon
                 ]
             elif self.method.value == MORPH_CHAN_VESE_METHOD:
@@ -231,14 +271,33 @@ class ActiveContourModel(cellprofiler.module.ImageSegmentation):
             pre_process = skimage.segmentation.inverse_gaussian_gradient(x_data,
                                                                          alpha=self.alpha.value,
                                                                          sigma=self.sigma.value)
-            threshold_policy = 'auto' if self.threshold.value == 0 else self.threshold.value
+            level_set = self.level_set.value
+            # Change default settings only if asked to
+            if self.adv_level_set:
+
+                if self.level_set.value == LEVEL_SET_CIRCLE:
+                    center_x = self.circle_center.x
+                    center_y = self.circle_center.y
+                    radius = self.circle_radius.value
+                    assert (center_x == center_y == -1) or (center_x != -1 and center_y != -1), \
+                        "Coordinates must either both be -1 (default) or both positive"
+                    level_set = skimage.segmentation.circle_level_set(pre_process.shape,
+                                                                      center=(center_x, center_y),
+                                                                      radius=radius)
+                elif self.level_set.value == LEVEL_SET_CHECKERBOARD:
+                    square_size = self.checkerboard_size.value
+                    level_set = skimage.segmentation.checkerboard_level_set(pre_process.shape,
+                                                                            square_size=square_size)
 
             if self.method.value == MORPH_GEODESIC_METHOD:
+
+                threshold_policy = 'auto' if self.threshold.value == 0 else self.threshold.value
+
                 y_data = skimage.segmentation \
                     .morphological_geodesic_active_contour(pre_process,
                                                            iterations=self.iterations.value,
                                                            smoothing=self.smoothing.value,
-                                                           init_level_set=self.level_set.value,
+                                                           init_level_set=level_set,
                                                            threshold=threshold_policy,
                                                            balloon=self.balloon.value
                                                            )
@@ -248,7 +307,7 @@ class ActiveContourModel(cellprofiler.module.ImageSegmentation):
                     .morphological_chan_vese(pre_process,
                                              iterations=self.iterations.value,
                                              smoothing=self.smoothing.value,
-                                             init_level_set=self.level_set.value,
+                                             init_level_set=level_set,
                                              lambda1=self.lambda1.value,
                                              lambda2=self.lambda2.value
                                              )
