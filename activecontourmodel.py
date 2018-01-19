@@ -270,13 +270,9 @@ class ActiveContourModel(cellprofiler.module.ImageSegmentation):
                                     sdf_smoothing=self.sdf_smoothing.value)
 
         else:
-            # Perform preprocessing for either method
-            pre_process = skimage.segmentation.inverse_gaussian_gradient(x_data,
-                                                                         alpha=self.alpha.value,
-                                                                         sigma=self.sigma.value)
-            level_set = self.level_set.value
+            level_set = str(self.level_set.value)
             # Change default settings only if asked to
-            if self.adv_level_set:
+            if self.adv_level_set.value:
 
                 if self.level_set.value == LEVEL_SET_CIRCLE:
                     # TODO: fix this for 3d images
@@ -292,15 +288,19 @@ class ActiveContourModel(cellprofiler.module.ImageSegmentation):
                         if len(x_data.shape) == 3:
                             raise NotImplementedError("3D center selection not yet implemented")
                         center = (center_x, center_y)
-                    level_set = skimage.segmentation.circle_level_set(pre_process.shape,
+                    level_set = skimage.segmentation.circle_level_set(x_data.shape,
                                                                       center=center,
                                                                       radius=radius)
                 elif self.level_set.value == LEVEL_SET_CHECKERBOARD:
                     square_size = self.checkerboard_size.value
-                    level_set = skimage.segmentation.checkerboard_level_set(pre_process.shape,
+                    level_set = skimage.segmentation.checkerboard_level_set(x_data.shape,
                                                                             square_size=square_size)
 
             if self.method.value == MORPH_GEODESIC_METHOD:
+                # Perform preprocessing for geodesic method
+                pre_process = skimage.segmentation.inverse_gaussian_gradient(x_data,
+                                                                             alpha=self.alpha.value,
+                                                                             sigma=self.sigma.value)
 
                 threshold_policy = 'auto' if self.threshold.value == 0 else self.threshold.value
 
@@ -315,7 +315,7 @@ class ActiveContourModel(cellprofiler.module.ImageSegmentation):
 
             elif self.method.value == MORPH_CHAN_VESE_METHOD:
                 y_data = skimage.segmentation \
-                    .morphological_chan_vese(pre_process,
+                    .morphological_chan_vese(x_data,
                                              iterations=self.iterations.value,
                                              smoothing=self.smoothing.value,
                                              init_level_set=level_set,
