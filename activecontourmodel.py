@@ -209,7 +209,6 @@ class ActiveContourModel(cellprofiler.module.ImageSegmentation):
                 self.sigma,
                 self.level_set,
                 self.adv_level_set,
-                self.smoothing
             ]
 
             # Advanced settings for level setting
@@ -224,6 +223,10 @@ class ActiveContourModel(cellprofiler.module.ImageSegmentation):
                         self.checkerboard_size
                     ]
 
+            # Add common smoothing function after level setting options
+            __settings__ += [
+                self.smoothing
+            ]
             # Add individual settings
             if self.method.value == MORPH_GEODESIC_METHOD:
                 __settings__ += [
@@ -276,13 +279,21 @@ class ActiveContourModel(cellprofiler.module.ImageSegmentation):
             if self.adv_level_set:
 
                 if self.level_set.value == LEVEL_SET_CIRCLE:
+                    # TODO: fix this for 3d images
                     center_x = self.circle_center.x
                     center_y = self.circle_center.y
                     radius = self.circle_radius.value
                     assert (center_x == center_y == -1) or (center_x != -1 and center_y != -1), \
                         "Coordinates must either both be -1 (default) or both positive"
+
+                    if center_x == center_y == -1:
+                        center = None
+                    else:
+                        if len(x_data.shape) == 3:
+                            raise NotImplementedError("3D center selection not yet implemented")
+                        center = (center_x, center_y)
                     level_set = skimage.segmentation.circle_level_set(pre_process.shape,
-                                                                      center=(center_x, center_y),
+                                                                      center=center,
                                                                       radius=radius)
                 elif self.level_set.value == LEVEL_SET_CHECKERBOARD:
                     square_size = self.checkerboard_size.value
