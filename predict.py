@@ -147,7 +147,8 @@ Select the project type which matches the project file specified by
         elif self.project_type.value in ["Autocontext (2-stage)"]:
             x_data = skimage.img_as_ubyte(x_data)  # ilastik requires UINT8. Might be relaxed in future.
 
-            cmd = ["--export_source", "probabilities stage 2"]
+            cmd += ["--export_source", "probabilities stage 2"]
+            #cmd += ["--export_source", "probabilities all stages"]
 
         cmd += [
             "--output_filename_format", fout.name,
@@ -156,7 +157,14 @@ Select the project type which matches the project file specified by
 
         try:
             with h5py.File(fin.name, "w") as f:
-                f.create_dataset("data", data=x_data)
+                shape = x_data.shape
+
+                if x_data.ndim == 2:
+                  # ilastik appears to add a channel dimension
+                  # even if the image is grayscale
+                  shape += (1,)
+                
+                f.create_dataset("data", shape, data=x_data)
 
             fin.close()
 
