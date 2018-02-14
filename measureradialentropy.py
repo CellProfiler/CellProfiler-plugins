@@ -13,6 +13,7 @@ intensity inside a certain object
 
 import numpy
 import scipy.stats
+import skimage.measure
 
 import cellprofiler.module as cpm
 import cellprofiler.measurement as cpmeas
@@ -77,7 +78,11 @@ class MeasurementTemplate(cpm.Module):
 
         indexes = objects.indices
         #Calculate the center of the objects- I'm guessing there's a better way to do this but this was already here
-        centers, radius = minimum_enclosing_circle(labels, indexes)
+        #centers, radius = minimum_enclosing_circle(labels, indexes)
+        # minimum_enclosing_circle returns confusing results, b/c if the input objects are not necessarily round then
+        # the returned center is frequently not within the object of interest
+        my_props = skimage.measure.regionprops(labels)
+        centers = numpy.asarray([props.centroid for props in my_props])
 
         feature = self.get_measurement_name(input_image_name,metric,bins)
         #Do the actual calculation
@@ -132,6 +137,11 @@ class MeasurementTemplate(cpm.Module):
                     else:
                         pixeldict[sliceno] += [objects[i1, i2]]
                 objectiter.iternext()
+            # in the case that the object will not have pixels in a given slice, a value must still be given
+            for sliceno in range(1,nbins+1):
+                if sliceno not in pixeldict.keys():
+                    pixeldict[sliceno]=[numpy.nan]
+
             entropy,slicemeasurements=self.calculate_entropy(pixeldict,metric)
             entropylist.append(entropy)
             slicemeasurementlist.append(slicemeasurements)
@@ -152,7 +162,9 @@ class MeasurementTemplate(cpm.Module):
                 slicemeasurements.append(numpy.sum(pixeldict[eachslice]))
         slicemeasurements=numpy.array(slicemeasurements, dtype=float)
         #Calculate entropy, and let scipy handle the normalization for you
-        entropy=scipy.stats.entropy(slicemeasurements)
+        # mask out the nan values
+        slicemeasurements_mask = numpy.ma.array(slicemeasurements, mask=numpy.isnan(slicemeasurements))
+        entropy=scipy.stats.entropy(slicemeasurements_mask)
         return entropy, slicemeasurements
 
 
