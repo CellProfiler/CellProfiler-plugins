@@ -79,6 +79,11 @@ class RunImageJ(cellprofiler.module.Module):
 
     @staticmethod
     def is_friendly_module(module):
+        # HACK: Filter out nastily long and useless modules.
+        if module.startswith('command:net.imagej.plugins.commands.misc.ApplyLookupTable(') or \
+                module.startswith('command:org.scijava.plugins.commands.io.OpenFile('):
+            return False
+
         # TODO: Filter modules by headless flag. Server needs to give more info.
         # That said: server should just have a mode for headless-only or not.
         # Then we won't have to detail every module up front anyway.
