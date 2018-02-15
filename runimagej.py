@@ -1,6 +1,9 @@
 import cellprofiler.module
 import cellprofiler.setting
 import imagej
+import logging
+
+logger = logging.getLogger(__name__)
 
 BOOL_TYPES = [
     "boolean",
@@ -96,8 +99,8 @@ class RunImageJ(cellprofiler.module.ImageProcessing):
         inputs = details["inputs"]
 
         # # FOR DEBUGGING
-        # import json
-        # print(json.dumps(details, indent=4))
+        import json
+        logger.debug(json.dumps(details, indent=4))
 
         for input_ in inputs:
             name = input_["name"]
@@ -121,7 +124,7 @@ class RunImageJ(cellprofiler.module.ImageProcessing):
     def make_setting(self, input_):
         raw_type = input_["rawType"]
         if raw_type in IGNORE_TYPES:
-            # print("**** Ignoring input: '" + input_["name"] + "' of type '" + raw_type + "' ****")
+            logger.debug("**** Ignoring input: '" + input_["name"] + "' of type '" + raw_type + "' ****")
             return None
 
         label = input_["label"]
@@ -165,7 +168,7 @@ class RunImageJ(cellprofiler.module.ImageProcessing):
             return cellprofiler.setting.Choice(text, choices)
 
         # TODO: handle error somehow -- maybe put a label saying "unsupported input: blah"
-        # print("**** Unsupported input: '" + input_["name"] + "' of type '" + raw_type + "' ****")
+        logger.debug("**** Unsupported input: '" + input_["name"] + "' of type '" + raw_type + "' ****")
         return None
 
     def clamp(self, value, minval):
