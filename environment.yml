@@ -43,6 +43,7 @@ dependencies:
     - cellh5
     - centrosome
     - inflect
+    - imagej
     - prokaryote==2.3.2
     - javabridge==1.0.15
     - microscopeimagequality
