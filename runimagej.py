@@ -85,13 +85,13 @@ class RunImageJ(cellprofiler.module.Module):
         return True
 
     def on_setting_changed(self, setting, pipeline):
-        if not setting == self.ijmodule:
+        if not setting == self.ij_module:
             return
 
-        self.create_ijsettings(setting.value)
+        self.create_ij_settings(setting.value)
 
-    def create_ijsettings(self, module_name):
-        self.ijsettings = cellprofiler.setting.SettingsGroup()
+    def create_ij_settings(self, module_name):
+        self.ij_settings = cellprofiler.setting.SettingsGroup()
 
         # Get the module and the module details
         ij = imagej.IJ()
@@ -120,7 +120,7 @@ class RunImageJ(cellprofiler.module.Module):
 
             setting = self.make_setting(input_)
             if setting is not None:
-                self.ijsettings.append(name, setting)
+                self.ij_settings.append(name, setting)
 
     def make_setting(self, input_):
         raw_type = input_["rawType"]
@@ -181,18 +181,18 @@ class RunImageJ(cellprofiler.module.Module):
     # Define settings as instance variables
     # Available settings are in in cellprofiler.settings
     def create_settings(self):
-        self.ijmodule = cellprofiler.setting.Choice(
+        self.ij_module = cellprofiler.setting.Choice(
             "ImageJ module",
             choices=self.get_ij_modules()
         )
 
-        self.create_ijsettings(self.ijmodule.value)
+        self.create_ij_settings(self.ij_module.value)
 
     # Returns the list of available settings
     # This is primarily used to load/save the .cppipe/.cpproj files
     def settings(self):
-        settings = [self.ijmodule]
-        settings += self.ijsettings.settings
+        settings = [self.ij_module]
+        settings += self.ij_settings.settings
 
         return settings
 
