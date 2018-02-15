@@ -6,34 +6,39 @@ name: cellprofiler-plugins
 channels:
   - anaconda
   - goodman # mysql-python for mac
+  - hanslovsky # imglib2-imglyb
+  - damianavila82 # rise
   - bioconda
   - cyclus # java-jdk for windows
   - conda-forge # libxml2 for windows
 dependencies:
   - appdirs
   - h5py
+  - imglib2-imglyb
+  - ipywidgets
   - java-jdk
+  - jupyter
   - libtiff
   - libxml2
   - libxslt
   - lxml
-  - packaging
-  - pillow
-  - pip
-  - python=2
-  - pyzmq=15.3.0
   - mahotas
   - matplotlib!=2.1.0,>2.0.0
   - mysql-python
   - numpy
-  - raven
+  - openjdk>=8.0.152
+  - packaging
+  - pandas
+  - pillow
+  - pip
+  - python=2
+  - pyzmq=15.3.0
   - requests
+  - rise
   - scikit-image
   - scikit-learn
   - scipy
-  - sphinx
   - tifffile
-  - wxpython
   - pip:
     - cellh5
     - centrosome
