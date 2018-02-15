@@ -61,6 +61,11 @@ class RunImageJ(cellprofiler.module.ImageProcessing):
             if raw_type.endswith("Service") or raw_type == "org.scijava.Context":
                 continue
 
+            # TODO:
+            # - Exclude inappropriate visibilities
+            #   But ImageJ server does not tell us right now
+            # - Add outputs
+
             self.ijsettings.append(
                 name,
                 cellprofiler.setting.Text(name, str(default_value))
