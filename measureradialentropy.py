@@ -78,11 +78,11 @@ class MeasurementTemplate(cpm.Module):
 
         indexes = objects.indices
         #Calculate the center of the objects- I'm guessing there's a better way to do this but this was already here
-        centers, radius = minimum_enclosing_circle(labels, indexes)
+        #centers, radius = minimum_enclosing_circle(labels, indexes)
         # minimum_enclosing_circle returns confusing results, b/c if the input objects are not necessarily round then
         # the returned center is frequently not within the object of interest
         my_props = skimage.measure.regionprops(labels)
-        #centers = numpy.asarray([props.centroid for props in my_props])
+        centers = numpy.asarray([props.centroid for props in my_props])
 
         feature = self.get_measurement_name(input_image_name,metric,bins)
         #Do the actual calculation
