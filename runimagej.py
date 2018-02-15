@@ -54,6 +54,13 @@ class RunImageJ(cellprofiler.module.ImageProcessing):
             name = input_["name"]
             default_value = input_["defaultValue"]
 
+            input_["rawType"] = raw_type = input_["genericType"].split("<")[0].split(" ")[-1]
+
+            # HACK: For now, we skip service and context parameters.
+            # Later, the ImageJ Server will filter these out for us.
+            if raw_type.endswith("Service") or raw_type == "org.scijava.Context":
+                continue
+
             self.ijsettings.append(
                 name,
                 cellprofiler.setting.Text(name, str(default_value))
