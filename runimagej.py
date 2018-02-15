@@ -1,3 +1,5 @@
+# coding=utf-8
+
 import cellprofiler.module
 import cellprofiler.setting
 import imagej
@@ -125,6 +127,27 @@ class RunImageJ(cellprofiler.module.Module):
             setting = self.make_setting(input_)
             if setting is not None:
                 self.ij_settings.append(name, setting)
+
+        # Aggregate list of supported outputs.
+        outputs = []
+        for output in details["outputs"]:
+            raw_type = output["genericType"].split("<")[0].split(" ")[-1]
+            output['rawType'] = raw_type
+            if raw_type in IMAGE_TYPES:
+                outputs.append(output)
+
+        # Add divider if any outputs are supported.
+        if len(outputs) > 0:
+            # add divider
+            self.ij_settings.append("divider", cellprofiler.setting.Divider(u"———OUTPUTS———"))
+
+        # Append CP settings for matching outputs.
+        for output in outputs:
+            if output['rawType'] in IMAGE_TYPES:
+                label = output["label"]
+                text = label if label and not label == "" else output["name"]
+                setting = cellprofiler.setting.ImageNameProvider(text)
+                self.ij_settings.append("output_" + output["name"], setting)
 
     def make_setting(self, input_):
         raw_type = input_["rawType"]
