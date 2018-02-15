@@ -21,8 +21,15 @@ class RunImageJ(cellprofiler.module.ImageProcessing):
         # on the Choice setting. :(
         ij = imagej.IJ()
         modules = ij.modules()
-        modules = [module.split(".")[-1] for module in modules]
+        modules = [module.split(".")[-1] for module in modules if RunImageJ.is_friendly_module(module)]
         return modules
+
+    @staticmethod
+    def is_friendly_module(module):
+        # TODO: Filter modules by headless flag. Server needs to give more info.
+        # That said: server should just have a mode for headless-only or not.
+        # Then we won't have to detail every module up front anyway.
+        return True
 
     def on_setting_changed(self, setting, pipeline):
         if not setting == self.ijmodule:
