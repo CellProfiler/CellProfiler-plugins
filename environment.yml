@@ -1,0 +1,45 @@
+# run: conda env create -f environment.yml
+# run: conda env update -f environment.yml
+# run: conda env remove -n cellprofiler-plugins
+name: cellprofiler-plugins
+# in order of priority: lowest (top) to highest (bottom)
+channels:
+  - anaconda
+  - goodman # mysql-python for mac
+  - bioconda
+  - cyclus # java-jdk for windows
+  - conda-forge # libxml2 for windows
+dependencies:
+  - appdirs
+  - h5py
+  - java-jdk
+  - libtiff
+  - libxml2
+  - libxslt
+  - lxml
+  - packaging
+  - pillow
+  - pip
+  - python=2
+  - pyzmq=15.3.0
+  - mahotas
+  - matplotlib!=2.1.0,>2.0.0
+  - mysql-python
+  - numpy
+  - raven
+  - requests
+  - scikit-image
+  - scikit-learn
+  - scipy
+  - sphinx
+  - tifffile
+  - wxpython
+  - pip:
+    - cellh5
+    - centrosome
+    - inflect
+    - prokaryote==2.3.2
+    - javabridge==1.0.15
+    - microscopeimagequality
+    - python-bioformats==1.3.1
+    - git+https://github.com/CellProfiler/CellProfiler.git@master
