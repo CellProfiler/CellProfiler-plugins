@@ -71,7 +71,7 @@ class RunImageJ(cellprofiler.module.ImageProcessing):
         ij = imagej.IJ()
         modules = ij.modules()
         modules = [module.split(".")[-1] for module in modules if RunImageJ.is_friendly_module(module)]
-        return modules
+        return sorted(modules)
 
     @staticmethod
     def is_friendly_module(module):
