@@ -102,13 +102,12 @@ class RunImageJ(cellprofiler.module.Module):
         ij = imagej.IJ()
         module = ij.find(module_name)[0]
         details = ij.detail(module)
-        inputs = details["inputs"]
 
         # # FOR DEBUGGING
         import json
         logger.debug(json.dumps(details, indent=4))
 
-        for input_ in inputs:
+        for input_ in details["inputs"]:
             name = input_["name"]
             default_value = input_["defaultValue"]
             input_["rawType"] = raw_type = input_["genericType"].split("<")[0].split(" ")[-1]
