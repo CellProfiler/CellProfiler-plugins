@@ -6,6 +6,9 @@ import imagej
 import logging
 import json
 
+# TODO:
+# - Saving and loading pipeline does not preserve module-specific settings.
+
 logger = logging.getLogger(__name__)
 
 BOOL_TYPES = [
