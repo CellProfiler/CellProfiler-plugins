@@ -86,9 +86,6 @@ class RunImageJ(cellprofiler.module.Module):
                 module.startswith('command:org.scijava.plugins.commands.io.OpenFile('):
             return False
 
-        # TODO: Filter modules by headless flag. Server needs to give more info.
-        # That said: server should just have a mode for headless-only or not.
-        # Then we won't have to detail every module up front anyway.
         return True
 
     def on_setting_changed(self, setting, pipeline):
