@@ -1,13 +1,16 @@
 # coding=utf-8
 
 import StringIO
+import json
 import logging
+import tempfile
 
 import cellprofiler.image
 import cellprofiler.module
 import cellprofiler.setting
 import imagej
 import numpy as np
+import skimage.io
 from PIL import Image
 
 # TODO:
@@ -251,19 +254,27 @@ class RunImageJ(cellprofiler.module.Module):
         for details, setting in zip(self.inputs, self.input_settings.settings):
             name = details["name"]
             value = self._input_value(setting, workspace)
-            inputs[name] = value
 
             # Remember input images if they should be shown.
             if isinstance(setting, cellprofiler.setting.ImageNameSubscriber):
                 if self.show_window:
                     workspace.display_data.images.append(value)
 
+                # Upload the image to the server.
+                with tempfile.NamedTemporaryFile(suffix=".png") as tmp:
+                    skimage.io.imsave(tmp.name, value)
+                    img_id = ij.upload(tmp.name)
+                    inputs[name] = img_id
+
+            else:
+                inputs[name] = value
+
         # Run the module.
         result = ij.run(id, inputs, True)
 
         # Populate the outputs.
-        for name, setting in zip(self.outputs, self.output_settings.settings):
-            value = self._output_value(setting, result[name], ij)
+        for details, setting in zip(self.outputs, self.output_settings.settings):
+            value = self._output_value(setting, result[details["name"]], ij)
 
             # Record output images if they should be shown.
             if isinstance(setting, cellprofiler.setting.ImageNameProvider):
