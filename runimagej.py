@@ -125,24 +125,25 @@ class RunImageJ(cellprofiler.module.Module):
             # - Add outputs
 
             setting = self.make_setting(input_)
+            self.inputs = []
             if setting is not None:
+                self.inputs.append(input_)
                 self.ij_settings.append(name, setting)
 
         # Aggregate list of supported outputs.
-        outputs = []
+        self.outputs = []
         for output in details["outputs"]:
             raw_type = output["genericType"].split("<")[0].split(" ")[-1]
             output['rawType'] = raw_type
             if raw_type in IMAGE_TYPES:
-                outputs.append(output)
+                self.outputs.append(output)
 
         # Add divider if any outputs are supported.
-        if len(outputs) > 0:
-            # add divider
+        if len(self.outputs) > 0:
             self.ij_settings.append("divider", cellprofiler.setting.Divider(u"———OUTPUTS———"))
 
         # Append CP settings for matching outputs.
-        for output in outputs:
+        for output in self.outputs:
             if output['rawType'] in IMAGE_TYPES:
                 label = output["label"]
                 text = label if label and not label == "" else output["name"]
