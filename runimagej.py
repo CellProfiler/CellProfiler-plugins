@@ -157,7 +157,7 @@ class RunImageJ(cellprofiler.module.Module):
             return None
 
         label = input_["label"]
-        text = label if not (label is None or label == "") else input_["name"]
+        text = label if label and not label == "" else input_["name"]
         value = input_["defaultValue"]
         minval = input_["minimumValue"]
         maxval = input_["maximumValue"]
