@@ -113,10 +113,10 @@ class RunImageJ(cellprofiler.module.Module):
         self.create_ij_settings(setting.value)
 
     def create_ij_settings(self, module_name):
-        self.inputs = []
+        self.input_details = []
         self.input_settings = cellprofiler.setting.SettingsGroup()
 
-        self.outputs = []
+        self.output_details = []
         self.output_settings = cellprofiler.setting.SettingsGroup()
 
         ij = imagej.IJ()
@@ -142,7 +142,7 @@ class RunImageJ(cellprofiler.module.Module):
 
             setting = self.make_setting(input_)
             if setting is not None:
-                self.inputs.append(input_)
+                self.input_details.append(input_)
                 self.input_settings.append(name, setting)
 
         for output in details["outputs"]:
@@ -152,7 +152,7 @@ class RunImageJ(cellprofiler.module.Module):
                 label = output["label"]
                 text = label if label and not label == "" else output["name"]
                 setting = cellprofiler.setting.ImageNameProvider(text)
-                self.outputs.append(output)
+                self.output_details.append(output)
                 self.output_settings.append("output_" + output["name"], setting)
 
     def make_setting(self, input_):
@@ -251,7 +251,7 @@ class RunImageJ(cellprofiler.module.Module):
             workspace.display_data.images = []
 
         # Harvest the inputs.
-        for details, setting in zip(self.inputs, self.input_settings.settings):
+        for details, setting in zip(self.input_details, self.input_settings.settings):
             name = details["name"]
             value = self._input_value(setting, workspace)
 
@@ -273,7 +273,7 @@ class RunImageJ(cellprofiler.module.Module):
         result = ij.run(id, inputs, True)
 
         # Populate the outputs.
-        for details, setting in zip(self.outputs, self.output_settings.settings):
+        for details, setting in zip(self.output_details, self.output_settings.settings):
             value = self._output_value(setting, result[details["name"]], ij)
 
             # Record output images if they should be shown.
@@ -309,4 +309,3 @@ class RunImageJ(cellprofiler.module.Module):
             return value
 
         return minval if minval else 0
-
