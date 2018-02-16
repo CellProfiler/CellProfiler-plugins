@@ -179,13 +179,13 @@ class RunImageJ(cellprofiler.module.Module):
             return cellprofiler.setting.Pathname(text, value if value else '')
 
         if raw_type in FLOAT_TYPES:
-            return cellprofiler.setting.Float(text, self.clamp(value, minval), minval, maxval)
+            return cellprofiler.setting.Float(text, self._clamp(value, minval), minval, maxval)
 
         if raw_type in IMAGE_TYPES:
             return cellprofiler.setting.ImageNameSubscriber(text)
 
         if raw_type in INTEGER_TYPES:
-            return cellprofiler.setting.Integer(text, self.clamp(value, minval), minval, maxval)
+            return cellprofiler.setting.Integer(text, self._clamp(value, minval), minval, maxval)
 
         if raw_type in TEXT_TYPES:
             choices = input_["choices"]
@@ -199,12 +199,6 @@ class RunImageJ(cellprofiler.module.Module):
         # TODO: handle error somehow -- maybe put a label saying "unsupported input: blah"
         logger.debug("**** Unsupported input: '" + input_["name"] + "' of type '" + raw_type + "' ****")
         return None
-
-    def clamp(self, value, minval):
-        if value:
-            return value
-
-        return minval if minval else 0
 
     # Define settings as instance variables
     # Available settings are in in cellprofiler.settings
@@ -226,3 +220,9 @@ class RunImageJ(cellprofiler.module.Module):
 
     def run(self, workspace):
         pass
+
+    def _clamp(self, value, minval):
+        if value:
+            return value
+
+        return minval if minval else 0
