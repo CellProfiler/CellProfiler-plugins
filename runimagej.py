@@ -112,6 +112,20 @@ class RunImageJ(cellprofiler.module.Module):
 
         self.create_ij_settings(setting.value)
 
+    def prepare_settings(self, setting_values):
+        # Create the settings needed, based on the module details.
+        self.create_ij_settings(setting_values[2])
+
+        # Populate the values of the input settings and the output settings.
+        offset = 4
+        n_input_settings = int(setting_values[0])
+
+        for setting, value in zip(self.input_settings.settings, setting_values[offset:offset + n_input_settings]):
+            setting.value = value
+
+        for setting, value in zip(self.output_settings.settings, setting_values[offset + n_input_settings:]):
+            setting.value = value
+
     def create_ij_settings(self, module_name):
         self.input_details = []
         self.input_settings = cellprofiler.setting.SettingsGroup()
@@ -154,6 +168,8 @@ class RunImageJ(cellprofiler.module.Module):
                 setting = cellprofiler.setting.ImageNameProvider(text)
                 self.output_details.append(output)
                 self.output_settings.append("output_" + output["name"], setting)
+
+        self.input_count = cellprofiler.setting.HiddenCount(self.input_details, "input count")
 
     def make_setting(self, input_):
         raw_type = input_["rawType"]
@@ -221,8 +237,9 @@ class RunImageJ(cellprofiler.module.Module):
     # This is primarily used to load/save the .cppipe/.cpproj files
     def settings(self):
         settings = [
+            self.input_count,
             self.ij_module,
-            self.divider
+            self.divider,
         ]
 
         settings += self.input_settings.settings
