@@ -1,17 +1,24 @@
 # coding=utf-8
 
+import StringIO
+import logging
+
 import cellprofiler.image
 import cellprofiler.module
 import cellprofiler.setting
 import imagej
-import logging
-import json
 import numpy as np
 from PIL import Image
-import StringIO
 
 # TODO:
 # - Saving and loading pipeline does not preserve module-specific settings.
+# - Current implementation requires the server to be started. Appears to wait
+#   indefinitely if there is not a server running at the configured location.
+#   There should be a time out.
+# - The running server seems to conflict with CellProfiler's JVM? Cannot load
+#   images, presumably because of conflict with python-bioformats/javabridge.
+#   Though this seems somewhat weird, because you should be able to run two
+#   JVMs in different processes, right?
 
 logger = logging.getLogger(__name__)
 
@@ -103,19 +110,21 @@ class RunImageJ(cellprofiler.module.Module):
         self.create_ij_settings(setting.value)
 
     def create_ij_settings(self, module_name):
-        self.ij_settings = cellprofiler.setting.SettingsGroup()
+        self.inputs = []
+        self.input_settings = cellprofiler.setting.SettingsGroup()
 
-        # Get the module and the module details
+        self.outputs = []
+        self.output_settings = cellprofiler.setting.SettingsGroup()
+
         ij = imagej.IJ()
         module = ij.find(module_name)[0]
         details = ij.detail(module)
 
-        # # FOR DEBUGGING
+        # FOR DEBUGGING
         logger.debug(json.dumps(details, indent=4))
 
         for input_ in details["inputs"]:
             name = input_["name"]
-            default_value = input_["defaultValue"]
             input_["rawType"] = raw_type = input_["genericType"].split("<")[0].split(" ")[-1]
 
             # HACK: For now, we skip service and context parameters.
@@ -129,30 +138,19 @@ class RunImageJ(cellprofiler.module.Module):
             # - Add outputs
 
             setting = self.make_setting(input_)
-            self.inputs = []
             if setting is not None:
                 self.inputs.append(input_)
-                self.ij_settings.append(name, setting)
+                self.input_settings.append(name, setting)
 
-        # Aggregate list of supported outputs.
-        self.outputs = []
         for output in details["outputs"]:
             raw_type = output["genericType"].split("<")[0].split(" ")[-1]
             output['rawType'] = raw_type
             if raw_type in IMAGE_TYPES:
-                self.outputs.append(output)
-
-        # Add divider if any outputs are supported.
-        if len(self.outputs) > 0:
-            self.ij_settings.append("divider", cellprofiler.setting.Divider(u"———OUTPUTS———"))
-
-        # Append CP settings for matching outputs.
-        for output in self.outputs:
-            if output['rawType'] in IMAGE_TYPES:
                 label = output["label"]
                 text = label if label and not label == "" else output["name"]
                 setting = cellprofiler.setting.ImageNameProvider(text)
-                self.ij_settings.append("output_" + output["name"], setting)
+                self.outputs.append(output)
+                self.output_settings.append("output_" + output["name"], setting)
 
     def make_setting(self, input_):
         raw_type = input_["rawType"]
@@ -212,15 +210,32 @@ class RunImageJ(cellprofiler.module.Module):
             choices=self.get_ij_modules()
         )
 
+        self.divider = cellprofiler.setting.Divider(u"———OUTPUTS———")
+
         self.create_ij_settings(self.ij_module.value)
 
     # Returns the list of available settings
     # This is primarily used to load/save the .cppipe/.cpproj files
     def settings(self):
-        settings = [self.ij_module]
-        settings += self.ij_settings.settings
+        settings = [
+            self.ij_module,
+            self.divider
+        ]
+
+        settings += self.input_settings.settings
+        settings += self.output_settings.settings
 
         return settings
+
+    def visible_settings(self):
+        visible_settings = [self.ij_module]
+        visible_settings += self.input_settings.settings
+
+        if len(self.output_settings.settings) > 0:
+            visible_settings.append(self.divider)
+            visible_settings += self.output_settings.settings
+
+        return visible_settings
 
     def run(self, workspace):
         ij = imagej.IJ()
@@ -229,15 +244,17 @@ class RunImageJ(cellprofiler.module.Module):
         id = ij.find(self.ij_module.value)[0]
         inputs = {}
 
+        if self.show_window:
+            workspace.display_data.images = []
+
         # Harvest the inputs.
-        input_count = len(self.inputs)
-        for idx, setting in enumerate(self.ij_settings.settings[:input_count]):
-            name = self.inputs[idx]['name']
+        for details, setting in zip(self.inputs, self.input_settings.settings):
+            name = details["name"]
             value = self._input_value(setting, workspace)
             inputs[name] = value
 
             # Remember input images if they should be shown.
-            if isinstance(cellprofiler.setting.ImageNameSubscriber, setting):
+            if isinstance(setting, cellprofiler.setting.ImageNameSubscriber):
                 if self.show_window:
                     workspace.display_data.images.append(value)
 
@@ -245,13 +262,11 @@ class RunImageJ(cellprofiler.module.Module):
         result = ij.run(id, inputs, True)
 
         # Populate the outputs.
-        workspace.display_data.images = []
-        for idx, setting in enumerate(self.ij_settings.settings[input_count+1:]):
-            name = self.outputs[idx]
+        for name, setting in zip(self.outputs, self.output_settings.settings):
             value = self._output_value(setting, result[name], ij)
 
             # Record output images if they should be shown.
-            if isinstance(cellprofiler.setting.ImageNameProvider, setting):
+            if isinstance(setting, cellprofiler.setting.ImageNameProvider):
                 image = cellprofiler.image.Image(value)
                 workspace.image_set.add(setting.value, image)
                 if self.show_window:
@@ -264,13 +279,13 @@ class RunImageJ(cellprofiler.module.Module):
             figure.subplot_imshow(idx, 0, image)
 
     def _input_value(self, setting, workspace):
-        if isinstance(cellprofiler.setting.ImageNameSubscriber, setting):
+        if isinstance(setting, cellprofiler.setting.ImageNameSubscriber):
             return workspace.image_set.get_image(setting.value).pixel_data
 
         return setting.value
 
     def _output_value(self, setting, id, ij):
-        if isinstance(cellprofiler.setting.ImageNameProvider, setting):
+        if isinstance(setting, cellprofiler.setting.ImageNameProvider):
             data = ij.retrieve(id, format='png')
             pil = Image.open(StringIO.StringIO(data))
             return np.array(pil)
