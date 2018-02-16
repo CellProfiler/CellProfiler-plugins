@@ -1,10 +1,14 @@
 # coding=utf-8
 
+import cellprofiler.image
 import cellprofiler.module
 import cellprofiler.setting
 import imagej
 import logging
 import json
+import numpy as np
+from PIL import Image
+import StringIO
 
 # TODO:
 # - Saving and loading pipeline does not preserve module-specific settings.
@@ -219,10 +223,64 @@ class RunImageJ(cellprofiler.module.Module):
         return settings
 
     def run(self, workspace):
-        pass
+        ij = imagej.IJ()
+        # FIXME: Keep the original IDs in some data structure,
+        # so that we guarantee we run the correct module here.
+        id = ij.find(self.ij_module.value)[0]
+        inputs = {}
+
+        # Harvest the inputs.
+        input_count = len(self.inputs)
+        for idx, setting in enumerate(self.ij_settings.settings[:input_count]):
+            name = self.inputs[idx]['name']
+            value = self._input_value(setting, workspace)
+            inputs[name] = value
+
+            # Remember input images if they should be shown.
+            if isinstance(cellprofiler.setting.ImageNameSubscriber, setting):
+                if self.show_window:
+                    workspace.display_data.images.append(value)
+
+        # Run the module.
+        result = ij.run(id, inputs, True)
+
+        # Populate the outputs.
+        workspace.display_data.images = []
+        for idx, setting in enumerate(self.ij_settings.settings[input_count+1:]):
+            name = self.outputs[idx]
+            value = self._output_value(setting, result[name], ij)
+
+            # Record output images if they should be shown.
+            if isinstance(cellprofiler.setting.ImageNameProvider, setting):
+                image = cellprofiler.image.Image(value)
+                workspace.image_set.add(setting.value, image)
+                if self.show_window:
+                    workspace.display_data.images.append(value)
+
+    def display(self, workspace, figure):
+        image_count = len(workspace.display_data.images)
+        figure.set_subplots((image_count, 1))
+        for idx, image in enumerate(workspace.display_data.images):
+            figure.subplot_imshow(idx, 0, image)
+
+    def _input_value(self, setting, workspace):
+        if isinstance(cellprofiler.setting.ImageNameSubscriber, setting):
+            return workspace.image_set.get_image(setting.value).pixel_data
+
+        return setting.value
+
+    def _output_value(self, setting, id, ij):
+        if isinstance(cellprofiler.setting.ImageNameProvider, setting):
+            data = ij.retrieve(id, format='png')
+            pil = Image.open(StringIO.StringIO(data))
+            return np.array(pil)
+
+        logger.debug("**** Unsupported output: '" + id + "' ****")
+        return None
 
     def _clamp(self, value, minval):
         if value:
             return value
 
         return minval if minval else 0
+
