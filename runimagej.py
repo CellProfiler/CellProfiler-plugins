@@ -4,6 +4,7 @@ import cellprofiler.module
 import cellprofiler.setting
 import imagej
 import logging
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -103,7 +104,6 @@ class RunImageJ(cellprofiler.module.Module):
         details = ij.detail(module)
 
         # # FOR DEBUGGING
-        import json
         logger.debug(json.dumps(details, indent=4))
 
         for input_ in details["inputs"]:
