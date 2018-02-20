@@ -1,3 +1,4 @@
 cellh5
 microscopeimagequality
-git+https://github.com/mcquin/trackpy.git
+keras
+tensorflow
