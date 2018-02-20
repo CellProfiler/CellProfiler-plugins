@@ -2,12 +2,10 @@
 <b>MeasureRadialEntropy</b> measures the variability of an image's
 intensity inside a certain object
 <hr>
-<p>MeasureRadialEntropy divides an object into pie-shaped wedges and
+<p>MeasureRadialEntropy divides an object into pie-shaped wedges, emanating from the centroid of the object, and
  measures either the mean, median, or integrated intensity of each.  Once the intensity
- of each wedge has been calculated, the entropy of the bin measurements is calculated.</p>
-
- <p>This module is under construction</p>
-
+ of each wedge has been calculated, the entropy of the bin measurements is calculated. It is not guaranteed that every 
+ slice has an intensity value if the centroid of an object lies outside of the object area. In these cases a NAN will be reported.</p>
 '''
 
 
@@ -18,8 +16,6 @@ import skimage.measure
 import cellprofiler.module as cpm
 import cellprofiler.measurement as cpmeas
 import cellprofiler.setting as cps
-
-from centrosome.cpmorphology import minimum_enclosing_circle
 
 ENTROPY = "Entropy"
 
@@ -61,8 +57,11 @@ class MeasurementTemplate(cpm.Module):
         workspace.display_data.statistics = statistics
 
         input_image_name = self.input_image_name.value
+
         input_object_name = self.input_object_name.value
+
         metric = self.intensity_measurement.value
+
         bins = self.bin_number.value
 
         image_set = workspace.image_set
@@ -74,14 +73,13 @@ class MeasurementTemplate(cpm.Module):
         object_set = workspace.object_set
 
         objects = object_set.get_objects(input_object_name)
+
         labels = objects.segmented
 
         indexes = objects.indices
-        #Calculate the center of the objects- I'm guessing there's a better way to do this but this was already here
-        #centers, radius = minimum_enclosing_circle(labels, indexes)
-        # minimum_enclosing_circle returns confusing results, b/c if the input objects are not necessarily round then
-        # the returned center is frequently not within the object of interest
+
         my_props = skimage.measure.regionprops(labels)
+
         centers = numpy.asarray([props.centroid for props in my_props])
 
         feature = self.get_measurement_name(input_image_name,metric,bins)
@@ -92,9 +90,11 @@ class MeasurementTemplate(cpm.Module):
         
         for eachbin in range(bins):
             feature_bin = self.get_measurement_name_bins(input_image_name,metric,bins,eachbin+1)
+
             measurements.add_measurement(input_object_name,feature_bin,slicemeasurements[:,eachbin])
 
         emean = numpy.mean(entropy)
+
         statistics.append([feature, emean])
         
         #add statistics at some point
