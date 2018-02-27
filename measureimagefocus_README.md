@@ -1,13 +1,15 @@
 CellProfiler Microscope Image Focus Module Instructions
+
+The implementation of this plugin is described in and the URL for this page ("https://github.com/CellProfiler/CellProfiler-plugins/blob/master/measureimagefocus_README.md") is linked from this paper: Yang, S. J.; Berndl, M. & Ando, D. M. et al. (2017), "Assessing microscope image focus quality with deep learning", (accepted).
+
 Note: the first time it's run, this module needs to download the model/weights, which can take a while.
 
 OS X
 
 From source (recommended)
 
-Install CellProfiler from source
-Using a terminal (found in Applications), install CellProfiler from source by running given commands in command line (instructions)
-Get CellProfiler Plugin. In the terminal, run these commands:
+1. Install CellProfiler from source
+2. Get CellProfiler Plugin. In the terminal, run these commands:
 ```
 MYDIR=/tmp/; cd MYDIR
 git clone https://github.com/CellProfiler/CellProfiler-plugins.git  
@@ -16,12 +18,12 @@ Install dependencies. In the terminal, run
 pip install -r requirements.txt
 ```
 
-To run CellProfiler, in the terminal run the following; note you may get import errors, but these can be safely ignored:
+3. To run CellProfiler, in the terminal run the following; note you may get import errors, but these can be safely ignored:
 ```
 cellprofiler --plugins-directory MYDIR/CellProfiler-plugins
 ```
 
-In CellProfiler,
+4. In CellProfiler,
 Click "Images" and drag in images of interest [1]
 Edit > Add Module > Measurement > MeasureImageFocus
 Click on the module and in the module window choose Image > DNA (or name of image of interest)
