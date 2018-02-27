@@ -12,7 +12,9 @@ Get CellProfiler Plugin. In the terminal, run these commands:
 MYDIR=/tmp/; cd MYDIR
 git clone https://github.com/CellProfiler/CellProfiler-plugins.git  
 cd CellProfiler-plugins/
+```
 Install dependencies. In the terminal, run
+```
 pip install -r requirements.txt
 ```
 
