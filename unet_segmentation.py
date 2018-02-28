@@ -1,66 +1,79 @@
+import logging
+import os.path
+import time
+
+import cellprofiler.module
 import cellprofiler.setting
 import keras
-import tensorflow
 import numpy
+import pkg_resources
+import requests
+import tensorflow
+
+logger = logging.getLogger(__name__)
 
 option_dict_conv = {"activation": "relu", "border_mode": "same"}
 option_dict_bn = {"mode": 0, "momentum": 0.9}
 
 
+__doc__ = """\
+tbd
+"""
+
+
 class UnetSegment(cellprofiler.module.ImageProcessing):
-    category = "Image Segmentation"
     module_name = "UnetSegment"
     variable_revision_number = 1
 
-    def is_aggregation_module(self):
-        return True
-
-    def create_settings(self):
-        super(UnetSegment, self).create_settings()
-
-    def settings(self):
-        settings = super(UnetSegment, self).settings()
-        return settings
-
     def run(self, workspace):
-        self.function = unet_segmentation
+        input_image = workspace.image_set.get_image(self.x_name.value)
+
+        input_shape = input_image.pixel_data.shape
+
+        t0 = time.time()
+        model = unet_initialize(input_shape)
+        t1 = time.time()
+        logger.debug('UNet initialization took {} seconds '.format(t1 - t0))
+
+        self.function = lambda input_image: unet_segmentation(model, input_image)
 
         super(UnetSegment, self).run(workspace)
 
-        images = workspace.image_set
 
-        x_name = self.x_name.value
-        x = images.get_image(x_name)
-        x_data = x.pixel_data
-
-        y_name = self.y_name.value
-        y = images.get_image(y_name)
-        y_data = y.pixel_data
-
-        if self.show_window:
-            workspace.display_data.x_data = x_data
-
-            workspace.display_data.y_data = y_data
-
-            workspace.display_data.dimensions = x.dimensions
-
-    def post_group(self, workspace, grouping):
-        pass
-
-    def display_post_group(self, workspace, figure):
-        pass
-
-
-def unet_segmentation(input_image):
+def unet_initialize(input_shape):
     session = tensorflow.Session()
     # apply session
     keras.backend.set_session(session)
     # create model
 
-    print(input_image.shape)
+    dim1, dim2 = input_shape
 
-    dim1 = input_image.shape[0]
-    dim2 = input_image.shape[1]
+    # build model
+    model = get_model_3_class(dim1, dim2)
+
+    # load weights
+    weights_filename = pkg_resources.resource_filename(
+        "cellprofiler",
+        os.path.join(".cache", "unet-checkpoint.hdf5")
+    )
+
+    if not os.path.exists(weights_filename):
+        cache_directory = os.path.dirname(weights_filename)
+        if not os.path.exists(cache_directory):
+            os.makedirs(os.path.dirname(weights_filename))
+
+        # Download the weights
+        logger.debug("Downloading model weights to: {:s}".format(weights_filename))
+        id = "146sae_bv2rJa4YoJr8Hlo-MFKfuepoMX"
+        download_file_from_google_drive(id, weights_filename)
+
+    model.load_weights(weights_filename)
+
+    return model
+
+
+def unet_segmentation(model, input_image):
+    dim1, dim2 = input_image.shape
 
     images = input_image.reshape((-1, dim1, dim2, 1))
 
@@ -68,13 +81,12 @@ def unet_segmentation(input_image):
     images = images - numpy.min(images)
     images = images.astype(numpy.float32) / numpy.max(images)
 
-    # build model and load weights
-    model = get_model_3_class(dim1, dim2)
-    model.load_weights("/Users/tbecker/Documents/2017_08_unet/workspace/cp_plugin_test/unet_exp15_model.hdf5")
+    start = time.time()
+    segmentation = model.predict(images, batch_size=1)
+    end = time.time()
+    logger.debug('UNet segmentation took {} seconds '.format(end - start))
 
-    unet_segmentation = model.predict(images, batch_size=1)
-
-    return(unet_segmentation[0,:,:,:])
+    return segmentation[0, :, :, :]
 
 
 def get_core(dim1, dim2):
@@ -156,3 +168,39 @@ def get_model_3_class(dim1, dim2, activation="softmax"):
     model = keras.models.Model(x, y)
 
     return model
+
+
+# https://stackoverflow.com/a/39225272
+def download_file_from_google_drive(id, destination):
+    url = "https://docs.google.com/uc?export=download"
+
+    session = requests.Session()
+
+    response = session.get(url, params={'id': id}, stream=True)
+    token = get_confirm_token(response)
+
+    if token:
+        params = {
+            'id': id,
+            'confirm': token
+        }
+        response = session.get(url, params=params, stream=True)
+
+    save_response_content(response, destination)
+
+
+def get_confirm_token(response):
+    for key, value in response.cookies.items():
+        if key.startswith('download_warning'):
+            return value
+
+    return None
+
+
+def save_response_content(response, destination):
+    chunk_size = 32768
+
+    with open(destination, "wb") as f:
+        for chunk in response.iter_content(chunk_size):
+            if chunk:  # filter out keep-alive new chunks
+                f.write(chunk)
