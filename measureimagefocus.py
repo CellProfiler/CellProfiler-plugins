@@ -12,7 +12,7 @@ import matplotlib.pyplot
 import matplotlib.patches
 
 __doc__ = """
-For installation instructions and platform support notes, please read measureimagefocus_README.md.
+For installation instructions and platform support notes, please see https://github.com/CellProfiler/CellProfiler-plugins/wiki/Measure-Image-Focus.
 
 This module can collect measurements indicating possible image aberrations,
 e.g. blur (poor focus), intensity, saturation (i.e., the percentage
