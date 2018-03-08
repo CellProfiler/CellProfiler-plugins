@@ -17,11 +17,7 @@ from PIL import Image
 # - Saving and loading pipeline does not preserve module-specific settings.
 # - Current implementation requires the server to be started. Appears to wait
 #   indefinitely if there is not a server running at the configured location.
-#   There should be a time out.
-# - The running server seems to conflict with CellProfiler's JVM? Cannot load
-#   images, presumably because of conflict with python-bioformats/javabridge.
-#   Though this seems somewhat weird, because you should be able to run two
-#   JVMs in different processes, right?
+# - There should be a time out on connections.
 
 logger = logging.getLogger(__name__)
 
@@ -221,22 +217,42 @@ class RunImageJ(cellprofiler.module.Module):
         logger.debug("**** Unsupported input: '" + input_["name"] + "' of type '" + raw_type + "' ****")
         return None
 
-    # Define settings as instance variables
-    # Available settings are in in cellprofiler.settings
-    def create_settings(self):
+    def _connect(self):
         self.ij_module = cellprofiler.setting.Choice(
             "ImageJ module",
             choices=self.get_ij_modules()
         )
 
-        self.divider = cellprofiler.setting.Divider(u"———OUTPUTS———")
-
         self.create_ij_settings(self.ij_module.value)
 
-    # Returns the list of available settings
-    # This is primarily used to load/save the .cppipe/.cpproj files
+        self._connected = True
+
+    def create_settings(self):
+        self._connected = False
+
+        self.host = cellprofiler.setting.Text(
+            "ImageJ server",
+            imagej.HOST
+        )
+
+        self.connect = cellprofiler.setting.DoSomething(
+            "",
+            "Connect",
+            self._connect
+        )
+
+        self.divider = cellprofiler.setting.Divider(u"———OUTPUTS———")
+
+        # Dummy -- these will get redefined after the module connects to the server
+        self.ij_module = cellprofiler.setting.Setting("", "")
+        self.input_settings = cellprofiler.setting.SettingsGroup()
+        self.output_settings = cellprofiler.setting.SettingsGroup()
+        self.input_count = cellprofiler.setting.HiddenCount([], "")
+
     def settings(self):
         settings = [
+            self.host,
+            self.connect,
             self.input_count,
             self.ij_module,
             self.divider,
@@ -248,12 +264,18 @@ class RunImageJ(cellprofiler.module.Module):
         return settings
 
     def visible_settings(self):
-        visible_settings = [self.ij_module]
-        visible_settings += self.input_settings.settings
+        visible_settings = [
+            self.host,
+            self.connect
+        ]
 
-        if len(self.output_settings.settings) > 0:
-            visible_settings.append(self.divider)
-            visible_settings += self.output_settings.settings
+        if self._connected:
+            visible_settings += [self.ij_module]
+            visible_settings += self.input_settings.settings
+
+            if len(self.output_settings.settings) > 0:
+                visible_settings.append(self.divider)
+                visible_settings += self.output_settings.settings
 
         return visible_settings
 
