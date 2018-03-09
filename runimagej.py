@@ -10,14 +10,10 @@ import cellprofiler.module
 import cellprofiler.setting
 import imagej
 import numpy as np
+import requests
 import skimage.io
 from PIL import Image
 
-# TODO:
-# - Saving and loading pipeline does not preserve module-specific settings.
-# - Current implementation requires the server to be started. Appears to wait
-#   indefinitely if there is not a server running at the configured location.
-# - There should be a time out on connections.
 
 logger = logging.getLogger(__name__)
 
@@ -79,8 +75,7 @@ class RunImageJ(cellprofiler.module.Module):
     variable_revision_number = 1
 
     def get_ij_modules(self):
-        ij = imagej.IJ(self.host.value)
-        modules = ij.modules()
+        modules = self._ij.modules()
         modules = [module.split(".")[-1] for module in modules if RunImageJ.is_friendly_module(module)]
         return sorted(modules)
 
@@ -94,23 +89,14 @@ class RunImageJ(cellprofiler.module.Module):
         return True
 
     def on_setting_changed(self, setting, pipeline):
-        if not setting == self.ij_module:
-            return
-
-        self.create_ij_settings(setting.value)
+        if setting == self.ij_module:
+            self.create_ij_settings(setting.value)
 
     def prepare_settings(self, setting_values):
         self.host.value = setting_values[0]
 
-        self.ij_module = cellprofiler.setting.Choice(
-            "ImageJ module",
-            choices=self.get_ij_modules()
-        )
-
-        self._connected = True
-
         # Create the settings needed, based on the module details.
-        self.create_ij_settings(setting_values[3])
+        self._connect(setting_values[3])
 
         # Populate the values of the input settings and the output settings.
         offset = 5
@@ -129,9 +115,8 @@ class RunImageJ(cellprofiler.module.Module):
         self.output_details = []
         self.output_settings = cellprofiler.setting.SettingsGroup()
 
-        ij = imagej.IJ(self.host.value)
-        module = ij.find(module_name)[0]
-        details = ij.detail(module)
+        module = self._ij.find(module_name)[0]
+        details = self._ij.detail(module)
 
         # FOR DEBUGGING
         logger.debug(json.dumps(details, indent=4))
@@ -217,18 +202,34 @@ class RunImageJ(cellprofiler.module.Module):
         logger.debug("**** Unsupported input: '" + input_["name"] + "' of type '" + raw_type + "' ****")
         return None
 
-    def _connect(self):
+    def _connect(self, ij_module=None):
+        try:
+            self._ij = imagej.IJ(self.host.value)
+        except RuntimeError:
+            self._ij = None
+            return
+
         self.ij_module = cellprofiler.setting.Choice(
             "ImageJ module",
             choices=self.get_ij_modules()
         )
 
-        self.create_ij_settings(self.ij_module.value)
+        if not ij_module:
+            ij_module = self.ij_module.value
 
-        self._connected = True
+        self.create_ij_settings(ij_module)
+
+    def validate_module(self, pipeline):
+        if not self._ij:
+            raise cellprofiler.setting.ValidationError(
+                "Not connected to host: {:s}\n\n"
+                "Please ensure the address is correct and the"
+                " ImageJ server is running.".format(self.host.value),
+                self.host
+            )
 
     def create_settings(self):
-        self._connected = False
+        self._ij = None
 
         self.host = cellprofiler.setting.Text(
             "ImageJ server",
@@ -243,7 +244,7 @@ class RunImageJ(cellprofiler.module.Module):
 
         self.divider = cellprofiler.setting.Divider(u"———OUTPUTS———")
 
-        # Dummy -- these will get redefined after the module connects to the server
+        # These will get redefined after the module connects to the server.
         self.ij_module = cellprofiler.setting.Choice(
             "ImageJ module",
             choices=["-- NONE --"]
@@ -277,7 +278,7 @@ class RunImageJ(cellprofiler.module.Module):
             self.connect
         ]
 
-        if self._connected:
+        if self._ij:
             visible_settings += [self.ij_module]
             visible_settings += self.input_settings.settings
 
@@ -288,10 +289,9 @@ class RunImageJ(cellprofiler.module.Module):
         return visible_settings
 
     def run(self, workspace):
-        ij = imagej.IJ(self.host.value)
         # FIXME: Keep the original IDs in some data structure,
         # so that we guarantee we run the correct module here.
-        id = ij.find(self.ij_module.value)[0]
+        id = self._ij.find(self.ij_module.value)[0]
         inputs = {}
 
         if self.show_window:
@@ -310,18 +310,18 @@ class RunImageJ(cellprofiler.module.Module):
                 # Upload the image to the server.
                 with tempfile.NamedTemporaryFile(suffix=".png") as tmp:
                     skimage.io.imsave(tmp.name, value)
-                    img_id = ij.upload(tmp.name)
+                    img_id = self._ij.upload(tmp.name)
                     inputs[name] = img_id
 
             else:
                 inputs[name] = value
 
         # Run the module.
-        result = ij.run(id, inputs, True)
+        result = self._ij.run(id, inputs, True)
 
         # Populate the outputs.
         for details, setting in zip(self.output_details, self.output_settings.settings):
-            value = self._output_value(setting, result[details["name"]], ij)
+            value = self._output_value(setting, result[details["name"]], self._ij)
 
             # Record output images if they should be shown.
             if isinstance(setting, cellprofiler.setting.ImageNameProvider):
