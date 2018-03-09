@@ -78,17 +78,8 @@ class RunImageJ(cellprofiler.module.Module):
     module_name = "RunImageJ"
     variable_revision_number = 1
 
-    @staticmethod
-    def get_ij_modules():
-        # TODO: configure the ImageJ server host in CellProfiler's preferences.
-        # Not sure we can do this via CellProfiler-plugins but maaaaaybeeee?
-        # Otherwise, we'll need to expose this via a setting or an env variable.
-        #
-        # I tried exposing this through a setting and calling on_setting_changed
-        # when the host was updated; on_setting_change would repopulate the
-        # module choices using this method. However, there isn't a choices setter
-        # on the Choice setting. :(
-        ij = imagej.IJ()
+    def get_ij_modules(self):
+        ij = imagej.IJ(self.host.value)
         modules = ij.modules()
         modules = [module.split(".")[-1] for module in modules if RunImageJ.is_friendly_module(module)]
         return sorted(modules)
@@ -109,12 +100,21 @@ class RunImageJ(cellprofiler.module.Module):
         self.create_ij_settings(setting.value)
 
     def prepare_settings(self, setting_values):
+        self.host.value = setting_values[0]
+
+        self.ij_module = cellprofiler.setting.Choice(
+            "ImageJ module",
+            choices=self.get_ij_modules()
+        )
+
+        self._connected = True
+
         # Create the settings needed, based on the module details.
-        self.create_ij_settings(setting_values[2])
+        self.create_ij_settings(setting_values[3])
 
         # Populate the values of the input settings and the output settings.
-        offset = 4
-        n_input_settings = int(setting_values[0])
+        offset = 5
+        n_input_settings = int(setting_values[2])
 
         for setting, value in zip(self.input_settings.settings, setting_values[offset:offset + n_input_settings]):
             setting.value = value
@@ -129,7 +129,7 @@ class RunImageJ(cellprofiler.module.Module):
         self.output_details = []
         self.output_settings = cellprofiler.setting.SettingsGroup()
 
-        ij = imagej.IJ()
+        ij = imagej.IJ(self.host.value)
         module = ij.find(module_name)[0]
         details = ij.detail(module)
 
@@ -244,9 +244,17 @@ class RunImageJ(cellprofiler.module.Module):
         self.divider = cellprofiler.setting.Divider(u"———OUTPUTS———")
 
         # Dummy -- these will get redefined after the module connects to the server
-        self.ij_module = cellprofiler.setting.Setting("", "")
+        self.ij_module = cellprofiler.setting.Choice(
+            "ImageJ module",
+            choices=["-- NONE --"]
+        )
+
+        self.input_details = []
         self.input_settings = cellprofiler.setting.SettingsGroup()
+
+        self.output_details = []
         self.output_settings = cellprofiler.setting.SettingsGroup()
+
         self.input_count = cellprofiler.setting.HiddenCount([], "")
 
     def settings(self):
@@ -255,7 +263,7 @@ class RunImageJ(cellprofiler.module.Module):
             self.connect,
             self.input_count,
             self.ij_module,
-            self.divider,
+            self.divider
         ]
 
         settings += self.input_settings.settings
@@ -280,7 +288,7 @@ class RunImageJ(cellprofiler.module.Module):
         return visible_settings
 
     def run(self, workspace):
-        ij = imagej.IJ()
+        ij = imagej.IJ(self.host.value)
         # FIXME: Keep the original IDs in some data structure,
         # so that we guarantee we run the correct module here.
         id = ij.find(self.ij_module.value)[0]
