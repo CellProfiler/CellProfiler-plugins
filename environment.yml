@@ -17,6 +17,7 @@ dependencies:
   - pillow
   - pip
   - python=2
+  - python.app
   - mysql-python
   - numpy
   - rise
