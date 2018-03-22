@@ -563,7 +563,7 @@ def shiftb(m):
 
 # Convergence Test
 def convergence(p_mask, n_mask, thresh, c):
-    if numpy.sum(numpy.abs(p_mask - n_mask)) < thresh:
+    if numpy.sum(numpy.abs(numpy.logical_xor(p_mask, n_mask))) < thresh:
         c += 1
     else:
         c = 0
