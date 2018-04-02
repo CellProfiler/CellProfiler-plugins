@@ -64,13 +64,14 @@ artifacts that are the result of segmentation.
 
         self.remove_below_threshold = cellprofiler.setting.Binary(
             text="Remove objects below size threshold",
-            value=True,
+            value=False,
             doc="""\
-Select "*{NO}*" to ensure that objects below the minimum size
+Select "*{YES}*" to ensure that objects below the minimum size
 threshold with no larger significant neighbor will not be 
-removed. This thresholding is the behavior by default.
+removed. Objects below the threshold with no neighbors are kept
+by default.
 """.format(**{
-                "NO": cellprofiler.setting.NO
+                "YES": cellprofiler.setting.YES
             })
         )
 
