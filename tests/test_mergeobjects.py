@@ -7,7 +7,7 @@ import pytest
 import mergeobjects
 
 
-instance = mergeobjects.MergeObjects()
+instance = mergeobjects.MergeObjects
 
 
 @pytest.fixture(scope="module")

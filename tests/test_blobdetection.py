@@ -35,7 +35,7 @@ def image(request):
     return cellprofiler.image.Image(image=data, dimensions=dimensions)
 
 
-instance = blobdetection.BlobDetection()
+instance = blobdetection.BlobDetection
 
 
 def test_run_dog(image, image_set, module, workspace):
