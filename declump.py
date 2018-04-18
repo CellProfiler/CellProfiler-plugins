@@ -96,7 +96,7 @@ line between segmented objects.
         )
 
         self.gaussian_sigma = cellprofiler.setting.Float(
-            text="Standard deviation for Gaussian kernel",
+            text="Segmentation distance transform smoothing factor",
             value=1.,
             doc="Sigma defines how 'smooth' the Gaussian kernel makes the image. Higher sigma means a smoother image."
         )
@@ -212,22 +212,31 @@ Volumetric images will require volumetric structuring elements.
             raise ValueError("Structuring element does not match object dimensions: "
                              "{} != {}".format(strel_dim, im_dim))
 
+        # Get the segmentation distance transform
+        peak_image = scipy.ndimage.distance_transform_edt(x_data > 0)
+
         # Generate a watershed ready image
         if self.declump_method.value == O_SHAPE:
             # Use the reverse of the image to get basins at peaks
-            dist_transform = scipy.ndimage.distance_transform_edt(x_data > 0)
             # dist_transform = skimage.util.invert(dist_transform)
-            watershed_image = -dist_transform
-            watershed_image -= numpy.min(watershed_image)
+            watershed_image = -peak_image
+            watershed_image -= watershed_image.min()
 
         else:
-            raise NotImplementedError("Whoops!")
+            reference_name = self.reference_name.value
+            reference = images.get_image(reference_name)
+            reference_data = reference.pixel_data
+
+            # Set the image as a float and rescale to full bit depth
+            watershed_image = skimage.img_as_float(reference_data, force_copy=True)
+            watershed_image -= watershed_image.min()
+            watershed_image = 1 - watershed_image
 
         # Smooth the image
         watershed_image = skimage.filters.gaussian(watershed_image, sigma=self.gaussian_sigma.value)
 
         # Generate local peaks
-        seeds = skimage.feature.peak_local_max(dist_transform,
+        seeds = skimage.feature.peak_local_max(peak_image,
                                                min_distance=self.min_dist.value,
                                                threshold_rel=self.min_intensity.value,
                                                exclude_border=self.exclude_border.value,
