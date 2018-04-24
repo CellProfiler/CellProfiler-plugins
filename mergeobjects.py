@@ -118,9 +118,13 @@ def _merge_neighbors(array, min_obj_size, remove_below_threshold):
 
         # If self is the largest neighbor, then "bincount" will only
         # have one entry in it - the backround at index 0
-        # If the user requests it, we should remove it from the array
-        if len(neighbors) == 1 and remove_below_threshold:
-            max_neighbor = 0
+        if len(neighbors) == 1:
+            # If the user requests it, we should remove it from the array
+            if remove_below_threshold:
+                max_neighbor = 0
+            # Otherwise, we don't want to modify the object
+            else:
+                max_neighbor = n
 
         # Otherwise, we want to set the background to zero and
         # find the largest neighbor
