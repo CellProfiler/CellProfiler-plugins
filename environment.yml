@@ -1,0 +1,29 @@
+# run: conda env create -f environment.yml
+# run: conda env update -f environment.yml
+# run: conda env remove -n cellprofiler-plugins
+name: cellprofiler-plugins
+channels:
+#  - bjornfjohansson
+  - goodman # mysql-python for mac
+  - anaconda
+  - conda-forge
+dependencies:
+  - libtiff
+  - libxml2
+  - libxslt
+  - lxml
+  - mysql-python
+  - openjdk>=8.0.152
+  - pillow
+  - pip
+  - python=2
+  - python.app
+  - mysql-python
+  - numpy
+  - rise
+  - tifffile
+  - wxpython
+#  - wxpython=3.0.2.0
+  - pip:
+    - git+https://github.com/CellProfiler/CellProfiler.git@master#egg=CellProfiler
+    - -r requirements.txt
