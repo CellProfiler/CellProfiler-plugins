@@ -3,17 +3,26 @@
 """
 Author: Tim Becker, Juan Caicedo, Claire McQuinn 
 """
+import keras 
 import logging
-import os.path
-import time
-
-import cellprofiler.module
-import cellprofiler.setting
-import keras
 import numpy
 import pkg_resources
 import requests
-import tensorflow
+import sys
+import time
+
+import os.path
+import cellprofiler.module
+import cellprofiler.setting
+
+is_windows = hasattr(sys, 'getwindowsversion')
+
+if is_windows:
+    os.environ["KERAS_BACKEND"] = "cntk"
+    import cntk
+else:
+    os.environ["KERAS_BACKEND"] = "tensorflow"
+    import tensorflow
 
 logger = logging.getLogger(__name__)
 
