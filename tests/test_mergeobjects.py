@@ -40,10 +40,19 @@ def volume_labels():
     return labels
 
 
-def test_run(object_set_with_data, module, workspace_with_data):
+@pytest.fixture(
+    scope="module", 
+    params=[False, True],
+    ids=["keep_lonely", "remove_lonely"])
+def remove_below(request):
+    return request.param
+
+
+def test_run(object_set_with_data, module, workspace_with_data, remove_below):
     module.x_name.value = "InputObjects"
     module.y_name.value = "OutputObjects"
     module.size.value = 6.
+    module.remove_below_threshold.value = remove_below
 
     module.run(workspace_with_data)
 
@@ -65,9 +74,8 @@ def test_run(object_set_with_data, module, workspace_with_data):
     for n in numpy.nonzero(mask_sizes)[0]:
         mask = expected == n
         bound = skimage.segmentation.find_boundaries(mask, mode='thick')
-        # pdb.set_trace()
         neighbors = numpy.bincount(expected[bound].ravel())
-        if len(neighbors) >= n:
+        if len(neighbors) >= n and remove_below:
             neighbors[n] = 0
         neighbors[0] = 0
         max_neighbor = numpy.argmax(neighbors)
@@ -167,7 +175,7 @@ def test_pass_3d_merge_large_object(volume_labels, module, object_set_empty, obj
 def test_2d_keep_nonneighbored_objects(image_labels, module, object_set_empty, objects_empty, workspace_empty):
     labels = image_labels.copy()
     # Create "small"
-    labels[0:3, 4:6] = 8
+    labels[8:12, 9:11] = 8
 
     objects_empty.segmented = labels
 
@@ -188,7 +196,7 @@ def test_2d_keep_nonneighbored_objects(image_labels, module, object_set_empty, o
 
 def test_3d_keep_nonneighbored_object(volume_labels, module, object_set_empty, objects_empty, workspace_empty):
     labels = volume_labels.copy()
-    labels[0:3, 0:3, 4:6] = 8
+    labels[8:12, 9:11, 4:6] = 8
 
     objects_empty.segmented = labels
 

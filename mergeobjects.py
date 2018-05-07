@@ -64,13 +64,14 @@ artifacts that are the result of segmentation.
 
         self.remove_below_threshold = cellprofiler.setting.Binary(
             text="Remove objects below size threshold",
-            value=True,
+            value=False,
             doc="""\
-Select "*{NO}*" to ensure that objects below the minimum size
+Select "*{YES}*" to ensure that objects below the minimum size
 threshold with no larger significant neighbor will not be 
-removed. This thresholding is the behavior by default.
+removed. Objects below the threshold with no neighbors are kept
+by default.
 """.format(**{
-                "NO": cellprofiler.setting.NO
+                "YES": cellprofiler.setting.YES
             })
         )
 
@@ -105,19 +106,32 @@ def _merge_neighbors(array, min_obj_size, remove_below_threshold):
     mask_sizes = (sizes < min_obj_size) & (sizes != 0)
 
     merged = numpy.copy(array)
+
     # Iterate through each small object, determine most significant adjacent neighbor,
     # and merge the object into that neighbor
     for n in numpy.nonzero(mask_sizes)[0]:
         mask = array == n
-        # "Thick" mode ensures the border bleeds into the neighboring objects
-        bound = skimage.segmentation.find_boundaries(mask, mode='thick')
+
+        # "Outer" mode ensures we're only getting pixels beyond the object
+        bound = skimage.segmentation.find_boundaries(mask, mode='outer')
         neighbors = numpy.bincount(array[bound].ravel())
-        # If self is the largest neighbor, the object should be removed
-        if len(neighbors) >= n and remove_below_threshold:
-            neighbors[n] = 0
-        # Background should be set to 0
-        neighbors[0] = 0
-        max_neighbor = numpy.argmax(neighbors)
+
+        # If self is the largest neighbor, then "bincount" will only
+        # have one entry in it - the backround at index 0
+        if len(neighbors) == 1:
+            # If the user requests it, we should remove it from the array
+            if remove_below_threshold:
+                max_neighbor = 0
+            # Otherwise, we don't want to modify the object
+            else:
+                max_neighbor = n
+
+        # Otherwise, we want to set the background to zero and
+        # find the largest neighbor
+        else:
+            neighbors[0] = 0
+            max_neighbor = numpy.argmax(neighbors)
+
         # Set object value to largest neighbor
         merged[merged == n] = max_neighbor
     return merged

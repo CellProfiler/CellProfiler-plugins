@@ -18,6 +18,13 @@ import skimage.measure
 import skimage.segmentation
 
 
+DIFFERENTIAL_METHOD = "Partial differential equation Chan-Vese"
+MORPH_GEODESIC_METHOD = "Morphological geodesic"
+MORPH_CHAN_VESE_METHOD = "Morphological Chan-Vese"
+LEVEL_SET_CIRCLE = "circle"
+LEVEL_SET_CHECKERBOARD = "checkerboard"
+
+
 class ActiveContourModel(cellprofiler.module.ImageSegmentation):
     module_name = "Active contour model"
 
@@ -26,38 +33,212 @@ class ActiveContourModel(cellprofiler.module.ImageSegmentation):
     def create_settings(self):
         super(ActiveContourModel, self).create_settings()
 
+        self.method = cellprofiler.setting.Choice(
+            text="Active contour method",
+            choices=[DIFFERENTIAL_METHOD,
+                     MORPH_GEODESIC_METHOD,
+                     MORPH_CHAN_VESE_METHOD],
+            value=DIFFERENTIAL_METHOD,
+        )
+
+        # Shared by all three methods
         self.iterations = cellprofiler.setting.Integer(
             text="Iterations",
             value=20
         )
 
-        self.alpha = cellprofiler.setting.Float(
+        # Only shared by PDE and GEODESIC
+        self.threshold = cellprofiler.setting.Float(
+            text="Threshold",
+            value=0
+        )
+
+        # Pre-processing settings
+        self.pde_alpha = cellprofiler.setting.Float(
             text="Alpha",
             value=0.2
         )
 
-        self.threshold = cellprofiler.setting.Float(
-            text="Threshold",
-            value=0
+        self.advanced_settings = cellprofiler.setting.Binary(
+            text="Advanced settings for PDE method",
+            value=False
+        )
+
+        self.phi_bound = cellprofiler.setting.Float(
+            text="Phi bound",
+            value=1.2
+        )
+
+        self.pre_threshold = cellprofiler.setting.Float(
+            text="Pre-thresholding factor",
+            value=0.9
+        )
+
+        self.connectivity = cellprofiler.setting.Integer(
+            text="Label connectivity",
+            value=1
+        )
+
+        self.cfl_factor = cellprofiler.setting.Float(
+            text="CFL condition maintenance factor",
+            value=0.45
+        )
+
+        self.sdf_smoothing = cellprofiler.setting.Float(
+            text="SDF smoothing factor",
+            value=0.5
+        )
+
+        # Shared morph settings
+        self.alpha = cellprofiler.setting.Float(
+            text="Alpha",
+            value=100.0
+        )
+
+        self.sigma = cellprofiler.setting.Float(
+            text="Sigma",
+            value=5.0
+        )
+
+        self.level_set = cellprofiler.setting.Choice(
+            text="Initial level set",
+            choices=[LEVEL_SET_CIRCLE, LEVEL_SET_CHECKERBOARD],
+            value=LEVEL_SET_CIRCLE
+        )
+
+        self.adv_level_set = cellprofiler.setting.Binary(
+            text="Advanced level set options",
+            value=False
+        )
+
+        self.circle_center = cellprofiler.setting.Coordinates(
+            text="Circle level set center",
+            value=(-1,-1)
+        )
+
+        self.circle_radius = cellprofiler.setting.Float(
+            text="Circle level set radius",
+            value=-1.
+        )
+
+        self.checkerboard_size = cellprofiler.setting.Integer(
+            text="Checkerboard level set square size",
+            value=5,
+            minval=0
+        )
+
+        self.smoothing = cellprofiler.setting.Integer(
+            text="Smoothing",
+            value=1,
+            minval=0
+        )
+
+        # Geodesic settings
+        self.balloon = cellprofiler.setting.Float(
+            text="Ballon force",
+            value=0.
+        )
+
+        # Morph Chan-Vese settings
+        self.lambda1 = cellprofiler.setting.Float(
+            text="Outer region weight",
+            value=1.
+        )
+
+        self.lambda2 = cellprofiler.setting.Float(
+            text="Inner region weight",
+            value=1.
         )
 
     def settings(self):
         __settings__ = super(ActiveContourModel, self).settings()
 
         return __settings__ + [
+            self.method,
             self.iterations,
+            self.threshold,
+            self.pde_alpha,
+            self.advanced_settings,
+            self.phi_bound,
+            self.pre_threshold,
+            self.connectivity,
+            self.cfl_factor,
+            self.sdf_smoothing,
             self.alpha,
-            self.threshold
+            self.sigma,
+            self.level_set,
+            self.adv_level_set,
+            self.circle_center,
+            self.circle_radius,
+            self.checkerboard_size,
+            self.smoothing,
+            self.balloon,
+            self.lambda1,
+            self.lambda2
         ]
 
     def visible_settings(self):
         __settings__ = super(ActiveContourModel, self).settings()
 
-        return __settings__ + [
+        # Shared by all three methods
+        __settings__ += [
+            self.method,
             self.iterations,
-            self.alpha,
-            self.threshold
         ]
+
+        # Add PDE settings
+        if self.method.value == DIFFERENTIAL_METHOD:
+            __settings__ += [
+                self.pde_alpha,
+                self.threshold,
+                self.advanced_settings,
+            ]
+            if self.advanced_settings.value:
+                __settings__ += [
+                    self.phi_bound,
+                    self.pre_threshold,
+                    self.connectivity,
+                    self.cfl_factor,
+                    self.sdf_smoothing
+                ]
+
+        # Add common settings
+        elif self.method.value in [MORPH_GEODESIC_METHOD, MORPH_CHAN_VESE_METHOD]:
+            __settings__ += [
+                self.alpha,
+                self.sigma,
+                self.level_set,
+                self.adv_level_set,
+            ]
+
+            # Advanced settings for level setting
+            if self.adv_level_set.value:
+                if self.level_set.value == LEVEL_SET_CIRCLE:
+                    __settings__ += [
+                        self.circle_center,
+                        self.circle_radius
+                    ]
+                elif self.level_set.value == LEVEL_SET_CHECKERBOARD:
+                    __settings__ += [
+                        self.checkerboard_size
+                    ]
+
+            # Add common smoothing function after level setting options
+            __settings__ += [
+                self.smoothing
+            ]
+            # Add individual settings
+            if self.method.value == MORPH_GEODESIC_METHOD:
+                __settings__ += [
+                    self.threshold,
+                    self.balloon
+                ]
+            elif self.method.value == MORPH_CHAN_VESE_METHOD:
+                __settings__ += [
+                    self.lambda1,
+                    self.lambda2
+                ]
+        return __settings__
 
     def run(self, workspace):
         x_name = self.x_name.value
@@ -70,15 +251,79 @@ class ActiveContourModel(cellprofiler.module.ImageSegmentation):
 
         x_data = x.pixel_data
 
-        thresholding = skimage.filters.threshold_otsu(x_data)
+        y_data = None
 
-        thresholding = thresholding * 0.9
+        if self.method.value == DIFFERENTIAL_METHOD:
+            thresholding = skimage.filters.threshold_otsu(x_data)
 
-        binary = x_data > thresholding
+            thresholding = thresholding * self.pre_threshold.value
 
-        y_data, phi = chan_vese(x_data, binary, alpha=self.alpha.value, iterations=self.iterations.value, threshold=self.threshold.value)
+            binary = x_data > thresholding
 
-        y_data = skimage.measure.label(y_data)
+            y_data, phi = chan_vese(x_data,
+                                    binary,
+                                    alpha=self.pde_alpha.value,
+                                    iterations=self.iterations.value,
+                                    threshold=self.threshold.value,
+                                    phi_bound=self.phi_bound.value,
+                                    cfl_factor=self.cfl_factor.value,
+                                    sdf_smoothing=self.sdf_smoothing.value)
+
+        else:
+            level_set = str(self.level_set.value)
+            # Change default settings only if asked to
+            if self.adv_level_set.value:
+
+                if self.level_set.value == LEVEL_SET_CIRCLE:
+                    # TODO: fix this for 3d images
+                    center_x = self.circle_center.x
+                    center_y = self.circle_center.y
+                    radius = self.circle_radius.value
+                    assert (center_x == center_y == -1) or (center_x != -1 and center_y != -1), \
+                        "Coordinates must either both be -1 (default) or both positive"
+
+                    if center_x == center_y == -1:
+                        center = None
+                    else:
+                        if len(x_data.shape) == 3:
+                            raise NotImplementedError("3D center selection not yet implemented")
+                        center = (center_x, center_y)
+                    level_set = skimage.segmentation.circle_level_set(x_data.shape,
+                                                                      center=center,
+                                                                      radius=radius)
+                elif self.level_set.value == LEVEL_SET_CHECKERBOARD:
+                    square_size = self.checkerboard_size.value
+                    level_set = skimage.segmentation.checkerboard_level_set(x_data.shape,
+                                                                            square_size=square_size)
+
+            if self.method.value == MORPH_GEODESIC_METHOD:
+                # Perform preprocessing for geodesic method
+                pre_process = skimage.segmentation.inverse_gaussian_gradient(x_data,
+                                                                             alpha=self.alpha.value,
+                                                                             sigma=self.sigma.value)
+
+                threshold_policy = 'auto' if self.threshold.value == 0 else self.threshold.value
+
+                y_data = skimage.segmentation \
+                    .morphological_geodesic_active_contour(pre_process,
+                                                           iterations=self.iterations.value,
+                                                           smoothing=self.smoothing.value,
+                                                           init_level_set=level_set,
+                                                           threshold=threshold_policy,
+                                                           balloon=self.balloon.value
+                                                           )
+
+            elif self.method.value == MORPH_CHAN_VESE_METHOD:
+                y_data = skimage.segmentation \
+                    .morphological_chan_vese(x_data,
+                                             iterations=self.iterations.value,
+                                             smoothing=self.smoothing.value,
+                                             init_level_set=level_set,
+                                             lambda1=self.lambda1.value,
+                                             lambda2=self.lambda2.value
+                                             )
+
+        y_data = skimage.measure.label(y_data, connectivity=self.connectivity.value)
 
         objects = cellprofiler.object.Objects()
 
@@ -101,7 +346,7 @@ class ActiveContourModel(cellprofiler.module.ImageSegmentation):
 epsilon = numpy.finfo(numpy.float).eps
 
 
-def chan_vese(image, mask, iterations, alpha, threshold):
+def chan_vese(image, mask, iterations, alpha, threshold, phi_bound, cfl_factor, sdf_smoothing):
     image = skimage.img_as_float(image)
 
     # -- Create a signed distance map (SDF) from mask
@@ -118,7 +363,7 @@ def chan_vese(image, mask, iterations, alpha, threshold):
 
     while iteration < iterations and not stop:
         # get the curve's narrow band
-        index = numpy.flatnonzero(numpy.logical_and(phi <= 1.2, phi >= -1.2))
+        index = numpy.flatnonzero(numpy.logical_and(phi <= phi_bound, phi >= -phi_bound))
 
         if len(index) > 0:
             interior_points = numpy.flatnonzero(phi <= 0)
@@ -136,13 +381,13 @@ def chan_vese(image, mask, iterations, alpha, threshold):
             gradient_descent = force / numpy.max(numpy.abs(force)) + alpha * curvature
 
             # -- maintain the CFL condition
-            dt = 0.45 / (numpy.max(numpy.abs(gradient_descent)) + epsilon)
+            dt = cfl_factor / (numpy.max(numpy.abs(gradient_descent)) + epsilon)
 
             # -- evolve the curve
             phi.flat[index] += dt * gradient_descent
 
             # -- Keep SDF smooth
-            phi = sussman(phi, 0.5)
+            phi = sussman(phi, sdf_smoothing)
 
             new_mask = phi <= 0
 
@@ -318,7 +563,7 @@ def shiftb(m):
 
 # Convergence Test
 def convergence(p_mask, n_mask, thresh, c):
-    if numpy.sum(numpy.abs(p_mask - n_mask)) < thresh:
+    if numpy.sum(numpy.abs(numpy.logical_xor(p_mask, n_mask))) < thresh:
         c += 1
     else:
         c = 0
