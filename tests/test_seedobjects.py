@@ -75,8 +75,8 @@ def test_run(object_set_with_data, module, workspace_with_data, remove_below):
 
     seeds = skimage.feature.peak_local_max(seeds,
                                            min_distance=1,
-                                           threshold_rel=1,
-                                           exclude_border=True,
+                                           threshold_rel=0,
+                                           exclude_border=False,
                                            num_peaks=numpy.inf,
                                            indices=False)
 
