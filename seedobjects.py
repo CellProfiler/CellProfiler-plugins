@@ -157,6 +157,10 @@ def generate_seeds(labels, gaussian_sigma, distance_threshold, intensity_thresho
     if max_seeds == -1:
         max_seeds = numpy.inf
 
+    # Remove one pixel from the border
+    no_border = labels.copy()
+    # TODO: need to handle 2d and 3d data separately
+
     # Compute the distance transform
     seeds = scipy.ndimage.distance_transform_edt(labels)
 

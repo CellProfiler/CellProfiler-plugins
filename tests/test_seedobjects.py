@@ -17,13 +17,13 @@ instance = seedobjects.SeedObjects()
 def image_labels():
     labels = numpy.zeros((20, 20), dtype=numpy.uint8)
 
-    labels[2:8, 2:8] = 1
+    labels[2:9, 2:9] = 1
 
-    labels[0:8, 12:18] = 2
+    labels[0:9, 12:19] = 2
 
-    labels[12:18, 0:8] = 3
+    labels[12:19, 0:9] = 3
 
-    labels[12:20, 12:20] = 4
+    labels[14:21, 14:21] = 4
 
     return labels
 
@@ -32,13 +32,13 @@ def image_labels():
 def volume_labels():
     labels = numpy.zeros((9, 20, 20), dtype=numpy.uint8)
 
-    labels[0:9, 2:8, 2:8] = 1
+    labels[0:9, 2:9, 2:9] = 1
 
-    labels[0:5, 0:8, 12:18] = 2
+    labels[0:5, 0:9, 12:18] = 2
 
-    labels[4:9, 12:18, 0:8] = 3
+    labels[4:11, 12:18, 0:9] = 3
 
-    labels[1:8, 12:20, 12:20] = 4
+    labels[1:10, 14:20, 14:20] = 4
 
     return labels
 
@@ -84,131 +84,90 @@ def test_run(object_set_with_data, module, workspace_with_data, remove_below):
 
     numpy.testing.assert_array_equal(actual, expected)
 
-#
-# def test_2d_merge_objects(image_labels, module, object_set_empty, objects_empty, workspace_empty):
-#     labels = image_labels.copy()
-#     labels[5, 5] = 5
-#     labels[2, 15] = 6
-#     labels[15, 2] = 7
-#     labels[15, 15] = 8
-#
-#     objects_empty.segmented = labels
-#
-#     module.x_name.value = "InputObjects"
-#     module.y_name.value = "OutputObjects"
-#     module.size.value = 2.
-#
-#     module.run(workspace_empty)
-#
-#     actual = object_set_empty.get_objects("OutputObjects").segmented
-#     expected = image_labels
-#
-#     numpy.testing.assert_array_equal(actual, expected)
-#
-#
-# def test_3d_fill_holes(volume_labels, module, object_set_empty, objects_empty, workspace_empty):
-#     labels = volume_labels.copy()
-#     labels[5, 5, 5] = 5
-#     labels[2, 2, 15] = 6
-#     labels[5, 15, 2] = 7
-#     labels[5, 15, 15] = 8
-#
-#     objects_empty.segmented = labels
-#
-#     module.x_name.value = "InputObjects"
-#     module.y_name.value = "OutputObjects"
-#     module.size.value = 2.
-#
-#     module.run(workspace_empty)
-#
-#     actual = object_set_empty.get_objects("OutputObjects").segmented
-#     expected = volume_labels
-#
-#     numpy.testing.assert_array_equal(actual, expected)
-#
-#
-# def test_fail_3d_merge_large_object(volume_labels, module, object_set_empty, objects_empty, workspace_empty):
-#     labels = volume_labels.copy()
-#     # Create a 'large' object
-#     labels[5:10, 4:6, 4:6] = 5
-#
-#     objects_empty.segmented = labels
-#
-#     module.x_name.value = "InputObjects"
-#     module.y_name.value = "OutputObjects"
-#     # Set size below minimum
-#     module.size.value = 3.
-#
-#     module.run(workspace_empty)
-#
-#     actual = object_set_empty.get_objects("OutputObjects").segmented
-#     expected = labels
-#
-#     # Since the 3D size is above the minimum size threshold, no object should be merged
-#     numpy.testing.assert_array_equal(actual, expected)
-#
-#
-# def test_pass_3d_merge_large_object(volume_labels, module, object_set_empty, objects_empty, workspace_empty):
-#     labels = volume_labels.copy()
-#     # Create a 'large' object
-#     labels[5:10, 4:6, 4:6] = 5
-#
-#     objects_empty.segmented = labels
-#
-#     module.x_name.value = "InputObjects"
-#     module.y_name.value = "OutputObjects"
-#     # Set size below minimum
-#     module.size.value = 3.
-#     # Set to slicewise so the 'large' object is merged at each slice
-#     module.slice_wise.value = True
-#
-#     module.run(workspace_empty)
-#
-#     actual = object_set_empty.get_objects("OutputObjects").segmented
-#     expected = volume_labels
-#
-#     # We're filling slice-wise here, so each 2D slice should have the object merged
-#     numpy.testing.assert_array_equal(actual, expected)
-#
-#
-# def test_2d_keep_nonneighbored_objects(image_labels, module, object_set_empty, objects_empty, workspace_empty):
-#     labels = image_labels.copy()
-#     # Create "small"
-#     labels[8:12, 9:11] = 8
-#
-#     objects_empty.segmented = labels
-#
-#     module.x_name.value = "InputObjects"
-#     module.y_name.value = "OutputObjects"
-#     module.size.value = 4.
-#     # Modify threshold removal procedure
-#     module.remove_below_threshold.value = False
-#
-#     module.run(workspace_empty)
-#
-#     actual = object_set_empty.get_objects("OutputObjects").segmented
-#     # Object with no neighbors should not be removed
-#     expected = labels
-#
-#     numpy.testing.assert_array_equal(actual, expected)
-#
-#
-# def test_3d_keep_nonneighbored_object(volume_labels, module, object_set_empty, objects_empty, workspace_empty):
-#     labels = volume_labels.copy()
-#     labels[8:12, 9:11, 4:6] = 8
-#
-#     objects_empty.segmented = labels
-#
-#     module.x_name.value = "InputObjects"
-#     module.y_name.value = "OutputObjects"
-#     module.size.value = 4.
-#     # Modify threshold removal procedure
-#     module.remove_below_threshold.value = False
-#
-#     module.run(workspace_empty)
-#
-#     actual = object_set_empty.get_objects("OutputObjects").segmented
-#     # Object with no neighbors should not be removed
-#     expected = labels
-#
-#     numpy.testing.assert_array_equal(actual, expected)
+
+def test_2d_regular(image_labels, module, object_set_empty, objects_empty, workspace_empty):
+    labels = numpy.zeros_like(image_labels)
+    labels[5, 5] = 1
+    labels[4, 15] = 1
+    labels[15, 5] = 1
+    labels[17, 17] = 1
+
+    objects_empty.segmented = image_labels
+
+    module.x_name.value = "InputObjects"
+    module.y_name.value = "OutputObjects"
+    module.structuring_element.value = "disk,0"
+
+    module.run(workspace_empty)
+
+    actual = object_set_empty.get_objects("OutputObjects").segmented
+    expected = labels
+
+    numpy.testing.assert_array_equal(actual, expected)
+
+
+def test_3d_regular(volume_labels, module, object_set_empty, objects_empty, workspace_empty):
+    labels = numpy.zeros_like(volume_labels)
+
+    labels[5, 5, 5] = 1
+    labels[2, 4, 15] = 1
+    labels[7, 15, 5] = 1
+    labels[6, 17, 17] = 1
+
+    objects_empty.segmented = volume_labels
+
+    module.x_name.value = "InputObjects"
+    module.y_name.value = "OutputObjects"
+    module.structuring_element.value = "ball,0"
+
+    module.run(workspace_empty)
+
+    actual = object_set_empty.get_objects("OutputObjects").segmented
+    expected = labels
+
+    numpy.testing.assert_array_equal(actual, expected)
+
+
+def test_2d_min_dist(image_labels, module, object_set_empty, objects_empty, workspace_empty):
+    labels = numpy.zeros_like(image_labels)
+    labels[5, 5] = 1
+    labels[4, 15] = 1
+    labels[15, 5] = 1
+    labels[17, 17] = 1
+
+    objects_empty.segmented = image_labels
+
+    module.x_name.value = "InputObjects"
+    module.y_name.value = "OutputObjects"
+    module.structuring_element.value = "disk,0"
+
+    module.min_dist.value = 18
+
+    module.run(workspace_empty)
+
+    actual = object_set_empty.get_objects("OutputObjects").segmented
+    expected = labels
+
+    numpy.testing.assert_array_equal(actual, expected)
+
+
+def test_3d_regular(volume_labels, module, object_set_empty, objects_empty, workspace_empty):
+    labels = numpy.zeros_like(volume_labels)
+
+    labels[5, 5, 5] = 1
+    labels[2, 4, 15] = 1
+    labels[7, 15, 5] = 1
+    labels[6, 17, 17] = 1
+
+    objects_empty.segmented = labels
+
+    module.x_name.value = "InputObjects"
+    module.y_name.value = "OutputObjects"
+    module.structuring_element.value = "ball,0"
+
+    module.run(workspace_empty)
+
+    actual = object_set_empty.get_objects("OutputObjects").segmented
+    expected = labels
+
+    numpy.testing.assert_array_equal(actual, expected)
