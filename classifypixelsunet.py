@@ -3,7 +3,7 @@
 """
 Author: Tim Becker, Juan Caicedo, Claire McQuinn 
 """
-import keras 
+
 import logging
 import numpy
 import pkg_resources
@@ -15,14 +15,12 @@ import os.path
 import cellprofiler.module
 import cellprofiler.setting
 
-is_windows = hasattr(sys, 'getwindowsversion')
-
-if is_windows:
+if sys.platform.startswith('win'):
     os.environ["KERAS_BACKEND"] = "cntk"
-    import cntk
 else:
     os.environ["KERAS_BACKEND"] = "tensorflow"
-    import tensorflow
+
+import keras 
 
 logger = logging.getLogger(__name__)
 
@@ -73,9 +71,6 @@ class ClassifyPixelsUnet(cellprofiler.module.ImageProcessing):
 
 
 def unet_initialize(input_shape):
-    session = tensorflow.Session()
-    # apply session
-    keras.backend.set_session(session)
     # create model
 
     dim1, dim2 = input_shape
