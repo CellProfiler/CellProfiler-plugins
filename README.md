@@ -20,6 +20,12 @@ Please see help here: https://github.com/CellProfiler/CellProfiler/blob/master/c
 	pip install -r requirements.txt
 	```
 
+    To install CellProfiler-plugins on a windows machine with support for the deep learning module ClassifyPixels-UNet use
+    ```
+    cd CellProfiler-plugins
+    pip install -r requirements-windows.txt
+    ```
+
 1. Configure CellProfiler plugins directory in the GUI via `Preferences > CellProfiler plugins directory` (you will need to restart CellProfiler for the change to take effect). When running CellProfiler via the command line, use the `--plugins-directory` flag to specify the plugins directory, for example:
     ```
     cellprofiler --run --run-headless --project PROJECT_FILE --plugins-directory PLUGIN_DIRECTORY/CellProfiler-plugins
