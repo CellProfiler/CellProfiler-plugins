@@ -34,11 +34,11 @@ def volume_labels():
 
     labels[0:9, 2:9, 2:9] = 1
 
-    labels[0:5, 0:9, 12:18] = 2
+    labels[0:5, 0:9, 12:19] = 2
 
-    labels[4:11, 12:18, 0:9] = 3
+    labels[4:11, 12:19, 0:9] = 3
 
-    labels[1:10, 14:20, 14:20] = 4
+    labels[1:10, 14:21, 14:21] = 4
 
     return labels
 
@@ -109,10 +109,10 @@ def test_2d_regular(image_labels, module, object_set_empty, objects_empty, works
 def test_3d_regular(volume_labels, module, object_set_empty, objects_empty, workspace_empty):
     labels = numpy.zeros_like(volume_labels)
 
-    labels[5, 5, 5] = 1
+    labels[4, 5, 5] = 1
     labels[2, 4, 15] = 1
-    labels[7, 15, 4] = 1
-    labels[6, 17, 17] = 1
+    labels[6, 15, 4] = 1
+    labels[5, 17, 17] = 1
 
     objects_empty.segmented = volume_labels
 
