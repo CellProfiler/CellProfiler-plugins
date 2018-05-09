@@ -6,7 +6,7 @@ import skimage.morphology
 
 import imagegradient
 
-instance = imagegradient.ImageGradient()
+instance = imagegradient.ImageGradient
 
 
 def test_run(image, module, image_set, workspace):

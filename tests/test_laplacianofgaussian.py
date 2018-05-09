@@ -5,7 +5,7 @@ import skimage.color
 
 import laplacianofgaussian
 
-instance = laplacianofgaussian.LaplacianOfGaussian()
+instance = laplacianofgaussian.LaplacianOfGaussian
 
 
 def test_run(image, image_set, module, workspace):

@@ -6,7 +6,7 @@ import skimage.morphology
 
 import tophattransform
 
-instance = tophattransform.TopHatTransform()
+instance = tophattransform.TopHatTransform
 
 
 @pytest.fixture(
