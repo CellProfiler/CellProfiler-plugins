@@ -38,6 +38,7 @@ import skimage.segmentation
 import scipy.ndimage
 import skimage.filters
 import skimage.feature
+import skimage.util
 
 import cellprofiler.image
 import cellprofiler.module
@@ -157,12 +158,14 @@ def generate_seeds(labels, gaussian_sigma, distance_threshold, intensity_thresho
     if max_seeds == -1:
         max_seeds = numpy.inf
 
-    # Remove one pixel from the border
-    no_border = labels.copy()
-    # TODO: need to handle 2d and 3d data separately
+    # Pad the image so the distance transform works as expected
+    padded = skimage.util.pad(labels, 1, mode='constant', constant_values=0)
 
     # Compute the distance transform
-    seeds = scipy.ndimage.distance_transform_edt(labels)
+    seeds = scipy.ndimage.distance_transform_edt(padded)
+
+    # Remove the pad for the next step
+    seeds = skimage.util.crop(seeds, 1)
 
     # Smooth the image
     seeds = skimage.filters.gaussian(seeds, sigma=gaussian_sigma)

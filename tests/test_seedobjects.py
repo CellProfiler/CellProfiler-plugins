@@ -89,7 +89,7 @@ def test_2d_regular(image_labels, module, object_set_empty, objects_empty, works
     labels = numpy.zeros_like(image_labels)
     labels[5, 5] = 1
     labels[4, 15] = 1
-    labels[15, 5] = 1
+    labels[15, 4] = 1
     labels[17, 17] = 1
 
     objects_empty.segmented = image_labels
