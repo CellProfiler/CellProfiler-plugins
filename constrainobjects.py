@@ -108,6 +108,7 @@ objects.
         object_set = workspace.object_set
 
         x = object_set.get_objects(x_name)
+        x_data = x.segmented
 
         dimensions = x.dimensions
         y_data = x.segmented.copy()
@@ -116,19 +117,37 @@ objects.
         reference = object_set.get_objects(reference_name)
         reference_data = reference.segmented
 
+        # Get the parent object labels
+        outer_labels = numpy.unique(reference_data)
+
         if self.remove_orphans.value:
             # Get the child object labels
-            inner_labels = numpy.unique(y_data)
-            # Get the parent object labels
-            outer_labels = numpy.unique(reference_data)
+            inner_labels = numpy.unique(x_data)
             # Find the discrepancies between child and parent
             orphans = numpy.setdiff1d(inner_labels, outer_labels)
             # Remove them from the original array
-            orphan_mask = numpy.in1d(y_data, orphans)
+            orphan_mask = numpy.in1d(x_data, orphans)
             # orphan_mask here is a 1D array, but it has the same number of elements
             # as y_data. Since we know that, we can reshape it to the original array
             # shape and use it as a boolean mask to take out the orphaned objects
-            y_data[orphan_mask.reshape(y_data.shape)] = 0
+            y_data[orphan_mask.reshape(x_data.shape)] = 0
+
+        for obj in outer_labels:
+            # Ignore the background
+            if obj == 0:
+                continue
+
+            # Find where in the array the child object is outside of the
+            # parent object (i.e. where the original array is *not* that
+            # object *and* where the child array is that object)
+            constrain_mask = (reference_data != obj) & (x_data == obj)
+            # Remove those parts outside the parent
+            y_data[constrain_mask] = 0
+
+            # Only remove intruding pieces if the user has requested it
+            if self.coersion_method.value == METHOD_REMOVE:
+                intrude_mask = (reference_data == obj) & (x_data != obj) & (x_data != 0)
+                y_data[intrude_mask] = 0
 
         objects = cellprofiler.object.Objects()
 
@@ -140,13 +159,11 @@ objects.
         self.add_measurements(workspace)
 
         if self.show_window:
-            workspace.display_data.x_data = x.segmented
+            workspace.display_data.x_data = x_data
 
             workspace.display_data.y_data = y_data
 
             workspace.display_data.reference = reference_data
-
-            workspace.display_data.z_aggregate = z_aggregate
 
             workspace.display_data.dimensions = dimensions
 
@@ -179,12 +196,4 @@ objects.
             title=self.reference_name.value,
             x=0,
             y=1
-        )
-
-        figure.subplot_scatter(
-            xvals=numpy.arange(len(workspace.display_data.z_aggregate)),
-            yvals=workspace.display_data.z_aggregate,
-            x=1,
-            y=1,
-            title=self.aggregation_method.value
         )
