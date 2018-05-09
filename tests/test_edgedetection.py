@@ -7,7 +7,7 @@ import skimage.filters
 
 import edgedetection
 
-instance = edgedetection.EdgeDetection()
+instance = edgedetection.EdgeDetection
 
 
 def test_run_without_mask(image, image_set, module, workspace):

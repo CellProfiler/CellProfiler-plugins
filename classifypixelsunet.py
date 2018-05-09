@@ -1,14 +1,26 @@
-import logging
-import os.path
-import time
+# coding=utf-8
 
-import cellprofiler.module
-import cellprofiler.setting
-import keras
+"""
+Author: Tim Becker, Juan Caicedo, Claire McQuinn 
+"""
+
+import logging
 import numpy
 import pkg_resources
 import requests
-import tensorflow
+import sys
+import time
+
+import os.path
+import cellprofiler.module
+import cellprofiler.setting
+
+if sys.platform.startswith('win'):
+    os.environ["KERAS_BACKEND"] = "cntk"
+else:
+    os.environ["KERAS_BACKEND"] = "tensorflow"
+
+import keras 
 
 logger = logging.getLogger(__name__)
 
@@ -17,12 +29,30 @@ option_dict_bn = {"mode": 0, "momentum": 0.9}
 
 
 __doc__ = """\
-tbd
+ClassifyPixels-Unet calculates pixel wise classification using an UNet 
+network. The default network model is trained to identify nuclei, background 
+and the nuclei boundary. Classification results are returned as three channel 
+images: 
+
+* red channel stores background classification
+* green channel stores nuclei classification
+* blue channel stores boundary classification
+
+In the simplest use case, the classifications are converted to gray value images 
+using the module ColorToGray. The module IdentifyPrimaryObjects can be 
+used to identify example images in the nuclei channel (green channel). 
+
+The default UNet model is downloaded and stored on the local machine. To 
+replace the model the function  download_file_from_google_drive needs to 
+be updated.  
+
+
+Author: Tim Becker, Juan Caicedo, Claire McQuinn 
 """
 
 
-class UnetSegment(cellprofiler.module.ImageProcessing):
-    module_name = "UnetSegment"
+class ClassifyPixelsUnet(cellprofiler.module.ImageProcessing):
+    module_name = "ClassifyPixels-Unet"
     variable_revision_number = 1
 
     def run(self, workspace):
@@ -35,15 +65,12 @@ class UnetSegment(cellprofiler.module.ImageProcessing):
         t1 = time.time()
         logger.debug('UNet initialization took {} seconds '.format(t1 - t0))
 
-        self.function = lambda input_image: unet_segmentation(model, input_image)
+        self.function = lambda input_image: unet_classify(model, input_image)
 
-        super(UnetSegment, self).run(workspace)
+        super(ClassifyPixelsUnet, self).run(workspace)
 
 
 def unet_initialize(input_shape):
-    session = tensorflow.Session()
-    # apply session
-    keras.backend.set_session(session)
     # create model
 
     dim1, dim2 = input_shape
@@ -64,15 +91,16 @@ def unet_initialize(input_shape):
 
         # Download the weights
         logger.debug("Downloading model weights to: {:s}".format(weights_filename))
-        id = "146sae_bv2rJa4YoJr8Hlo-MFKfuepoMX"
-        download_file_from_google_drive(id, weights_filename)
+        model_id = "1I9j4oABbcV8EnvO_ufACXP9e4KyfHMtE"
+
+        download_file_from_google_drive(model_id, weights_filename)
 
     model.load_weights(weights_filename)
 
     return model
 
 
-def unet_segmentation(model, input_image):
+def unet_classify(model, input_image):
     dim1, dim2 = input_image.shape
 
     images = input_image.reshape((-1, dim1, dim2, 1))
@@ -82,11 +110,11 @@ def unet_segmentation(model, input_image):
     images = images.astype(numpy.float32) / numpy.max(images)
 
     start = time.time()
-    segmentation = model.predict(images, batch_size=1)
+    pixel_classification = model.predict(images, batch_size=1)
     end = time.time()
     logger.debug('UNet segmentation took {} seconds '.format(end - start))
 
-    return segmentation[0, :, :, :]
+    return pixel_classification[0, :, :, :]
 
 
 def get_core(dim1, dim2):

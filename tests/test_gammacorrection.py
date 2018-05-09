@@ -3,7 +3,7 @@ import skimage.exposure
 
 import gammacorrection
 
-instance = gammacorrection.GammaCorrection()
+instance = gammacorrection.GammaCorrection
 
 
 def test_run(image, module, image_set, workspace):
