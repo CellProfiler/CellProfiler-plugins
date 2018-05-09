@@ -111,7 +111,7 @@ def test_3d_regular(volume_labels, module, object_set_empty, objects_empty, work
 
     labels[5, 5, 5] = 1
     labels[2, 4, 15] = 1
-    labels[7, 15, 5] = 1
+    labels[7, 15, 4] = 1
     labels[6, 17, 17] = 1
 
     objects_empty.segmented = volume_labels
@@ -130,10 +130,8 @@ def test_3d_regular(volume_labels, module, object_set_empty, objects_empty, work
 
 def test_2d_min_dist(image_labels, module, object_set_empty, objects_empty, workspace_empty):
     labels = numpy.zeros_like(image_labels)
-    labels[5, 5] = 1
     labels[4, 15] = 1
-    labels[15, 5] = 1
-    labels[17, 17] = 1
+    labels[15, 4] = 1
 
     objects_empty.segmented = image_labels
 
@@ -141,7 +139,7 @@ def test_2d_min_dist(image_labels, module, object_set_empty, objects_empty, work
     module.y_name.value = "OutputObjects"
     module.structuring_element.value = "disk,0"
 
-    module.min_dist.value = 18
+    module.min_dist.value = 12
 
     module.run(workspace_empty)
 
@@ -151,19 +149,19 @@ def test_2d_min_dist(image_labels, module, object_set_empty, objects_empty, work
     numpy.testing.assert_array_equal(actual, expected)
 
 
-def test_3d_regular(volume_labels, module, object_set_empty, objects_empty, workspace_empty):
+def test_3d_min_dist(volume_labels, module, object_set_empty, objects_empty, workspace_empty):
     labels = numpy.zeros_like(volume_labels)
 
-    labels[5, 5, 5] = 1
     labels[2, 4, 15] = 1
-    labels[7, 15, 5] = 1
-    labels[6, 17, 17] = 1
+    labels[7, 15, 4] = 1
 
     objects_empty.segmented = labels
 
     module.x_name.value = "InputObjects"
     module.y_name.value = "OutputObjects"
     module.structuring_element.value = "ball,0"
+
+    module.min_dist.value = 64
 
     module.run(workspace_empty)
 
