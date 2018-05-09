@@ -18,12 +18,20 @@ instance = seedobjects.SeedObjects
 def image_labels():
     labels = numpy.zeros((20, 20), dtype=numpy.uint8)
 
+    # Midpoint - 5, 5
+    # Size = 7x7 (49)
     labels[2:9, 2:9] = 1
 
+    # Midpoint - 4, 15
+    # Size = 9x7 (63)
     labels[0:9, 12:19] = 2
 
+    # Midpoint - 15, 4
+    # Size = 7x9 (63)
     labels[12:19, 0:9] = 3
 
+    # Midpoint - 17, 17
+    # Size = 7x7 (49)
     labels[14:21, 14:21] = 4
 
     return labels
@@ -33,26 +41,26 @@ def image_labels():
 def volume_labels():
     labels = numpy.zeros((9, 20, 20), dtype=numpy.uint8)
 
+    # Midpoint - 4, 5, 5
+    # Size = 9x7x7 (441)
     labels[0:9, 2:9, 2:9] = 1
 
+    # Midpoint - 2, 4, 15
+    # Size = 5x9x7 (315)
     labels[0:5, 0:9, 12:19] = 2
 
+    # Midpoint - 6, 15, 4
+    # Size = 7x9x7 (441)
     labels[4:11, 12:19, 0:9] = 3
 
+    # Midpoint - 5, 17, 17
+    # Size = 9x7x7 (441)
     labels[1:10, 14:21, 14:21] = 4
 
     return labels
 
 
-@pytest.fixture(
-    scope="module", 
-    params=[False, True],
-    ids=["keep_lonely", "remove_lonely"])
-def remove_below(request):
-    return request.param
-
-
-def test_run(object_set_with_data, module, workspace_with_data, remove_below):
+def test_run(object_set_with_data, module, workspace_with_data):
     input_objs = object_set_with_data.get_objects("InputObjects").segmented
 
     im_dim = input_objs.ndim
@@ -167,6 +175,52 @@ def test_3d_min_dist(volume_labels, module, object_set_empty, objects_empty, wor
     module.structuring_element.value = "ball,0"
 
     module.min_dist.value = 64
+
+    module.run(workspace_empty)
+
+    actual = object_set_empty.get_objects("OutputObjects").segmented
+    expected = labels
+
+    numpy.testing.assert_array_equal(actual, expected)
+
+
+def test_2d_min_intensity(image_labels, module, object_set_empty, objects_empty, workspace_empty):
+    labels = numpy.zeros_like(image_labels)
+
+    # Only the largest objects should be seeded
+    labels[4, 15] = 1
+    labels[15, 4] = 1
+
+    objects_empty.segmented = image_labels
+
+    module.x_name.value = "InputObjects"
+    module.y_name.value = "OutputObjects"
+    module.structuring_element.value = "disk,0"
+
+    module.min_intensity.value = 0.95
+
+    module.run(workspace_empty)
+
+    actual = object_set_empty.get_objects("OutputObjects").segmented
+    expected = labels
+
+    numpy.testing.assert_array_equal(actual, expected)
+
+
+def test_3d_min_intensity(volume_labels, module, object_set_empty, objects_empty, workspace_empty):
+    labels = numpy.zeros_like(volume_labels)
+
+    labels[4, 5, 5] = 1
+    labels[6, 15, 4] = 1
+    labels[5, 17, 17] = 1
+
+    objects_empty.segmented = volume_labels
+
+    module.x_name.value = "InputObjects"
+    module.y_name.value = "OutputObjects"
+    module.structuring_element.value = "ball,0"
+
+    module.min_intensity.value = 0.95
 
     module.run(workspace_empty)
 

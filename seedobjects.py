@@ -76,10 +76,14 @@ To find the maximum number of peaks, set this value to `1`.
             text="Minimum absolute internal distance",
             value=0.,
             minval=0.,
+            maxval=1.,
             doc="""\
 Minimum absolute intensity threshold for seed generation. Since this threshold is
 applied to the distance transformed image, this defines a minimum object
 "size". Objects smaller than this size will not contain seeds. 
+
+This value is expressed as a percentage value (as if the image were rescaled
+between 0 and 1). 
 
 By default, the absolute threshold is the minimum value of the image.
 For distance transformed images, this value is `0` (or the background).
