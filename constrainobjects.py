@@ -28,12 +28,8 @@ import cellprofiler.setting
 
 log = logging.getLogger(__name__)
 
-METHOD_MEDIAN = "Median Intensity"
-METHOD_SUM = "Sum Intensity"
-#
-PEAK_SINGLE = "Accept Single Peak As Bottom"
-PEAK_NAIVE = "Accept Only Two Peaks"
-PEAK_APOSTERIORI = "Accept Nearest Peak After Highest Value"
+METHOD_IGNORE = "Ignore"
+METHOD_REMOVE = "Remove protruding pieces"
 
 
 class ConstrainObjects(cellprofiler.module.ObjectProcessing):
@@ -51,78 +47,38 @@ class ConstrainObjects(cellprofiler.module.ObjectProcessing):
             doc="Objects to use as reference for the constraint"
         )
 
-        self.aggregation_method = cellprofiler.setting.Choice(
-            text="Slice aggregation method",
-            choices=[METHOD_MEDIAN, METHOD_SUM],
-            value=METHOD_MEDIAN,
+        self.coersion_method = cellprofiler.setting.Choice(
+            text="Handle protruding objects",
+            choices=[METHOD_IGNORE, METHOD_REMOVE],
+            value=METHOD_IGNORE,
             doc="""\
-Method by which XY slices are grouped to determine peak. 
+Assuming the objects are related, there may be some "child" objects
+that protrude into the space of a "parent" object with a different label.
+E.g. a nuclei from one cell may protrude into the membrane segmentation 
+of a difference cell. This method sets how to handle these cases
 
-**{METHOD_MEDIAN}**: Group by median intensity of each slice
-**{METHOD_SUM}**: Group by sum intensity of each slice
+**{METHOD_IGNORE}**: Ignore these protrusions, only constrain the real child
+**{METHOD_REMOVE}**: Remove the portion of the child that protrudes into the wrong parent
 """.format(**{
-                "METHOD_MEDIAN": METHOD_MEDIAN,
-                "METHOD_SUM": METHOD_SUM
+                "METHOD_IGNORE": METHOD_IGNORE,
+                "METHOD_REMOVE": METHOD_REMOVE
             }
            )
         )
 
-        self.top_padding = cellprofiler.setting.Integer(
-            text="Top Padding",
-            value=0,
-            doc="Additional slices to keep beyond intensity peak"
-        )
-
-        self.bottom_padding = cellprofiler.setting.Integer(
-            text="Bottom Padding",
-            value=0,
-            doc="Additional slices to keep beyond intensity peak"
-        )
-
-        self.use_gradient = cellprofiler.setting.Binary(
-            text="Use gradient to choose peaks",
+        self.remove_orphans = cellprofiler.setting.Binary(
+            text="Remove children without a corresponding parent",
             value=False,
             doc="""
-Use the gradient of the aggregation method (instead of the aggregation method itself) 
-to determine clipping planes"""
-        )
+Some objects may be "parent-less" orphans, e.g. nuclei segmentations that have no 
+corresponding, surrounding membrane segmentations. This specifies how to handle these
+objects.
 
-        self.use_moving_average = cellprofiler.setting.Binary(
-            text="Apply a moving average to determine peaks",
-            value=False,
-            doc="""
-Use a `moving average`_ (also called a "running mean") to smooth the curve
-before calculating the peaks.
-
-..  _moving average: https://en.wikipedia.org/wiki/Moving_average
-"""
-        )
-
-        self.moving_average_size = cellprofiler.setting.Integer(
-            text="Moving average window size",
-            value=3,
-            doc="""
-Size of the window for moving average.
-"""
-        )
-
-        self.peak_method = cellprofiler.setting.Choice(
-            text="Peak Selection Method",
-            choices=[PEAK_NAIVE, PEAK_SINGLE, PEAK_APOSTERIORI],
-            value=PEAK_NAIVE,
-            doc="""
-Method for determining which peaks to choose for the clipping planes. 
-
-*{PEAK_NAIVE}*: If the number of local maxima found is 2, accept those two as the 
-peaks for the clipping planes. Otherwise, clip nothing.
-*{PEAK_SINGLE}*: Same as *{PEAK_NAIVE}*, except if only one local maxima exists, 
-that will be chosen as the bottom clipping plane (the top will not be clipped).
-*{PEAK_APOSTERIORI}*: The maximum of the aggregate is chosen as the bottom clipping plane,
-and the next closest peak when traveling "up" the z-stack is chosen as the top.
+**{NO}**: Ignore them
+**{YES}**: Remove the entire object from set
 """.format(**{
-                "PEAK_NAIVE": PEAK_NAIVE,
-                "PEAK_SINGLE": PEAK_SINGLE,
-                "PEAK_APOSTERIORI": PEAK_APOSTERIORI
+                "YES": cellprofiler.setting.YES,
+                "NO": cellprofiler.setting.NO
             })
         )
 
@@ -131,13 +87,8 @@ and the next closest peak when traveling "up" the z-stack is chosen as the top.
 
         return __settings__ + [
             self.reference_name,
-            self.aggregation_method,
-            self.top_padding,
-            self.bottom_padding,
-            self.use_gradient,
-            self.use_moving_average,
-            self.moving_average_size,
-            self.peak_method
+            self.coersion_method,
+            self.remove_orphans
         ]
 
     def visible_settings(self):
@@ -145,99 +96,39 @@ and the next closest peak when traveling "up" the z-stack is chosen as the top.
 
         __settings__ += [
             self.reference_name,
-            self.aggregation_method,
-            self.top_padding,
-            self.bottom_padding,
-            self.use_gradient,
-            self.use_moving_average
+            self.coersion_method,
+            self.remove_orphans
         ]
 
-        if self.use_moving_average.value:
-            __settings__ += [self.moving_average_size]
-
-        return __settings__ + [self.peak_method]
+        return __settings__
 
     def run(self, workspace):
         x_name = self.x_name.value
         y_name = self.y_name.value
         object_set = workspace.object_set
-        images = workspace.image_set
 
         x = object_set.get_objects(x_name)
-
-        if not x.volumetric:
-            raise NotImplementedError("This module is only compatible with 3D (volumetric) images, not 2D.")
 
         dimensions = x.dimensions
         y_data = x.segmented.copy()
 
         reference_name = self.reference_name.value
-        reference = images.get_image(reference_name)
-        reference_data = reference.pixel_data
+        reference = object_set.get_objects(reference_name)
+        reference_data = reference.segmented
 
-        if self.aggregation_method.value == METHOD_MEDIAN:
-            aggregation_method = numpy.median
-        elif self.aggregation_method.value == METHOD_SUM:
-            aggregation_method = numpy.sum
-        else:
-            raise ValueError("Invalid aggregation method selected")
-
-        # Depending on aggregation method, the numbers can be quite large
-        # Cast as float64 here to ensure that no overflow occurs
-        z_aggregate = aggregation_method(reference_data, axis=(1, 2)).astype(numpy.float64)
-        if self.use_gradient.value:
-            z_aggregate = numpy.gradient(z_aggregate)
-
-        # Depending on if the user requested a moving average, we may need to apply this
-        # over the array
-        # https://stackoverflow.com/a/22621523/3277713
-        if self.use_moving_average.value:
-            n = self.moving_average_size.value
-            z_aggregate = numpy.convolve(z_aggregate, numpy.ones((n,)) / n, mode='same')
-
-        # scipy-signal based local maxima
-        if self.peak_method.value in [PEAK_SINGLE, PEAK_NAIVE]:
-            # `argrelmax` always returns a tuple, but z_aggregate is one dimensional
-            local_maxima = scipy.signal.argrelmax(z_aggregate)[0]
-            num_maxima = len(local_maxima)
-
-            if num_maxima == 1 and self.peak_method.value == PEAK_SINGLE:
-                # Single peak accepted as bottom clipping plane
-                # Don't clip off anything from the top
-                local_maxima = [local_maxima[0], len(z_aggregate)]
-            elif num_maxima != 2:
-                log.warning("Unable to find only two maxima (found {}) - bypassing clipping operation".format(num_maxima))
-                log.warning("Maxima found af the following indices: {}".format(local_maxima))
-                local_maxima = [0, 0]
-
-            # Apply padding based on user preference
-            # Ensure the clipping plane isn't beyond the array's index
-            bottom_slice = max(local_maxima[0] - self.bottom_padding.value, 0)
-            top_slice = min(local_maxima[1] - self.top_padding.value, len(z_aggregate) - 1)
-
-        # Aposteriori method
-        else:
-            # Find the bottom (e.g. maximum of aggregate)
-            bottom_slice = numpy.argmax(z_aggregate)
-            # Get the array from there on out
-            upper_z_aggregate = z_aggregate[bottom_slice + 1:]
-            # Find all the local maxima of the upper portion (see above for the indexing)
-            local_maxima = scipy.signal.argrelmax(upper_z_aggregate)[0]
-            # Get the first local extrema (if there are any)
-            if not len(local_maxima):
-                log.warning("Unable to find a second maximum after the first initial one - bypassing clipping operation")
-                bottom_slice = 0
-                top_slice = 0
-            else:
-                # Add the index of the bottom slice as offset
-                top_slice = local_maxima[0] + bottom_slice
-
-        # Apply to new object
-        y_data[:bottom_slice, :, :] = 0
-        # First check if top slice is zero, if so then we need to bypass
-        if top_slice != 0:
-            # We need to add 1 here to the top slice to _include_ the peak
-            y_data[top_slice + 1:, :, :] = 0
+        if self.remove_orphans.value:
+            # Get the child object labels
+            inner_labels = numpy.unique(y_data)
+            # Get the parent object labels
+            outer_labels = numpy.unique(reference_data)
+            # Find the discrepancies between child and parent
+            orphans = numpy.setdiff1d(inner_labels, outer_labels)
+            # Remove them from the original array
+            orphan_mask = numpy.in1d(y_data, orphans)
+            # orphan_mask here is a 1D array, but it has the same number of elements
+            # as y_data. Since we know that, we can reshape it to the original array
+            # shape and use it as a boolean mask to take out the orphaned objects
+            y_data[orphan_mask.reshape(y_data.shape)] = 0
 
         objects = cellprofiler.object.Objects()
 
