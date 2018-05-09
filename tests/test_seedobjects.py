@@ -6,11 +6,12 @@ import pytest
 import scipy.ndimage
 import skimage.filters
 import skimage.feature
+import skimage.util
 
 import seedobjects
 
 
-instance = seedobjects.SeedObjects()
+instance = seedobjects.SeedObjects
 
 
 @pytest.fixture(scope="module")
@@ -69,7 +70,11 @@ def test_run(object_set_with_data, module, workspace_with_data, remove_below):
 
     actual = workspace_with_data.object_set.get_objects("OutputObjects").segmented
 
-    seeds = scipy.ndimage.distance_transform_edt(input_objs)
+    padded = skimage.util.pad(input_objs, 1, mode='constant', constant_values=0)
+
+    seeds = scipy.ndimage.distance_transform_edt(padded)
+
+    seeds = skimage.util.crop(seeds, 1)
 
     seeds = skimage.filters.gaussian(seeds, sigma=1)
 
