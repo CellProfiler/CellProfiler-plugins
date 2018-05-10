@@ -211,7 +211,6 @@ def test_3d_min_intensity(volume_labels, module, object_set_empty, objects_empty
     labels = numpy.zeros_like(volume_labels)
 
     labels[4, 5, 5] = 1
-    labels[6, 15, 4] = 1
     labels[5, 17, 17] = 1
 
     objects_empty.segmented = volume_labels
@@ -220,11 +219,146 @@ def test_3d_min_intensity(volume_labels, module, object_set_empty, objects_empty
     module.y_name.value = "OutputObjects"
     module.structuring_element.value = "ball,0"
 
-    module.min_intensity.value = 0.95
+    module.min_intensity.value = 0.77
 
     module.run(workspace_empty)
 
     actual = object_set_empty.get_objects("OutputObjects").segmented
+    expected = labels
+
+    numpy.testing.assert_array_equal(actual, expected)
+
+
+def test_2d_border_exclude(image_labels, module, object_set_empty, objects_empty, workspace_empty):
+    labels = numpy.zeros_like(image_labels)
+
+    labels[5, 5] = 1
+
+    objects_empty.segmented = image_labels
+
+    module.x_name.value = "InputObjects"
+    module.y_name.value = "OutputObjects"
+    module.structuring_element.value = "disk,0"
+
+    module.exclude_border.value = 5
+
+    module.run(workspace_empty)
+
+    actual = object_set_empty.get_objects("OutputObjects").segmented
+    expected = labels
+
+    numpy.testing.assert_array_equal(actual, expected)
+
+
+def test_3d_border_exclude(volume_labels, module, object_set_empty, objects_empty, workspace_empty):
+    labels = numpy.zeros_like(volume_labels)
+
+    labels[4, 5, 5] = 1
+
+    objects_empty.segmented = volume_labels
+
+    module.x_name.value = "InputObjects"
+    module.y_name.value = "OutputObjects"
+    module.structuring_element.value = "ball,0"
+
+    module.exclude_border.value = 3
+
+    module.run(workspace_empty)
+
+    actual = object_set_empty.get_objects("OutputObjects").segmented
+    expected = labels
+
+    numpy.testing.assert_array_equal(actual, expected)
+
+
+def test_2d_max_seeds(image_labels, module, object_set_empty, objects_empty, workspace_empty):
+    labels = numpy.zeros_like(image_labels)
+
+    labels[4, 15] = 1
+    labels[15, 4] = 1
+
+    objects_empty.segmented = image_labels
+
+    module.x_name.value = "InputObjects"
+    module.y_name.value = "OutputObjects"
+    module.structuring_element.value = "disk,0"
+
+    module.max_seeds.value = 2
+
+    module.run(workspace_empty)
+
+    actual = object_set_empty.get_objects("OutputObjects").segmented
+    expected = labels
+
+    numpy.testing.assert_array_equal(actual, expected)
+
+
+def test_3d_max_seeds(volume_labels, module, object_set_empty, objects_empty, workspace_empty):
+    labels = numpy.zeros_like(volume_labels)
+
+    labels[4, 5, 5] = 1
+    labels[5, 17, 17] = 1
+
+    objects_empty.segmented = volume_labels
+
+    module.x_name.value = "InputObjects"
+    module.y_name.value = "OutputObjects"
+    module.structuring_element.value = "ball,0"
+
+    module.max_seeds.value = 2
+
+    module.run(workspace_empty)
+
+    actual = object_set_empty.get_objects("OutputObjects").segmented
+    expected = labels
+
+    numpy.testing.assert_array_equal(actual, expected)
+
+
+def test_2d_strel(image_labels, module, object_set_empty, objects_empty, workspace_empty):
+    labels = numpy.zeros_like(image_labels)
+    labels[5, 5] = 1
+    labels[4, 15] = 1
+    labels[15, 4] = 1
+    labels[17, 17] = 1
+
+    objects_empty.segmented = image_labels
+
+    module.x_name.value = "InputObjects"
+    module.y_name.value = "OutputObjects"
+    module.structuring_element.value = "disk,2"
+
+    module.run(workspace_empty)
+
+    actual = object_set_empty.get_objects("OutputObjects").segmented
+
+    labels = skimage.morphology.binary_dilation(labels, skimage.morphology.disk(2))
+
+    expected = labels
+
+    numpy.testing.assert_array_equal(actual, expected)
+
+
+def test_3d_strel(volume_labels, module, object_set_empty, objects_empty, workspace_empty):
+    labels = numpy.zeros_like(volume_labels)
+
+    labels[4, 5, 5] = 1
+    labels[2, 4, 15] = 1
+    labels[6, 15, 4] = 1
+    labels[5, 17, 17] = 1
+
+    objects_empty.segmented = volume_labels
+
+    module.x_name.value = "InputObjects"
+    module.y_name.value = "OutputObjects"
+    module.structuring_element.value = "ball,2"
+
+    module.run(workspace_empty)
+
+    actual = object_set_empty.get_objects("OutputObjects").segmented
+
+    labels = skimage.morphology.binary_dilation(labels, skimage.morphology.ball(2))
+
     expected = labels
 
     numpy.testing.assert_array_equal(actual, expected)
