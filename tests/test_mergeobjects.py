@@ -143,7 +143,7 @@ def test_3d_regular(volume_labels, module, object_set_empty, objects_empty, work
     numpy.testing.assert_array_equal(actual, expected)
 
 
-def test_fail_3d_merge_large_object(volume_labels, module, object_set_empty, objects_empty, workspace_empty):
+def test_unchanged_3d_merge_large_object(volume_labels, module, object_set_empty, objects_empty, workspace_empty):
     labels = volume_labels.copy()
     # Create a 'large' object
     labels[5:10, 4:6, 4:6] = 5
@@ -164,7 +164,7 @@ def test_fail_3d_merge_large_object(volume_labels, module, object_set_empty, obj
     numpy.testing.assert_array_equal(actual, expected)
 
 
-def test_pass_3d_merge_large_object(volume_labels, module, object_set_empty, objects_empty, workspace_empty):
+def test_changed_3d_merge_large_object(volume_labels, module, object_set_empty, objects_empty, workspace_empty):
     labels = volume_labels.copy()
     # Create a 'large' object
     labels[5:10, 4:6, 4:6] = 5
@@ -175,21 +175,21 @@ def test_pass_3d_merge_large_object(volume_labels, module, object_set_empty, obj
     module.y_name.value = "OutputObjects"
     # Set size below minimum
     module.size.value = 3.
-    # Set to slicewise so the 'large' object is merged at each slice
-    module.slice_wise.value = True
+    # Set to planewise so the 'large' object is merged at each plane
+    module.plane_wise.value = True
 
     module.run(workspace_empty)
 
     actual = object_set_empty.get_objects("OutputObjects").segmented
     expected = volume_labels
 
-    # We're filling slice-wise here, so each 2D slice should have the object merged
+    # We're filling plane-wise here, so each 2D plane should have the object merged
     numpy.testing.assert_array_equal(actual, expected)
 
 
 def test_2d_keep_nonneighbored_objects(image_labels, module, object_set_empty, objects_empty, workspace_empty):
     labels = image_labels.copy()
-    # Create "small"
+    # Create "small" object
     labels[8:12, 9:11] = 8
 
     objects_empty.segmented = labels
@@ -226,5 +226,70 @@ def test_3d_keep_nonneighbored_object(volume_labels, module, object_set_empty, o
     actual = object_set_empty.get_objects("OutputObjects").segmented
     # Object with no neighbors should not be removed
     expected = labels
+
+    numpy.testing.assert_array_equal(actual, expected)
+
+
+def test_2d_min_neighbor_size_some(image_labels, module, object_set_empty, objects_empty, workspace_empty):
+    labels = image_labels.copy()
+    # Create an object which doesn't meet contact criteria
+    labels[12:15, 0:1] = 7
+    # Create one which does
+    labels[2:8, 2:4] = 8
+    # Create one which meets the criteria for one object but not another
+    labels[10:12, 12:17] = 9
+    labels[8:10, 14:16] = 9
+
+    objects_empty.segmented = labels
+
+    module.x_name.value = "InputObjects"
+    module.y_name.value = "OutputObjects"
+    module.size.value = 4.
+    module.remove_below_threshold.value = False
+
+    # Set the minimum contact area
+    module.min_neighbor_size.value = 5
+
+    module.run(workspace_empty)
+
+    actual = object_set_empty.get_objects("OutputObjects").segmented
+
+    expected = image_labels.copy()
+    # Objects with less than 6 contacting pixels stay
+    expected[12:15, 0:1] = 7
+    expected[10:12, 12:17] = 9
+    expected[8:10, 14:16] = 9
+
+    numpy.testing.assert_array_equal(actual, expected)
+
+
+def test_2d_min_neighbor_size_all(image_labels, module, object_set_empty, objects_empty, workspace_empty):
+    labels = image_labels.copy()
+    # Create an object which doesn't meet contact criteria
+    labels[12:15, 0:1] = 7
+    # Create one which does
+    labels[2:8, 2:4] = 8
+    # Create one which meets the criteria for one object but not another
+    labels[10:12, 12:17] = 9
+    labels[8:10, 14:16] = 9
+
+    objects_empty.segmented = labels
+
+    module.x_name.value = "InputObjects"
+    module.y_name.value = "OutputObjects"
+    module.size.value = 5.
+    module.remove_below_threshold.value = False
+
+    # Set the minimum contact area low so all objects get merged
+    module.min_neighbor_size.value = 3
+
+    module.run(workspace_empty)
+
+    actual = object_set_empty.get_objects("OutputObjects").segmented
+
+    expected = image_labels.copy()
+    # Have to set the weird one
+    expected[10:12, 12:17] = 4
+    expected[8:10, 14:16] = 4
 
     numpy.testing.assert_array_equal(actual, expected)

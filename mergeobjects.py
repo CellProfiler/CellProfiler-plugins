@@ -48,7 +48,7 @@ class MergeObjects(cellprofiler.module.ObjectProcessing):
         )
 
         self.min_neighbor_size = cellprofiler.setting.Integer(
-            text="Minimum neighbor size",
+            text="Minimum contact size",
             value=0,
             doc="""
 When considering to merge an object, the largest neighbor must have at 
@@ -58,16 +58,16 @@ merge into it.
 The default of 0 means no minimum is required."""
         )
 
-        self.slice_wise = cellprofiler.setting.Binary(
-            text="Slice wise merge",
+        self.plane_wise = cellprofiler.setting.Binary(
+            text="Plane wise merge",
             value=False,
             doc="""\
-Select "*{YES}*" to merge objects on a per-slice level. 
+Select "*{YES}*" to merge objects on a per-plane level. 
 This will perform the "significant neighbor" merge on 
-each slice of a volumetric image, rather than on the 
+each plane of a volumetric image, rather than on the 
 image as a whole. This may be helpful for removing seed
 artifacts that are the result of segmentation.
-**Note**: Slice-wise operations will be considerably slower.
+**Note**: Plane-wise operations will be considerably slower.
 """.format(**{
                 "YES": cellprofiler.setting.YES
             })
@@ -91,7 +91,7 @@ by default.
 
         return __settings__ + [
             self.size,
-            self.slice_wise,
+            self.plane_wise,
             self.remove_below_threshold,
             self.min_neighbor_size
         ]
@@ -102,13 +102,13 @@ by default.
         return __settings__ + [
             self.size,
             self.min_neighbor_size,
-            self.slice_wise,
+            self.plane_wise,
             self.remove_below_threshold
         ]
 
     def run(self, workspace):
-        self.function = lambda labels, diameter, slicewise, remove_below_threshold, min_neighbor_size: \
-            merge_objects(labels, diameter, slicewise, remove_below_threshold, min_neighbor_size)
+        self.function = lambda labels, diameter, planewise, remove_below_threshold, min_neighbor_size: \
+            merge_objects(labels, diameter, planewise, remove_below_threshold, min_neighbor_size)
 
         super(MergeObjects, self).run(workspace)
 
@@ -153,17 +153,17 @@ def _merge_neighbors(array, min_obj_size, remove_below_threshold, min_neighbor_s
     return merged
 
 
-def merge_objects(labels, diameter, slicewise, remove_below_threshold, min_neighbor_size):
+def merge_objects(labels, diameter, planewise, remove_below_threshold, min_neighbor_size):
     radius = diameter / 2.0
 
-    if labels.ndim == 2 or labels.shape[-1] in (3, 4) or slicewise:
+    if labels.ndim == 2 or labels.shape[-1] in (3, 4) or planewise:
         factor = radius ** 2
     else:
         factor = (4.0 / 3.0) * (radius ** 3)
 
     min_obj_size = numpy.pi * factor
 
-    # Only operate slicewise if image is 3D and slicewise requested
-    if slicewise and labels.ndim != 2 and labels.shape[-1] not in (3, 4):
+    # Only operate planewise if image is 3D and planewise requested
+    if planewise and labels.ndim != 2 and labels.shape[-1] not in (3, 4):
         return numpy.array([_merge_neighbors(x, min_obj_size, remove_below_threshold, min_neighbor_size) for x in labels])
     return _merge_neighbors(labels, min_obj_size, remove_below_threshold, min_neighbor_size)
