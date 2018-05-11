@@ -3,6 +3,7 @@ addons:
     packages:
       - libhdf5-serial-dev
       - python-pip
+cache:
   apt: true
   directories: $HOME/.cache/pip
 dist: trusty
