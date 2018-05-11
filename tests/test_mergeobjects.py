@@ -63,9 +63,6 @@ def test_run(object_set_with_data, module, workspace_with_data, remove_below, ne
     module.remove_below_threshold.value = remove_below
     module.min_neighbor_size.value = neighbor_size
 
-    if not remove_below:
-        print("here")
-
     module.run(workspace_with_data)
 
     actual = workspace_with_data.object_set.get_objects("OutputObjects").segmented
@@ -91,7 +88,7 @@ def test_run(object_set_with_data, module, workspace_with_data, remove_below, ne
             if remove_below:
                 max_neighbor = 0
             else:
-                max_neighbor = n
+                continue
         else:
             neighbors[0] = 0
             max_neighbor = numpy.argmax(neighbors)

@@ -137,7 +137,7 @@ def _merge_neighbors(array, min_obj_size, remove_below_threshold, min_neighbor_s
                 max_neighbor = 0
             # Otherwise, we don't want to modify the object
             else:
-                max_neighbor = n
+                continue
 
         # Otherwise, we want to set the background to zero and
         # find the largest neighbor
