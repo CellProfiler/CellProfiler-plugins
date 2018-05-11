@@ -48,11 +48,23 @@ def remove_below(request):
     return request.param
 
 
-def test_run(object_set_with_data, module, workspace_with_data, remove_below):
+@pytest.fixture(
+    scope="module",
+    params=[0, 10, 20, 50]
+)
+def neighbor_size(request):
+    return request.param
+
+
+def test_run(object_set_with_data, module, workspace_with_data, remove_below, neighbor_size):
     module.x_name.value = "InputObjects"
     module.y_name.value = "OutputObjects"
     module.size.value = 6.
     module.remove_below_threshold.value = remove_below
+    module.min_neighbor_size.value = neighbor_size
+
+    if not remove_below:
+        print("here")
 
     module.run(workspace_with_data)
 
@@ -73,20 +85,26 @@ def test_run(object_set_with_data, module, workspace_with_data, remove_below):
 
     for n in numpy.nonzero(mask_sizes)[0]:
         mask = expected == n
-        bound = skimage.segmentation.find_boundaries(mask, mode='thick')
+        bound = skimage.segmentation.find_boundaries(mask, mode='outer')
         neighbors = numpy.bincount(expected[bound].ravel())
-        if len(neighbors) >= n and remove_below:
-            neighbors[n] = 0
-        neighbors[0] = 0
-        max_neighbor = numpy.argmax(neighbors)
-        merged[merged == n] = max_neighbor
+        if len(neighbors) == 1:
+            if remove_below:
+                max_neighbor = 0
+            else:
+                max_neighbor = n
+        else:
+            neighbors[0] = 0
+            max_neighbor = numpy.argmax(neighbors)
+
+        if neighbor_size == 0 or neighbors[max_neighbor] > neighbor_size:
+            merged[merged == n] = max_neighbor
 
     expected = merged
 
     numpy.testing.assert_array_equal(actual, expected)
 
 
-def test_2d_merge_objects(image_labels, module, object_set_empty, objects_empty, workspace_empty):
+def test_2d_regular(image_labels, module, object_set_empty, objects_empty, workspace_empty):
     labels = image_labels.copy()
     labels[5, 5] = 5
     labels[2, 15] = 6
@@ -107,7 +125,7 @@ def test_2d_merge_objects(image_labels, module, object_set_empty, objects_empty,
     numpy.testing.assert_array_equal(actual, expected)
 
 
-def test_3d_fill_holes(volume_labels, module, object_set_empty, objects_empty, workspace_empty):
+def test_3d_regular(volume_labels, module, object_set_empty, objects_empty, workspace_empty):
     labels = volume_labels.copy()
     labels[5, 5, 5] = 5
     labels[2, 2, 15] = 6

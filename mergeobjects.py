@@ -47,6 +47,17 @@ class MergeObjects(cellprofiler.module.ObjectProcessing):
             doc="Objects smaller than this diameter will be merged with their most significant neighbor."
         )
 
+        self.min_neighbor_size = cellprofiler.setting.Integer(
+            text="Minimum neighbor size",
+            value=0,
+            doc="""
+When considering to merge an object, the largest neighbor must have at 
+least this many bordering pixels in order to have the current object 
+merge into it.
+
+The default of 0 means no minimum is required."""
+        )
+
         self.slice_wise = cellprofiler.setting.Binary(
             text="Slice wise merge",
             value=False,
@@ -81,7 +92,8 @@ by default.
         return __settings__ + [
             self.size,
             self.slice_wise,
-            self.remove_below_threshold
+            self.remove_below_threshold,
+            self.min_neighbor_size
         ]
 
     def visible_settings(self):
@@ -89,18 +101,19 @@ by default.
 
         return __settings__ + [
             self.size,
+            self.min_neighbor_size,
             self.slice_wise,
             self.remove_below_threshold
         ]
 
     def run(self, workspace):
-        self.function = lambda labels, diameter, slicewise, remove_below_threshold: \
-            merge_objects(labels, diameter, slicewise, remove_below_threshold)
+        self.function = lambda labels, diameter, slicewise, remove_below_threshold, min_neighbor_size: \
+            merge_objects(labels, diameter, slicewise, remove_below_threshold, min_neighbor_size)
 
         super(MergeObjects, self).run(workspace)
 
 
-def _merge_neighbors(array, min_obj_size, remove_below_threshold):
+def _merge_neighbors(array, min_obj_size, remove_below_threshold, min_neighbor_size):
     sizes = numpy.bincount(array.ravel())
     # Find the indices of all objects below threshold
     mask_sizes = (sizes < min_obj_size) & (sizes != 0)
@@ -133,11 +146,14 @@ def _merge_neighbors(array, min_obj_size, remove_below_threshold):
             max_neighbor = numpy.argmax(neighbors)
 
         # Set object value to largest neighbor
-        merged[merged == n] = max_neighbor
+        # But only if there is no minimum specified or the size is above the
+        # user specified minimum
+        if min_neighbor_size == 0 or neighbors[max_neighbor] > min_neighbor_size:
+            merged[merged == n] = max_neighbor
     return merged
 
 
-def merge_objects(labels, diameter, slicewise, remove_below_threshold):
+def merge_objects(labels, diameter, slicewise, remove_below_threshold, min_neighbor_size):
     radius = diameter / 2.0
 
     if labels.ndim == 2 or labels.shape[-1] in (3, 4) or slicewise:
@@ -149,5 +165,5 @@ def merge_objects(labels, diameter, slicewise, remove_below_threshold):
 
     # Only operate slicewise if image is 3D and slicewise requested
     if slicewise and labels.ndim != 2 and labels.shape[-1] not in (3, 4):
-        return numpy.array([_merge_neighbors(x, min_obj_size, remove_below_threshold) for x in labels])
-    return _merge_neighbors(labels, min_obj_size, remove_below_threshold)
+        return numpy.array([_merge_neighbors(x, min_obj_size, remove_below_threshold, min_neighbor_size) for x in labels])
+    return _merge_neighbors(labels, min_obj_size, remove_below_threshold, min_neighbor_size)
