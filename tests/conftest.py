@@ -37,7 +37,7 @@ def image(request):
     return cellprofiler.image.Image(image=data, dimensions=dimensions)
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="function")
 def image_empty():
     image = cellprofiler.image.Image()
 
@@ -71,11 +71,12 @@ def measurements():
     return cellprofiler.measurement.Measurements()
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="function")
 def module(request):
     instance = getattr(request.module, "instance")
 
-    return instance
+    return instance()
+
 
 @pytest.fixture(scope="function")
 def objects(image):

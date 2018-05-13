@@ -7,7 +7,7 @@ import skimage.segmentation
 import randomwalkeralgorithm
 
 
-instance = randomwalkeralgorithm.RandomWalkerAlgorithm()
+instance = randomwalkeralgorithm.RandomWalkerAlgorithm
 
 
 def test_run(image, module, workspace):

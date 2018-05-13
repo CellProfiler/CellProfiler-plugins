@@ -5,7 +5,7 @@ import skimage.exposure
 
 import histogramequalization
 
-instance = histogramequalization.HistogramEqualization()
+instance = histogramequalization.HistogramEqualization
 
 
 def test_run(image, image_set, module, workspace):
