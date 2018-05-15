@@ -48,20 +48,46 @@ def remove_below(request):
     return request.param
 
 
+def make_params():
+    # Format:
+    # [use, method, vals[]]
+    params = []
+    methods = [mergeobjects.A_ABSOLUTE, mergeobjects.A_RELATIVE]
+    abs_vals = [0, 10, 20, 50]
+    rel_vals = [0.001, 0.01, 0.1, 1.0]
+    # Add non used
+    params.append([False, None, []])
+    for method in methods:
+        if method == mergeobjects.A_ABSOLUTE:
+            params += [[True, method, val] for val in abs_vals]
+        else:
+            params += [[True, method, val] for val in rel_vals]
+    return params
+
+
 @pytest.fixture(
     scope="module",
-    params=[0, 10, 20, 50]
+    params=make_params()
 )
-def neighbor_size(request):
+def contact_area_params(request):
     return request.param
 
 
-def test_run(object_set_with_data, module, workspace_with_data, remove_below, neighbor_size):
+def test_run(object_set_with_data, module, workspace_with_data, remove_below, contact_area_params):
+
+    use_contact_area, contact_method, relabs_neighbor_size = contact_area_params
+
     module.x_name.value = "InputObjects"
     module.y_name.value = "OutputObjects"
     module.size.value = 6.
     module.remove_below_threshold.value = remove_below
-    module.min_neighbor_size.value = neighbor_size
+    module.use_contact_area.value = use_contact_area
+    if use_contact_area:
+        module.contact_area_method.value = contact_method
+        if contact_method == mergeobjects.A_ABSOLUTE:
+            module.abs_neighbor_size.value = relabs_neighbor_size
+        else:
+            module.rel_neighbor_size.value = relabs_neighbor_size
 
     module.run(workspace_with_data)
 
@@ -80,6 +106,10 @@ def test_run(object_set_with_data, module, workspace_with_data, remove_below, ne
     sizes = numpy.bincount(expected.ravel())
     mask_sizes = (sizes < size) & (sizes != 0)
 
+    if use_contact_area and contact_method == mergeobjects.A_RELATIVE:
+        border_mask = skimage.segmentation.find_boundaries(expected, mode='inner')
+        surface_areas = numpy.bincount(expected[border_mask].ravel())
+
     for n in numpy.nonzero(mask_sizes)[0]:
         mask = expected == n
         bound = skimage.segmentation.find_boundaries(mask, mode='outer')
@@ -93,8 +123,20 @@ def test_run(object_set_with_data, module, workspace_with_data, remove_below, ne
             neighbors[0] = 0
             max_neighbor = numpy.argmax(neighbors)
 
-        if neighbor_size == 0 or neighbors[max_neighbor] > neighbor_size:
+        if not use_contact_area:
             merged[merged == n] = max_neighbor
+        else:
+            if contact_method == mergeobjects.A_ABSOLUTE:
+                neighbor_size = relabs_neighbor_size
+                conditional = neighbors[max_neighbor] > relabs_neighbor_size
+            else:
+                neighbor_size = relabs_neighbor_size
+                if remove_below and max_neighbor == 0:
+                    conditional = True
+                else:
+                    conditional = (float(neighbors[max_neighbor]) / surface_areas[max_neighbor]) > rel_neighbor_size
+            if neighbor_size == 0 or conditional:
+                merged[merged == n] = max_neighbor
 
     expected = merged
 
@@ -230,7 +272,7 @@ def test_3d_keep_nonneighbored_object(volume_labels, module, object_set_empty, o
     numpy.testing.assert_array_equal(actual, expected)
 
 
-def test_2d_min_neighbor_size_some(image_labels, module, object_set_empty, objects_empty, workspace_empty):
+def test_2d_rel_neighbor_size_some(image_labels, module, object_set_empty, objects_empty, workspace_empty):
     labels = image_labels.copy()
     # Create an object which doesn't meet contact criteria
     labels[12:15, 0:1] = 7
@@ -248,7 +290,9 @@ def test_2d_min_neighbor_size_some(image_labels, module, object_set_empty, objec
     module.remove_below_threshold.value = False
 
     # Set the minimum contact area
-    module.min_neighbor_size.value = 5
+    module.use_contact_area.value = True
+    module.contact_area_method.value = mergeobjects.A_ABSOLUTE
+    module.abs_neighbor_size.value = 5
 
     module.run(workspace_empty)
 
@@ -263,7 +307,7 @@ def test_2d_min_neighbor_size_some(image_labels, module, object_set_empty, objec
     numpy.testing.assert_array_equal(actual, expected)
 
 
-def test_2d_min_neighbor_size_all(image_labels, module, object_set_empty, objects_empty, workspace_empty):
+def test_2d_rel_neighbor_size_all(image_labels, module, object_set_empty, objects_empty, workspace_empty):
     labels = image_labels.copy()
     # Create an object which doesn't meet contact criteria
     labels[12:15, 0:1] = 7
@@ -281,7 +325,9 @@ def test_2d_min_neighbor_size_all(image_labels, module, object_set_empty, object
     module.remove_below_threshold.value = False
 
     # Set the minimum contact area low so all objects get merged
-    module.min_neighbor_size.value = 3
+    module.use_contact_area.value = True
+    module.contact_area_method.value = mergeobjects.A_ABSOLUTE
+    module.abs_neighbor_size.value = 3
 
     module.run(workspace_empty)
 

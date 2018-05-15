@@ -225,8 +225,13 @@ def _merge_neighbors(array, min_obj_size, remove_below_threshold, use_contact_ar
                 conditional = neighbors[max_neighbor] > abs_neighbor_size
             else:
                 neighbor_size = rel_neighbor_size
-                # Divide the calculated neighbor size by the total surface area
-                conditional = (float(neighbors[max_neighbor]) / surface_areas[max_neighbor]) > rel_neighbor_size
+                # If the background is the largest neighbor and we want to remove, then
+                # we will get a divide by zero error here
+                if remove_below_threshold and max_neighbor == 0:
+                    conditional = True
+                else:
+                    # Divide the calculated neighbor size by the total surface area
+                    conditional = (float(neighbors[max_neighbor]) / surface_areas[max_neighbor]) > rel_neighbor_size
             if neighbor_size == 0 or conditional:
                 merged[merged == n] = max_neighbor
 
