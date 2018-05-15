@@ -30,7 +30,6 @@ import cellprofiler.image
 import cellprofiler.module
 import cellprofiler.setting
 
-
 A_RELATIVE = "Relative area"
 A_ABSOLUTE = "Absolute area"
 
@@ -76,9 +75,11 @@ merge into it.
 The default of 0 means no minimum is required."""
         )
 
-        self.rel_neighbor_size = cellprofiler.setting.Integer(
+        self.rel_neighbor_size = cellprofiler.setting.Float(
             text="Relative minimum contact area",
             value=0,
+            minval=0,
+            maxval=1,
             doc="""
 When considering to merge an object, the largest neighbor must have at 
 least percentage of its surface area contacting the object in order for the 
@@ -148,8 +149,10 @@ by default.
         return __settings__
 
     def run(self, workspace):
-        self.function = lambda labels, diameter, planewise, remove_below_threshold, abs_neighbor_size: \
-            merge_objects(labels, diameter, planewise, remove_below_threshold, abs_neighbor_size)
+        self.function = lambda labels, diameter, planewise, remove_below_threshold, \
+                               use_contact_area, contact_area_method, abs_neighbor_size, rel_neighbor_size: \
+            merge_objects(labels, diameter, planewise, remove_below_threshold,
+                          use_contact_area, contact_area_method, abs_neighbor_size, rel_neighbor_size)
 
         super(MergeObjects, self).run(workspace)
 
@@ -173,10 +176,16 @@ by default.
         return __settings__
 
 
-def _merge_neighbors(array, min_obj_size, remove_below_threshold, abs_neighbor_size):
+def _merge_neighbors(array, min_obj_size, remove_below_threshold, use_contact_area,
+                     contact_area_method, abs_neighbor_size, rel_neighbor_size):
     sizes = numpy.bincount(array.ravel())
     # Find the indices of all objects below threshold
     mask_sizes = (sizes < min_obj_size) & (sizes != 0)
+
+    # Calculate the surface areas for each object
+    if use_contact_area and contact_area_method == A_RELATIVE:
+        border_mask = skimage.segmentation.find_boundaries(array, mode='inner')
+        surface_areas = numpy.bincount(array[border_mask].ravel())
 
     merged = numpy.copy(array)
 
@@ -208,12 +217,24 @@ def _merge_neighbors(array, min_obj_size, remove_below_threshold, abs_neighbor_s
         # Set object value to largest neighbor
         # But only if there is no minimum specified or the size is above the
         # user specified minimum
-        if abs_neighbor_size == 0 or neighbors[max_neighbor] > abs_neighbor_size:
+        if not use_contact_area:
             merged[merged == n] = max_neighbor
+        else:
+            if contact_area_method == A_ABSOLUTE:
+                neighbor_size = abs_neighbor_size
+                conditional = neighbors[max_neighbor] > abs_neighbor_size
+            else:
+                neighbor_size = rel_neighbor_size
+                # Divide the calculated neighbor size by the total surface area
+                conditional = (neighbors[max_neighbor] / surface_areas[max_neighbor]) > rel_neighbor_size
+            if neighbor_size == 0 or conditional:
+                merged[merged == n] = max_neighbor
+
     return merged
 
 
-def merge_objects(labels, diameter, planewise, remove_below_threshold, abs_neighbor_size):
+def merge_objects(labels, diameter, planewise, remove_below_threshold, use_contact_area,
+                  contact_area_method, abs_neighbor_size, rel_neighbor_size):
     radius = diameter / 2.0
 
     if labels.ndim == 2 or labels.shape[-1] in (3, 4) or planewise:
@@ -225,5 +246,8 @@ def merge_objects(labels, diameter, planewise, remove_below_threshold, abs_neigh
 
     # Only operate planewise if image is 3D and planewise requested
     if planewise and labels.ndim != 2 and labels.shape[-1] not in (3, 4):
-        return numpy.array([_merge_neighbors(x, min_obj_size, remove_below_threshold, abs_neighbor_size) for x in labels])
-    return _merge_neighbors(labels, min_obj_size, remove_below_threshold, abs_neighbor_size)
+        return numpy.array([_merge_neighbors(x, min_obj_size, remove_below_threshold, use_contact_area,
+                                             contact_area_method, abs_neighbor_size, rel_neighbor_size) for x in
+                            labels])
+    return _merge_neighbors(labels, min_obj_size, remove_below_threshold, use_contact_area,
+                            contact_area_method, abs_neighbor_size, rel_neighbor_size)
