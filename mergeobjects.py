@@ -31,12 +31,16 @@ import cellprofiler.module
 import cellprofiler.setting
 
 
+A_RELATIVE = "Relative area"
+A_ABSOLUTE = "Absolute area"
+
+
 class MergeObjects(cellprofiler.module.ObjectProcessing):
     category = "Advanced"
 
     module_name = "MergeObjects"
 
-    variable_revision_number = 1
+    variable_revision_number = 2
 
     def create_settings(self):
         super(MergeObjects, self).create_settings()
@@ -47,13 +51,38 @@ class MergeObjects(cellprofiler.module.ObjectProcessing):
             doc="Objects smaller than this diameter will be merged with their most significant neighbor."
         )
 
-        self.min_neighbor_size = cellprofiler.setting.Integer(
-            text="Minimum contact size",
+        self.use_contact_area = cellprofiler.setting.Binary(
+            text="Set minimum contact area threshold",
+            value=False,
+            doc="Use this setting for setting a minimum contact area value (either relative or absolute)"
+        )
+
+        self.contact_area_method = cellprofiler.setting.Choice(
+            text="Minimum contact area method",
+            choices=[A_ABSOLUTE, A_RELATIVE],
+            value=A_ABSOLUTE,
+            # TODO: This
+            doc=""""""
+        )
+
+        self.abs_neighbor_size = cellprofiler.setting.Integer(
+            text="Absolute minimum contact area",
             value=0,
             doc="""
 When considering to merge an object, the largest neighbor must have at 
 least this many bordering pixels in order to have the current object 
 merge into it.
+
+The default of 0 means no minimum is required."""
+        )
+
+        self.rel_neighbor_size = cellprofiler.setting.Integer(
+            text="Relative minimum contact area",
+            value=0,
+            doc="""
+When considering to merge an object, the largest neighbor must have at 
+least percentage of its surface area contacting the object in order for the 
+current object to merge into it.
 
 The default of 0 means no minimum is required."""
         )
@@ -93,27 +122,58 @@ by default.
             self.size,
             self.plane_wise,
             self.remove_below_threshold,
-            self.min_neighbor_size
+            self.use_contact_area,
+            self.contact_area_method,
+            self.abs_neighbor_size,
+            self.rel_neighbor_size
         ]
 
     def visible_settings(self):
         __settings__ = super(MergeObjects, self).visible_settings()
 
-        return __settings__ + [
+        __settings__ += [
             self.size,
-            self.min_neighbor_size,
             self.plane_wise,
-            self.remove_below_threshold
+            self.remove_below_threshold,
+            self.use_contact_area
         ]
 
+        if self.use_contact_area.value:
+            __settings__.append(self.contact_area_method)
+            if self.contact_area_method.value == A_ABSOLUTE:
+                __settings__.append(self.abs_neighbor_size)
+            else:
+                __settings__.append(self.rel_neighbor_size)
+
+        return __settings__
+
     def run(self, workspace):
-        self.function = lambda labels, diameter, planewise, remove_below_threshold, min_neighbor_size: \
-            merge_objects(labels, diameter, planewise, remove_below_threshold, min_neighbor_size)
+        self.function = lambda labels, diameter, planewise, remove_below_threshold, abs_neighbor_size: \
+            merge_objects(labels, diameter, planewise, remove_below_threshold, abs_neighbor_size)
 
         super(MergeObjects, self).run(workspace)
 
+    def upgrade_settings(self, setting_values, variable_revision_number,
+                         module_name, from_matlab):
+        __settings__ = setting_values
 
-def _merge_neighbors(array, min_obj_size, remove_below_threshold, min_neighbor_size):
+        if variable_revision_number == 1:
+            # Last few settings have changed
+            __settings__ = setting_values[:5]
+
+            # We'll assume they had an absolute neighbor size value set
+            # Settings to add:
+            #   use_contact_area = True
+            #   contact_area_method = A_ABSOLUTE
+            __settings__ += [True, A_ABSOLUTE]
+
+            # Add the value they had for absolute size
+            __settings__ += setting_values[5:]
+
+        return __settings__
+
+
+def _merge_neighbors(array, min_obj_size, remove_below_threshold, abs_neighbor_size):
     sizes = numpy.bincount(array.ravel())
     # Find the indices of all objects below threshold
     mask_sizes = (sizes < min_obj_size) & (sizes != 0)
@@ -148,12 +208,12 @@ def _merge_neighbors(array, min_obj_size, remove_below_threshold, min_neighbor_s
         # Set object value to largest neighbor
         # But only if there is no minimum specified or the size is above the
         # user specified minimum
-        if min_neighbor_size == 0 or neighbors[max_neighbor] > min_neighbor_size:
+        if abs_neighbor_size == 0 or neighbors[max_neighbor] > abs_neighbor_size:
             merged[merged == n] = max_neighbor
     return merged
 
 
-def merge_objects(labels, diameter, planewise, remove_below_threshold, min_neighbor_size):
+def merge_objects(labels, diameter, planewise, remove_below_threshold, abs_neighbor_size):
     radius = diameter / 2.0
 
     if labels.ndim == 2 or labels.shape[-1] in (3, 4) or planewise:
@@ -165,5 +225,5 @@ def merge_objects(labels, diameter, planewise, remove_below_threshold, min_neigh
 
     # Only operate planewise if image is 3D and planewise requested
     if planewise and labels.ndim != 2 and labels.shape[-1] not in (3, 4):
-        return numpy.array([_merge_neighbors(x, min_obj_size, remove_below_threshold, min_neighbor_size) for x in labels])
-    return _merge_neighbors(labels, min_obj_size, remove_below_threshold, min_neighbor_size)
+        return numpy.array([_merge_neighbors(x, min_obj_size, remove_below_threshold, abs_neighbor_size) for x in labels])
+    return _merge_neighbors(labels, min_obj_size, remove_below_threshold, abs_neighbor_size)
