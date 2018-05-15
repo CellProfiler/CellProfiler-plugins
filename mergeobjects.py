@@ -173,7 +173,7 @@ by default.
             # Add the value they had for absolute size
             __settings__ += setting_values[5:]
 
-        return __settings__
+        return __settings__, variable_revision_number, from_matlab
 
 
 def _merge_neighbors(array, min_obj_size, remove_below_threshold, use_contact_area,
@@ -226,7 +226,7 @@ def _merge_neighbors(array, min_obj_size, remove_below_threshold, use_contact_ar
             else:
                 neighbor_size = rel_neighbor_size
                 # Divide the calculated neighbor size by the total surface area
-                conditional = (neighbors[max_neighbor] / surface_areas[max_neighbor]) > rel_neighbor_size
+                conditional = (float(neighbors[max_neighbor]) / surface_areas[max_neighbor]) > rel_neighbor_size
             if neighbor_size == 0 or conditional:
                 merged[merged == n] = max_neighbor
 
