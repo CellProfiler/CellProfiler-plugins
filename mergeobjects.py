@@ -231,7 +231,7 @@ def _merge_neighbors(array, min_obj_size, remove_below_threshold, use_contact_ar
                     conditional = True
                 else:
                     # Divide the calculated neighbor size by the total surface area
-                    conditional = (float(neighbors[max_neighbor]) / surface_areas[max_neighbor]) > rel_neighbor_size
+                    conditional = (float(neighbors[max_neighbor]) / surface_areas[n]) > rel_neighbor_size
             if neighbor_size == 0 or conditional:
                 merged[merged == n] = max_neighbor
 

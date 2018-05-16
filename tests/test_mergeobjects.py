@@ -134,7 +134,7 @@ def test_run(object_set_with_data, module, workspace_with_data, remove_below, co
                 if remove_below and max_neighbor == 0:
                     conditional = True
                 else:
-                    conditional = (float(neighbors[max_neighbor]) / surface_areas[max_neighbor]) > rel_neighbor_size
+                    conditional = (float(neighbors[max_neighbor]) / surface_areas[n]) > relabs_neighbor_size
             if neighbor_size == 0 or conditional:
                 merged[merged == n] = max_neighbor
 
@@ -272,7 +272,7 @@ def test_3d_keep_nonneighbored_object(volume_labels, module, object_set_empty, o
     numpy.testing.assert_array_equal(actual, expected)
 
 
-def test_2d_rel_neighbor_size_some(image_labels, module, object_set_empty, objects_empty, workspace_empty):
+def test_2d_abs_neighbor_size_some(image_labels, module, object_set_empty, objects_empty, workspace_empty):
     labels = image_labels.copy()
     # Create an object which doesn't meet contact criteria
     labels[12:15, 0:1] = 7
@@ -307,7 +307,7 @@ def test_2d_rel_neighbor_size_some(image_labels, module, object_set_empty, objec
     numpy.testing.assert_array_equal(actual, expected)
 
 
-def test_2d_rel_neighbor_size_all(image_labels, module, object_set_empty, objects_empty, workspace_empty):
+def test_2d_abs_neighbor_size_all(image_labels, module, object_set_empty, objects_empty, workspace_empty):
     labels = image_labels.copy()
     # Create an object which doesn't meet contact criteria
     labels[12:15, 0:1] = 7
@@ -328,6 +328,73 @@ def test_2d_rel_neighbor_size_all(image_labels, module, object_set_empty, object
     module.use_contact_area.value = True
     module.contact_area_method.value = mergeobjects.A_ABSOLUTE
     module.abs_neighbor_size.value = 3
+
+    module.run(workspace_empty)
+
+    actual = object_set_empty.get_objects("OutputObjects").segmented
+
+    expected = image_labels.copy()
+    # Have to set the weird one
+    expected[10:12, 12:17] = 4
+    expected[8:10, 14:16] = 4
+
+    numpy.testing.assert_array_equal(actual, expected)
+
+
+def test_2d_rel_neighbor_size_some(image_labels, module, object_set_empty, objects_empty, workspace_empty):
+    labels = image_labels.copy()
+    # Create an object which doesn't meet contact criteria
+    labels[12:15, 0:1] = 7
+    # Create one which does
+    labels[2:8, 2:4] = 8
+    # Create one which meets the criteria for one object but not another
+    labels[10:12, 12:17] = 9
+    labels[8:10, 14:16] = 9
+
+    objects_empty.segmented = labels
+
+    module.x_name.value = "InputObjects"
+    module.y_name.value = "OutputObjects"
+    module.size.value = 4.
+    module.remove_below_threshold.value = False
+
+    # Set the minimum contact area
+    module.use_contact_area.value = True
+    module.contact_area_method.value = mergeobjects.A_RELATIVE
+    module.rel_neighbor_size.value = 0.5
+
+    module.run(workspace_empty)
+
+    actual = object_set_empty.get_objects("OutputObjects").segmented
+
+    expected = labels.copy()
+    # Objects with more than 50% contacting will be removed
+    expected[12:15, 0:1] = 3
+
+    numpy.testing.assert_array_equal(actual, expected)
+
+
+def test_2d_rel_neighbor_size_all(image_labels, module, object_set_empty, objects_empty, workspace_empty):
+    labels = image_labels.copy()
+    # Create an object which doesn't meet contact criteria
+    labels[12:15, 0:1] = 7
+    # Create one which does
+    labels[2:8, 2:4] = 8
+    # Create one which meets the criteria for one object but not another
+    labels[10:12, 12:17] = 9
+    labels[8:10, 14:16] = 9
+
+    objects_empty.segmented = labels
+
+    module.x_name.value = "InputObjects"
+    module.y_name.value = "OutputObjects"
+    module.size.value = 5.
+    module.remove_below_threshold.value = False
+
+    # Set the minimum contact area low so all objects get merged
+    module.use_contact_area.value = True
+    module.contact_area_method.value = mergeobjects.A_ABSOLUTE
+    module.rel_neighbor_size.value = 0.1
 
     module.run(workspace_empty)
 
