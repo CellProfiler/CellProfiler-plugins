@@ -2,6 +2,7 @@ import numpy
 import numpy.testing
 import skimage.morphology
 import skimage.segmentation
+import centrosome.cpmorphology
 import pytest
 
 import mergeobjects
@@ -138,7 +139,7 @@ def test_run(object_set_with_data, module, workspace_with_data, remove_below, co
             if neighbor_size == 0 or conditional:
                 merged[merged == n] = max_neighbor
 
-    expected = merged
+    expected = centrosome.cpmorphology.relabel(merged)[0]
 
     numpy.testing.assert_array_equal(actual, expected)
 
@@ -232,7 +233,7 @@ def test_changed_3d_merge_large_object(volume_labels, module, object_set_empty, 
 def test_2d_keep_nonneighbored_objects(image_labels, module, object_set_empty, objects_empty, workspace_empty):
     labels = image_labels.copy()
     # Create "small" object
-    labels[8:12, 9:11] = 8
+    labels[8:12, 9:11] = 5
 
     objects_empty.segmented = labels
 
@@ -253,7 +254,7 @@ def test_2d_keep_nonneighbored_objects(image_labels, module, object_set_empty, o
 
 def test_3d_keep_nonneighbored_object(volume_labels, module, object_set_empty, objects_empty, workspace_empty):
     labels = volume_labels.copy()
-    labels[8:12, 9:11, 4:6] = 8
+    labels[8:12, 9:11, 4:6] = 5
 
     objects_empty.segmented = labels
 
@@ -298,11 +299,12 @@ def test_2d_abs_neighbor_size_some(image_labels, module, object_set_empty, objec
 
     actual = object_set_empty.get_objects("OutputObjects").segmented
 
-    expected = image_labels.copy()
+    expected = labels.copy()
     # Objects with less than 6 contacting pixels stay
-    expected[12:15, 0:1] = 7
-    expected[10:12, 12:17] = 9
-    expected[8:10, 14:16] = 9
+    expected[2:8, 2:4] = 1
+    # Some objects are relabeled
+    expected[expected == 7] = 5
+    expected[expected == 9] = 6
 
     numpy.testing.assert_array_equal(actual, expected)
 
@@ -370,6 +372,9 @@ def test_2d_rel_neighbor_size_some(image_labels, module, object_set_empty, objec
     expected = labels.copy()
     # Objects with more than 50% contacting will be removed
     expected[12:15, 0:1] = 3
+    # Some objects get relabeled
+    expected[expected == 8] = 5
+    expected[expected == 9] = 6
 
     numpy.testing.assert_array_equal(actual, expected)
 
