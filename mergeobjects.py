@@ -23,6 +23,7 @@ YES          YES          NO
 """
 
 import numpy
+import centrosome.cpmorphology
 import skimage.morphology
 import skimage.segmentation
 
@@ -251,8 +252,11 @@ def merge_objects(labels, diameter, planewise, remove_below_threshold, use_conta
 
     # Only operate planewise if image is 3D and planewise requested
     if planewise and labels.ndim != 2 and labels.shape[-1] not in (3, 4):
-        return numpy.array([_merge_neighbors(x, min_obj_size, remove_below_threshold, use_contact_area,
-                                             contact_area_method, abs_neighbor_size, rel_neighbor_size) for x in
-                            labels])
-    return _merge_neighbors(labels, min_obj_size, remove_below_threshold, use_contact_area,
-                            contact_area_method, abs_neighbor_size, rel_neighbor_size)
+        array = numpy.array([_merge_neighbors(x, min_obj_size, remove_below_threshold, use_contact_area,
+                                              contact_area_method, abs_neighbor_size, rel_neighbor_size) for x in
+                             labels])
+    else:
+        array = _merge_neighbors(labels, min_obj_size, remove_below_threshold, use_contact_area,
+                                 contact_area_method, abs_neighbor_size, rel_neighbor_size)
+
+    return centrosome.cpmorphology.relabel(array)[0]
