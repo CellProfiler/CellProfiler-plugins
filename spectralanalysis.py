@@ -12,13 +12,15 @@ import cellprofiler.setting
 
 
 __doc__ = """
-For installation instructions and platform support notes, please read measureimagefocus_README.md.
-
-This module can collect measurements indicating possible image aberrations,
-e.g. blur (poor focus), intensity, saturation (i.e., the percentage
-of pixels in the image that are minimal and maximal).
-It outputs an image focus score, an integer from 0 (in focus) to 10 (out of focus).
-There is also a certainty output indicating how certain the score is.
+This module measures orientation and wavelength of cardiomyocytes or other cells with sarcomeric qualities.
+It makes measurements from three types of distributions for each cell: 
+Orientation Mixed (object orientation distribution information), 
+Distance Mixed (distribution of sizes of structures in the image), and 
+Orientation Detailed (limits orientation information to structures with size close to the most common size of the original image). 
+Angles are measured in degrees relative to the horizontal. Various statistics like mode, sum, variance, skewness, 
+circular kurtosis, and ratio mode area (the value of the mode of the frequency distribution divided by the sum over the whole distribution) 
+can be calculated from these distributions to obtain useful metrics.
+Feature measurements are based on MATLAB-based software CytoSpectre.
 """
 
 class SpectralAnalysis(cellprofiler.module.Module):
