@@ -7,6 +7,14 @@ BlobDetection
 Find blobs in an image or volume. Blobs are bright on dark or dark on
 bright regions in an image. The output of this module is a binary image of
 white circles or spheres centered around found blobs on a black background.
+
+Note, 3D blobs are computed planewise.
+
+============ ============ ===============
+Supports 2D? Supports 3D? Respects masks?
+============ ============ ===============
+YES          YES           NO
+============ ============ ===============
 """
 
 import cellprofiler.image
@@ -156,6 +164,29 @@ class BlobDetection(cellprofiler.module.Module):
             """
         )
 
+        self.output = cellprofiler.setting.Choice(
+            u"Output",
+            [
+                u"Circles/Spheres",
+                u"Centers"
+            ],
+            u"Circles/Spheres",
+            doc="""
+            Select the format of the blobs that will appear in the output binary image, "Cirlces/Spheres" or "Centers":
+            <ul>
+                <li>
+                    <i>Circles/Spheres</i> (default): Filled Circles/Planewise-Spheres will occupy the area/volume
+                    where a blob is located.
+                </li>
+
+                <li>
+                    <i>Centers</i>: The center of each blob is returned in a binary image. Note that in 3D a center
+                    will be returned for each plane. These centers can be used as watershed seeds.
+                </li>
+            </ul>
+            """
+        )
+
     def settings(self):
         return [
             self.x_name,
@@ -167,7 +198,8 @@ class BlobDetection(cellprofiler.module.Module):
             self.count,
             self.threshold,
             self.overlap,
-            self.scale
+            self.scale,
+            self.output
         ]
 
     def visible_settings(self):
@@ -198,6 +230,10 @@ class BlobDetection(cellprofiler.module.Module):
             settings = settings + [
                 self.scale
             ]
+
+        settings = settings + [
+            self.output
+        ]
 
         return settings
 
@@ -261,14 +297,24 @@ class BlobDetection(cellprofiler.module.Module):
         if dimensions == 2:
             blobs = self.__detect_blobs(x_data)
 
-            y_data = self.__draw_circles(blobs, x_data.shape)
+            if self.output.value == u"Centers":
+                y_data = self.__draw_centers(blobs, x_data.shape)
+
+            else:
+                y_data = self.__draw_circles(blobs, x_data.shape)
+
         else:
             y_data = numpy.zeros_like(x_data)
 
             for z, plane in enumerate(x_data):
                 blobs = self.__detect_blobs(plane)
 
-                y_data[z] = self.__draw_circles(blobs, plane.shape)
+                if self.output.value == u"Centers":
+                    y_data[z] = self.__draw_centers(blobs, plane.shape)
+
+                else:
+                    y_data[z] = self.__draw_circles(blobs, plane.shape)
+
 
         y = cellprofiler.image.Image(
             image=y_data,
@@ -346,6 +392,17 @@ class BlobDetection(cellprofiler.module.Module):
             )
 
             result[rr[in_bounds], cc[in_bounds]] = 1
+
+        return result
+
+    def __draw_centers(self, blobs, shape):
+        result = numpy.zeros(shape)
+
+        if blobs.size == 0:
+            return result
+
+        for r, c, _ in blobs:
+            result[int(numpy.trunc(r)), int(numpy.trunc(c))] = 1
 
         return result
 
