@@ -200,7 +200,7 @@ def _merge_neighbors(array, min_obj_size, remove_below_threshold, use_contact_ar
         neighbors = numpy.bincount(array[bound].ravel())
 
         # If self is the largest neighbor, then "bincount" will only
-        # have one entry in it - the backround at index 0
+        # have one entry in it - the background at index 0
         if len(neighbors) == 1:
             # If the user requests it, we should remove it from the array
             if remove_below_threshold:
@@ -209,8 +209,8 @@ def _merge_neighbors(array, min_obj_size, remove_below_threshold, use_contact_ar
             else:
                 continue
 
-        # Otherwise, we want to set the background to zero and
-        # find the largest neighbor
+        # If there's more than one object in the neighbors array, we want
+        # to set the background to zero and find the largest neighbor
         else:
             neighbors[0] = 0
             max_neighbor = numpy.argmax(neighbors)
@@ -223,6 +223,7 @@ def _merge_neighbors(array, min_obj_size, remove_below_threshold, use_contact_ar
         else:
             if contact_area_method == A_ABSOLUTE:
                 neighbor_size = abs_neighbor_size
+                # Ensure the neighbor is above the size threshold
                 conditional = neighbors[max_neighbor] > abs_neighbor_size
             else:
                 neighbor_size = rel_neighbor_size
