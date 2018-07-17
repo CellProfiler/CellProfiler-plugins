@@ -362,3 +362,69 @@ def test_3d_strel(volume_labels, module, object_set_empty, objects_empty, worksp
     expected = labels
 
     numpy.testing.assert_array_equal(actual, expected)
+
+
+def test_2d_multiple_seeds_per_obj(image_labels, module, object_set_empty, objects_empty, workspace_empty):
+    # Make an object with more than one internal maximum
+    image_labels[2:9, 2:11] = 1
+    image_labels[2:5, 6] = 0
+    image_labels[7:9, 6] = 0
+
+    labels = numpy.zeros_like(image_labels)
+    # This object should now have two seeds
+    labels[5, 4] = 1
+    labels[5, 8] = 1
+    labels[4, 15] = 1
+    labels[15, 4] = 1
+    labels[17, 17] = 1
+
+    objects_empty.segmented = image_labels
+
+    module.x_name.value = "InputObjects"
+    module.y_name.value = "OutputObjects"
+    module.structuring_element.value = "disk,2"
+
+    module.run(workspace_empty)
+
+    actual = object_set_empty.get_objects("OutputObjects").segmented
+
+    labels = skimage.morphology.binary_dilation(labels, skimage.morphology.disk(2))
+
+    expected = labels
+
+    numpy.testing.assert_array_equal(actual, expected)
+
+
+def test_2d_max_seeds_per_object(image_labels, module, object_set_empty, objects_empty, workspace_empty):
+    # Make an object with more than one internal maximum
+    image_labels[2:9, 2:11] = 1
+    image_labels[2:5, 6] = 0
+    image_labels[7:9, 6] = 0
+
+    labels = numpy.zeros_like(image_labels)
+    # This object should normally get two seeds, but we're going to
+    # enforce a maximum of 1
+    labels[5, 4] = 1
+    labels[5, 8] = 1
+    labels[4, 15] = 1
+    labels[15, 4] = 1
+    labels[17, 17] = 1
+
+    objects_empty.segmented = image_labels
+
+    module.x_name.value = "InputObjects"
+    module.y_name.value = "OutputObjects"
+    module.structuring_element.value = "disk,0"
+    module.max_seeds_per_obj.value = 1
+
+    module.run(workspace_empty)
+
+    actual = object_set_empty.get_objects("OutputObjects").segmented
+
+    labels = skimage.morphology.binary_dilation(labels, skimage.morphology.disk(0))
+
+    expected = labels
+
+    unequal_pos = tuple(int(x) for x in numpy.where(actual != expected))
+
+    assert unequal_pos == (5, 8) or unequal_pos == (5, 4)
