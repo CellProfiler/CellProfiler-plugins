@@ -33,6 +33,7 @@ YES          YES          NO
 """
 
 import numpy
+import numpy.random
 import skimage.morphology
 import skimage.segmentation
 import scipy.ndimage
@@ -115,6 +116,20 @@ Volumetric images will require volumetric structuring elements.
 """
         )
 
+        self.max_seeds_per_obj = cellprofiler.setting.Integer(
+            text="Maximum number of seeds per object",
+            value=0,
+            doc="""\
+Maximum number of seeds that can be within a single object. Default is
+no limit. Depending on the shape of the object and the minimum distance
+specified between seeds, a single object might get a number of seeds.
+This value enforces a maximum number of seeds that can exist within
+a single object (e.g. 1 seed per object).
+
+Note: this may be a slow operation, since it is per-object.
+"""
+        )
+
     def settings(self):
         __settings__ = super(SeedObjects, self).settings()
 
@@ -124,7 +139,8 @@ Volumetric images will require volumetric structuring elements.
             self.min_intensity,
             self.exclude_border,
             self.max_seeds,
-            self.structuring_element
+            self.structuring_element,
+            self.max_seeds_per_obj
         ]
 
     def visible_settings(self):
@@ -136,6 +152,7 @@ Volumetric images will require volumetric structuring elements.
             self.min_intensity,
             self.exclude_border,
             self.max_seeds,
+            self.max_seeds_per_obj,
             self.structuring_element
         ]
 
@@ -151,13 +168,52 @@ Volumetric images will require volumetric structuring elements.
             raise ValueError("Structuring element does not match object dimensions: "
                              "{} != {}".format(strel_dim, im_dim))
 
-        self.function = lambda labels, sigma, distance_threshold, intensity_threshold, border, max_seeds, s_elem:\
-            generate_seeds(labels, sigma, distance_threshold, intensity_threshold, border, max_seeds, s_elem)
+        self.function = generate_seeds
 
         super(SeedObjects, self).run(workspace)
 
 
-def generate_seeds(labels, gaussian_sigma, distance_threshold, intensity_threshold, border, max_seeds, s_elem):
+def enforce_maximum(labels, seeds, max_seeds_per_obj):
+    # Copy the original array in this scope
+    seeds = seeds.copy()
+
+    # Label the seeds to get unique labels for each
+    labeled_seeds, _ = scipy.ndimage.label(seeds)
+
+    # For each object, enforce the maximum
+    # The background (0) shows up in numpy.unique so we trim it out
+    for obj in numpy.trim_zeros(numpy.unique(labels)):
+
+        # Get the seeds that are in that object
+        obj_mask = seeds & (labels == obj)
+        obj_seeds = numpy.trim_zeros(numpy.unique(labeled_seeds * obj_mask))
+
+        # Only proceed if the object has violated the maximum
+        num_seeds = len(obj_seeds)
+        if num_seeds > max_seeds_per_obj:
+
+            # Get the number of seeds we need to remove to meet the max
+            remove_count = num_seeds - max_seeds_per_obj
+
+            # Set up an array that will tell us which we need to remove
+            seeds_to_remove = numpy.zeros(num_seeds, dtype=int)
+            seeds_to_remove[:remove_count] = 1
+
+            # Randomize which seeds we're going to remove
+            numpy.random.shuffle(seeds_to_remove)
+
+            # Get the actual labels of the seeds we need to remove
+            labels_to_remove = obj_seeds[numpy.nonzero(obj_seeds * seeds_to_remove)]
+
+            # Remove them from the original seeds array by matching
+            # the labels we need to remove to the labeled seeds array
+            seeds[numpy.isin(labeled_seeds, labels_to_remove)] = 0
+
+    return seeds
+
+
+def generate_seeds(labels, gaussian_sigma, distance_threshold, intensity_threshold, border,
+                   max_seeds, s_elem, max_seeds_per_obj):
     # Modify settings to correspond to appropriate library defaults
     if max_seeds == -1:
         max_seeds = numpy.inf
@@ -184,6 +240,11 @@ def generate_seeds(labels, gaussian_sigma, distance_threshold, intensity_thresho
 
     # Dilate seeds based on settings
     seeds = skimage.morphology.binary_dilation(seeds, s_elem)
+
+    # If user has set a maximum number of seeds per object,
+    # enforce said max
+    if max_seeds_per_obj > 0:
+        seeds = enforce_maximum(labels, seeds, max_seeds_per_obj)
 
     return seeds
 
