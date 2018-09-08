@@ -153,8 +153,7 @@ def get_core(dim1, dim2):
     # UP
 
     d = keras.layers.UpSampling2D()(d)
-
-    y = keras.layers.merge([d, c], concat_axis=3, mode="concat")
+    y = keras.layers.merge.concatenate([d, c], axis=3)
 
     e = keras.layers.Convolution2D(256, 3, 3, **option_dict_conv)(y)
     e = keras.layers.BatchNormalization(**option_dict_bn)(e)
@@ -164,7 +163,7 @@ def get_core(dim1, dim2):
 
     e = keras.layers.UpSampling2D()(e)
 
-    y = keras.layers.merge([e, b], concat_axis=3, mode="concat")
+    y = keras.layers.merge.concatenate([e, b], axis=3)
 
     f = keras.layers.Convolution2D(128, 3, 3, **option_dict_conv)(y)
     f = keras.layers.BatchNormalization(**option_dict_bn)(f)
@@ -173,8 +172,8 @@ def get_core(dim1, dim2):
     f = keras.layers.BatchNormalization(**option_dict_bn)(f)
 
     f = keras.layers.UpSampling2D()(f)
-
-    y = keras.layers.merge([f, a], concat_axis=3, mode="concat")
+    
+    y = keras.layers.merge.concatenate([f, a], axis=3)
 
     y = keras.layers.Convolution2D(64, 3, 3, **option_dict_conv)(y)
     y = keras.layers.BatchNormalization(**option_dict_bn)(y)
