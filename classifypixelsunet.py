@@ -11,7 +11,7 @@ import pkg_resources
 import requests
 import sys
 import time
-
+import numpy as np
 import os.path
 import cellprofiler.module
 import cellprofiler.setting
@@ -149,7 +149,7 @@ def unet_image_resize(image, n_pooling_layers):
     # or become float64, 0-1 (which makes no difference w/ subsequent min/max scaling)
     return image if shape == image.shape else transform.resize(
         image, shape, mode='reflect', anti_aliasing=True)
-        
+
 
 def unet_classify(model, input_image, resize_to_model=True):
     dim1, dim2 = input_image.shape
