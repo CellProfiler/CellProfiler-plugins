@@ -180,6 +180,8 @@ by default.
 def _merge_neighbors(array, min_obj_size, remove_below_threshold, use_contact_area,
                      contact_area_method, abs_neighbor_size, rel_neighbor_size):
     sizes = numpy.bincount(array.ravel())
+    # Set the background to zero
+    sizes[0] = 0
     # Find the indices of all objects below threshold
     mask_sizes = (sizes < min_obj_size) & (sizes != 0)
 
