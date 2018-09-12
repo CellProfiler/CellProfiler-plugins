@@ -83,7 +83,7 @@ def unet_initialize(input_shape, automated_shape_adjustment=True):
     unet_shape = unet_shape_resize(input_shape, 3)
     if input_shape != unet_shape and not automated_shape_adjustment:
         raise ValueError(
-            f"Shape {input_shape} not compatible with 3 max-pool layers. Consider setting automated_shape_adjustment=True.")
+            "Input shape not compatible with 3 max-pool layers. Consider setting automated_shape_adjustment=True.")
     
     # create model
     dim1, dim2 = unet_shape
