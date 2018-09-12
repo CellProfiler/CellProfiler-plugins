@@ -149,22 +149,7 @@ def unet_image_resize(image, n_pooling_layers):
     # or become float64, 0-1 (which makes no difference w/ subsequent min/max scaling)
     return image if shape == image.shape else transform.resize(
         image, shape, mode='reflect', anti_aliasing=True)
-
-def unet_classify(model, input_image):
-    dim1, dim2 = input_image.shape
-
-    images = input_image.reshape((-1, dim1, dim2, 1))
-
-    images = images.astype(numpy.float32)
-    images = images - numpy.min(images)
-    images = images.astype(numpy.float32) / numpy.max(images)
-
-    start = time.time()
-    pixel_classification = model.predict(images, batch_size=1)
-    end = time.time()
-    logger.debug('UNet segmentation took {} seconds '.format(end - start))
-
-    return pixel_classification[0, :, :, :]
+        
 
 def unet_classify(model, input_image, resize_to_model=True):
     dim1, dim2 = input_image.shape
