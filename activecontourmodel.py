@@ -135,17 +135,17 @@ class ActiveContourModel(cellprofiler.module.ImageSegmentation):
 
         # Geodesic settings
         self.balloon = cellprofiler.setting.Float(
-            text="Ballon force",
+            text="Balloon force",
             value=0.
         )
 
         # Morph Chan-Vese settings
-        self.lambda1 = cellprofiler.setting.Float(
+        self.outer_weight = cellprofiler.setting.Float(
             text="Outer region weight",
             value=1.
         )
 
-        self.lambda2 = cellprofiler.setting.Float(
+        self.inner_weight = cellprofiler.setting.Float(
             text="Inner region weight",
             value=1.
         )
@@ -173,8 +173,8 @@ class ActiveContourModel(cellprofiler.module.ImageSegmentation):
             self.checkerboard_size,
             self.smoothing,
             self.balloon,
-            self.lambda1,
-            self.lambda2
+            self.outer_weight,
+            self.inner_weight
         ]
 
     def visible_settings(self):
@@ -235,8 +235,8 @@ class ActiveContourModel(cellprofiler.module.ImageSegmentation):
                 ]
             elif self.method.value == MORPH_CHAN_VESE_METHOD:
                 __settings__ += [
-                    self.lambda1,
-                    self.lambda2
+                    self.outer_weight,
+                    self.inner_weight
                 ]
         return __settings__
 
@@ -319,8 +319,8 @@ class ActiveContourModel(cellprofiler.module.ImageSegmentation):
                                              iterations=self.iterations.value,
                                              smoothing=self.smoothing.value,
                                              init_level_set=level_set,
-                                             lambda1=self.lambda1.value,
-                                             lambda2=self.lambda2.value
+                                             lambda1=self.outer_weight.value,
+                                             lambda2=self.inner_weight.value
                                              )
 
         y_data = skimage.measure.label(y_data, connectivity=self.connectivity.value)
