@@ -386,7 +386,7 @@ class ActiveContourModel(cellprofiler.module.ImageSegmentation):
             return skimage.segmentation.circle_level_set(shape, center=center, radius=radius)
 
         elif self.level_set.value == LEVEL_SET_CHECKERBOARD:
-            square_size = int(numpy.ceil(self.level_set_size.value)) if size is not None else size
+            square_size = int(numpy.ceil(self.level_set_size.value)) if size is None else size
             return skimage.segmentation.checkerboard_level_set(shape, square_size=square_size)
 
     def run_morphological_operations(self, data, size=None, iterations=None):
