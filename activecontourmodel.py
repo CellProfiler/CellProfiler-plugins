@@ -26,6 +26,24 @@ LEVEL_SET_CIRCLE = "circle"
 LEVEL_SET_CHECKERBOARD = "checkerboard"
 
 
+class DefaultCoordinate(cellprofiler.setting.Coordinates):
+    """
+    Override for the Coordinate setting to allow negative defaults.
+    """
+    def test_valid(self, pipeline):
+        # TODO: fix this for 3d images
+        values = self.value_text.split(',')
+        if len(values) < 2:
+            raise cellprofiler.setting.ValidationError("X and Y values must be separated by a comma", self)
+        if len(values) > 2:
+            raise cellprofiler.setting.ValidationError("Only two values allowed", self)
+        for value in values:
+            try:
+                int(value.strip())
+            except ValueError:
+                raise cellprofiler.setting.ValidationError("{} is not an integer".format(value), self)
+
+
 class ActiveContourModel(cellprofiler.module.ImageSegmentation):
     module_name = "Active contour model"
 
@@ -112,16 +130,16 @@ class ActiveContourModel(cellprofiler.module.ImageSegmentation):
             value=False
         )
 
-        self.circle_center = cellprofiler.setting.Coordinates(
+        self.circle_center = DefaultCoordinate(
             text="Circle level set center",
-            value=(-1,-1)
+            value=(-1, -1)
         )
 
-        self.checkerboard_iterative = cellprofiler.setting.Binary(
+        self.level_set_iterative = cellprofiler.setting.Binary(
             text="Enable iterative level set determination",
             value=False,
             doc=textwrap.dedent("""
-            The region that gets segmented for checkerboard-based level set is 
+            The region that gets segmented for shape-based level set is 
             determined largely by the level set size and the inner/outer region 
             weighting. This means that sometimes, the "segmented" region will 
             not match the region of interest (e.g. the space *between* nuclei 
@@ -135,15 +153,6 @@ class ActiveContourModel(cellprofiler.module.ImageSegmentation):
             """)
         )
 
-        self.checkerboard_iterative_sizes = cellprofiler.setting.Text(
-            text="Checkerboard level set square sizes",
-            value="8,3,1",
-            doc=textwrap.dedent("""
-            A list of sizes to try, in order, separated by commas.
-            E.g. "8,5,2,1" or "18, 3, 4"
-            """)
-        )
-
         self.level_set_size = cellprofiler.setting.Float(
             text="Level set size",
             value=-1.,
@@ -151,6 +160,7 @@ class ActiveContourModel(cellprofiler.module.ImageSegmentation):
             doc=textwrap.dedent("""
             For **{LEVEL_SET_CIRCLE}** this can be a float and corresponds to 
             the circle radius.
+            
             For **{LEVEL_SET_CHECKERBOARD}** this is cast to an integer and
             corresponds to the checkerbox width/height.
             """.format(
@@ -158,6 +168,25 @@ class ActiveContourModel(cellprofiler.module.ImageSegmentation):
                 LEVEL_SET_CHECKERBOARD=LEVEL_SET_CHECKERBOARD
             ))
 
+        )
+
+        self.level_set_iterative_sizes = cellprofiler.setting.Text(
+            text="Level set sizes",
+            value="8,3,1",
+            doc=textwrap.dedent("""
+            A list of sizes to try, in order, separated by commas.
+            
+            For **{LEVEL_SET_CIRCLE}** this can be a list of floats and 
+            corresponds to the circle radius.
+            
+            For **{LEVEL_SET_CHECKERBOARD}** this is a list of integers (floating 
+            points are casted to integers) and corresponds to the checkerboard width/height.
+            
+            E.g. "8,5,2,1" or "18, 3, 4" or "8.5, 2.3, 4.0"
+            """.format(
+                LEVEL_SET_CIRCLE=LEVEL_SET_CIRCLE,
+                LEVEL_SET_CHECKERBOARD=LEVEL_SET_CHECKERBOARD
+            ))
         )
 
         self.smoothing = cellprofiler.setting.Integer(
@@ -203,29 +232,44 @@ class ActiveContourModel(cellprofiler.module.ImageSegmentation):
             self.adv_level_set,
             self.circle_center,
             self.level_set_size,
-            # TODO: 16 was removed
             self.smoothing,
             self.balloon,
             self.outer_weight,
             self.inner_weight,
-            self.checkerboard_iterative,
-            self.checkerboard_iterative_sizes
+            self.level_set_iterative,
+            self.level_set_iterative_sizes
         ]
 
     def validate_module(self, pipeline):
-        iterative_sizes = self.checkerboard_iterative_sizes.value
-        parsed_sizes = [x.strip() for x in iterative_sizes.split(',')]
-        # TODO add option for circle level set
+        # Parse the iterative sizes
+        iterative_sizes = self.level_set_iterative_sizes.value
+        split_sizes = [x.strip() for x in iterative_sizes.split(',')]
         try:
-            self.iterative_sizes = [int(x) for x in parsed_sizes]
+            if self.level_set.value == LEVEL_SET_CIRCLE:
+                parse_fn = float
+            else:
+                # The users could specify them as floats, but for checkerboard they need
+                # to be converted to ints. `ceil` is used here just to make sure 0.x is
+                # still a valid checkerboard size.
+                parse_fn = lambda y: int(numpy.ceil(float(y)))
+            self.iterative_sizes = [parse_fn(x) for x in split_sizes]
         except ValueError:
-            raise cellprofiler.setting.ValidationError("'{}' is not a suitable list of integers!".format(iterative_sizes),
-                                                       self.checkerboard_iterative_sizes)
+            raise cellprofiler.setting.ValidationError("'{}' is not a suitable list of values for {} level set!"
+                                                       .format(iterative_sizes, self.level_set.value),
+                                                       self.level_set_iterative_sizes)
+
+        # Validate circle coordinate settings
+        if self.adv_level_set.value:
+            center_x = self.circle_center.x
+            center_y = self.circle_center.y
+            if not ((center_x == center_y == -1) or (center_x != -1 and center_y != -1)):
+                raise cellprofiler.setting.ValidationError("Circle coordinates must either both be -1 (default) or both positive",
+                                                           self.circle_center)
 
     def upgrade_settings(self, setting_values, variable_revision_number, module_name, from_matlab):
         if variable_revision_number == 1:
             # The circle and checkerboard level set sizes were unified
-            __settings__ = setting_values[:16] + setting_values[17:]
+            __settings__ = setting_values[:17] + setting_values[18:]
 
             variable_revision_number = 2
 
@@ -270,24 +314,26 @@ class ActiveContourModel(cellprofiler.module.ImageSegmentation):
 
             # Advanced settings for level setting
             if self.adv_level_set.value:
+                __settings__ += [
+                    self.level_set_iterative
+                ]
+
+                # Determine which size/sizes option to show
+                # based on the iterative setting
+                if self.level_set_iterative.value:
+                    __settings__ += [
+                        self.level_set_iterative_sizes
+                    ]
+                else:
+                    __settings__ += [
+                        self.level_set_size
+                    ]
+
+                # Extra parameter for the circle level set
                 if self.level_set.value == LEVEL_SET_CIRCLE:
                     __settings__ += [
                         self.circle_center,
-                        self.level_set_size
                     ]
-                elif self.level_set.value == LEVEL_SET_CHECKERBOARD:
-                    __settings__ += [
-                        self.checkerboard_iterative
-                    ]
-                    # Iterative checking
-                    if self.checkerboard_iterative.value:
-                        __settings__ += [
-                            self.checkerboard_iterative_sizes
-                        ]
-                    else:
-                        __settings__ += [
-                            self.level_set_size
-                        ]
 
             # Add common smoothing function after level setting options
             __settings__ += [
@@ -305,6 +351,65 @@ class ActiveContourModel(cellprofiler.module.ImageSegmentation):
                     self.inner_weight
                 ]
         return __settings__
+
+    def generate_level_set(self, shape, size=None):
+        """
+        Generate a level set based off of the current settings and
+        optionally a specific size.
+        :param shape: Shape of the level set to make
+        :type shape: tuple
+        :param size: Radius or width/height for the given level set
+        :type size: float, int
+        :return:
+        :rtype:
+        """
+        # Return early if the advanced options weren't asked for
+        if not self.adv_level_set.value:
+            return str(self.level_set.value)
+
+        if self.level_set.value == LEVEL_SET_CIRCLE:
+            # TODO: fix this for 3d images
+            radius = self.level_set_size.value if size is None else size
+            center_x = self.circle_center.x
+            center_y = self.circle_center.y
+            if center_x == center_y == -1:
+                center = None
+            else:
+                if len(shape) == 3:
+                    raise NotImplementedError("3D center selection not yet implemented")
+                center = (center_x, center_y)
+            return skimage.segmentation.circle_level_set(shape, center=center, radius=radius)
+
+        elif self.level_set.value == LEVEL_SET_CHECKERBOARD:
+            square_size = int(numpy.ceil(self.level_set_size.value)) if size is not None else size
+            return skimage.segmentation.checkerboard_level_set(shape, square_size=square_size)
+
+    def run_morphological_operations(self, data, size=None, iterations=None):
+        level_set = self.generate_level_set(data.shape, size)
+        iterations = self.iterations.value if iterations is None else iterations
+
+        if self.method.value == MORPH_GEODESIC_METHOD:
+            # Perform preprocessing for geodesic method
+            pre_process = skimage.segmentation.inverse_gaussian_gradient(data,
+                                                                         alpha=self.alpha.value,
+                                                                         sigma=self.sigma.value)
+
+            threshold_policy = 'auto' if self.threshold.value == 0 else self.threshold.value
+
+            return skimage.segmentation.morphological_geodesic_active_contour(pre_process,
+                                                                              iterations=iterations,
+                                                                              smoothing=self.smoothing.value,
+                                                                              init_level_set=level_set,
+                                                                              threshold=threshold_policy,
+                                                                              balloon=self.balloon.value)
+
+        elif self.method.value == MORPH_CHAN_VESE_METHOD:
+            return skimage.segmentation.morphological_chan_vese(data,
+                                                                iterations=iterations,
+                                                                smoothing=self.smoothing.value,
+                                                                init_level_set=level_set,
+                                                                lambda1=self.outer_weight.value,
+                                                                lambda2=self.inner_weight.value)
 
     def run(self, workspace):
         x_name = self.x_name.value
@@ -336,58 +441,38 @@ class ActiveContourModel(cellprofiler.module.ImageSegmentation):
                                     sdf_smoothing=self.sdf_smoothing.value)
 
         else:
-            level_set = str(self.level_set.value)
-            # Change default settings only if asked to
-            if self.adv_level_set.value:
+            # Do a single run and return the result
+            if not self.level_set_iterative.value:
+                y_data = self.run_morphological_operations(x_data)
 
-                if self.level_set.value == LEVEL_SET_CIRCLE:
-                    # TODO: fix this for 3d images
-                    center_x = self.circle_center.x
-                    center_y = self.circle_center.y
-                    radius = self.level_set_size.value
-                    assert (center_x == center_y == -1) or (center_x != -1 and center_y != -1), \
-                        "Coordinates must either both be -1 (default) or both positive"
+            # Step through each proposed level set size, try 10% of the initial iterations,
+            # and check to see that the foreground/background relationship is preserved
+            else:
+                # We only want to "try out" the first few iterations, so we'll take 10%
+                iterations = int(numpy.ceil(self.iterations.value * 0.1))
+                for level_set_size in self.iterative_sizes:
+                    test_segmentation = self.run_morphological_operations(x_data,
+                                                                          size=level_set_size,
+                                                                          iterations=iterations)
+                    # Convert it to boolean because we want to use it as a mask
+                    test_segmentation = test_segmentation.astype(bool)
+                    # Compare the foreground and background median intensities
+                    fg_median = numpy.median(x_data[test_segmentation])
+                    bg_median = numpy.median(x_data[~test_segmentation])
+                    if fg_median > bg_median:
+                        # We're good to go!
+                        break
 
-                    if center_x == center_y == -1:
-                        center = None
-                    else:
-                        if len(x_data.shape) == 3:
-                            raise NotImplementedError("3D center selection not yet implemented")
-                        center = (center_x, center_y)
-                    level_set = skimage.segmentation.circle_level_set(x_data.shape,
-                                                                      center=center,
-                                                                      radius=radius)
-                elif self.level_set.value == LEVEL_SET_CHECKERBOARD:
-                    square_size = int(numpy.ceil(self.level_set_size.value))
-                    level_set = skimage.segmentation.checkerboard_level_set(x_data.shape,
-                                                                            square_size=square_size)
+                # If we're here, we haven't found a suitable level set size within the supplied
+                # level set values (i.e. we didn't `break` in the above code block)
+                else:
+                    raise ValueError("None of the supplied level set sizes produced a suitable "
+                                     "foreground/background relationship. Values: {}".format(self.iterative_sizes))
 
-            if self.method.value == MORPH_GEODESIC_METHOD:
-                # Perform preprocessing for geodesic method
-                pre_process = skimage.segmentation.inverse_gaussian_gradient(x_data,
-                                                                             alpha=self.alpha.value,
-                                                                             sigma=self.sigma.value)
-
-                threshold_policy = 'auto' if self.threshold.value == 0 else self.threshold.value
-
-                y_data = skimage.segmentation \
-                    .morphological_geodesic_active_contour(pre_process,
-                                                           iterations=self.iterations.value,
-                                                           smoothing=self.smoothing.value,
-                                                           init_level_set=level_set,
-                                                           threshold=threshold_policy,
-                                                           balloon=self.balloon.value
-                                                           )
-
-            elif self.method.value == MORPH_CHAN_VESE_METHOD:
-                y_data = skimage.segmentation \
-                    .morphological_chan_vese(x_data,
-                                             iterations=self.iterations.value,
-                                             smoothing=self.smoothing.value,
-                                             init_level_set=level_set,
-                                             lambda1=self.outer_weight.value,
-                                             lambda2=self.inner_weight.value
-                                             )
+                # If we're here, we broke out of the for loop above and level_set_size should
+                # be a suitable size for finding the correct relationship. We also want to
+                # use the iteration count that the user supplied rather than the 10% reduced here.
+                y_data = self.run_morphological_operations(x_data, level_set_size)
 
         y_data = skimage.measure.label(y_data, connectivity=self.connectivity.value)
 
