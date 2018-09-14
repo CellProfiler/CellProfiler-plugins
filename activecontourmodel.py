@@ -245,14 +245,7 @@ class ActiveContourModel(cellprofiler.module.ImageSegmentation):
         iterative_sizes = self.level_set_iterative_sizes.value
         split_sizes = [x.strip() for x in iterative_sizes.split(',')]
         try:
-            if self.level_set.value == LEVEL_SET_CIRCLE:
-                parse_fn = float
-            else:
-                # The users could specify them as floats, but for checkerboard they need
-                # to be converted to ints. `ceil` is used here just to make sure 0.x is
-                # still a valid checkerboard size.
-                parse_fn = lambda y: int(numpy.ceil(float(y)))
-            self.iterative_sizes = [parse_fn(x) for x in split_sizes]
+            self.parse_level_set_values()
         except ValueError:
             raise cellprofiler.setting.ValidationError("'{}' is not a suitable list of values for {} level set!"
                                                        .format(iterative_sizes, self.level_set.value),
@@ -352,6 +345,18 @@ class ActiveContourModel(cellprofiler.module.ImageSegmentation):
                 ]
         return __settings__
 
+    def parse_level_set_values(self):
+        iterative_sizes = self.level_set_iterative_sizes.value
+        split_sizes = [x.strip() for x in iterative_sizes.split(',')]
+        if self.level_set.value == LEVEL_SET_CIRCLE:
+            parse_fn = float
+        else:
+            # The users could specify them as floats, but for checkerboard they need
+            # to be converted to ints. `ceil` is used here just to make sure 0.x is
+            # still a valid checkerboard size.
+            parse_fn = lambda y: int(numpy.ceil(float(y)))
+        return [parse_fn(x) for x in split_sizes]
+
     def generate_level_set(self, shape, size=None):
         """
         Generate a level set based off of the current settings and
@@ -448,9 +453,10 @@ class ActiveContourModel(cellprofiler.module.ImageSegmentation):
             # Step through each proposed level set size, try 10% of the initial iterations,
             # and check to see that the foreground/background relationship is preserved
             else:
+                iterative_sizes = self.parse_level_set_values()
                 # We only want to "try out" the first few iterations, so we'll take 10%
                 iterations = int(numpy.ceil(self.iterations.value * 0.1))
-                for level_set_size in self.iterative_sizes:
+                for level_set_size in iterative_sizes:
                     test_segmentation = self.run_morphological_operations(x_data,
                                                                           size=level_set_size,
                                                                           iterations=iterations)
@@ -461,13 +467,14 @@ class ActiveContourModel(cellprofiler.module.ImageSegmentation):
                     bg_median = numpy.median(x_data[~test_segmentation])
                     if fg_median > bg_median:
                         # We're good to go!
+                        print("Suitable level set size found: {}".format(level_set_size))
                         break
 
                 # If we're here, we haven't found a suitable level set size within the supplied
                 # level set values (i.e. we didn't `break` in the above code block)
                 else:
                     raise ValueError("None of the supplied level set sizes produced a suitable "
-                                     "foreground/background relationship. Values: {}".format(self.iterative_sizes))
+                                     "foreground/background relationship. Values: {}".format(iterative_sizes))
 
                 # If we're here, we broke out of the for loop above and level_set_size should
                 # be a suitable size for finding the correct relationship. We also want to
