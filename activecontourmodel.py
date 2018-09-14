@@ -6,6 +6,7 @@ Active contour model
 
 """
 
+import textwrap
 import cellprofiler.module
 import cellprofiler.object
 import cellprofiler.setting
@@ -28,7 +29,7 @@ LEVEL_SET_CHECKERBOARD = "checkerboard"
 class ActiveContourModel(cellprofiler.module.ImageSegmentation):
     module_name = "Active contour model"
 
-    variable_revision_number = 1
+    variable_revision_number = 2
 
     def create_settings(self):
         super(ActiveContourModel, self).create_settings()
@@ -116,15 +117,47 @@ class ActiveContourModel(cellprofiler.module.ImageSegmentation):
             value=(-1,-1)
         )
 
-        self.circle_radius = cellprofiler.setting.Float(
-            text="Circle level set radius",
-            value=-1.
+        self.checkerboard_iterative = cellprofiler.setting.Binary(
+            text="Enable iterative level set determination",
+            value=False,
+            doc=textwrap.dedent("""
+            The region that gets segmented for checkerboard-based level set is 
+            determined largely by the level set size and the inner/outer region 
+            weighting. This means that sometimes, the "segmented" region will 
+            not match the region of interest (e.g. the space *between* nuclei 
+            will be segmented, rather than the nuclei themselves). This allows 
+            you to specify multiple level sets to try while attempting to segment 
+            a given region. The foreground/background relationship is determined 
+            by first attempting the segmentation with 10% of the defined iterations 
+            and then comparing the median intensity of the original image that's 
+            contained within each region. The region with the greatest median 
+            intensity is assigned to be the foreground.
+            """)
         )
 
-        self.checkerboard_size = cellprofiler.setting.Integer(
-            text="Checkerboard level set square size",
-            value=5,
-            minval=0
+        self.checkerboard_iterative_sizes = cellprofiler.setting.Text(
+            text="Checkerboard level set square sizes",
+            value="8,3,1",
+            doc=textwrap.dedent("""
+            A list of sizes to try, in order, separated by commas.
+            E.g. "8,5,2,1" or "18, 3, 4"
+            """)
+        )
+
+        self.level_set_size = cellprofiler.setting.Float(
+            text="Level set size",
+            value=-1.,
+            minval=0.,
+            doc=textwrap.dedent("""
+            For **{LEVEL_SET_CIRCLE}** this can be a float and corresponds to 
+            the circle radius.
+            For **{LEVEL_SET_CHECKERBOARD}** this is cast to an integer and
+            corresponds to the checkerbox width/height.
+            """.format(
+                LEVEL_SET_CIRCLE=LEVEL_SET_CIRCLE,
+                LEVEL_SET_CHECKERBOARD=LEVEL_SET_CHECKERBOARD
+            ))
+
         )
 
         self.smoothing = cellprofiler.setting.Integer(
@@ -169,13 +202,37 @@ class ActiveContourModel(cellprofiler.module.ImageSegmentation):
             self.level_set,
             self.adv_level_set,
             self.circle_center,
-            self.circle_radius,
-            self.checkerboard_size,
+            self.level_set_size,
+            # TODO: 16 was removed
             self.smoothing,
             self.balloon,
             self.outer_weight,
-            self.inner_weight
+            self.inner_weight,
+            self.checkerboard_iterative,
+            self.checkerboard_iterative_sizes
         ]
+
+    def validate_module(self, pipeline):
+        iterative_sizes = self.checkerboard_iterative_sizes.value
+        parsed_sizes = [x.strip() for x in iterative_sizes.split(',')]
+        # TODO add option for circle level set
+        try:
+            self.iterative_sizes = [int(x) for x in parsed_sizes]
+        except ValueError:
+            raise cellprofiler.setting.ValidationError("'{}' is not a suitable list of integers!".format(iterative_sizes),
+                                                       self.checkerboard_iterative_sizes)
+
+    def upgrade_settings(self, setting_values, variable_revision_number, module_name, from_matlab):
+        if variable_revision_number == 1:
+            # The circle and checkerboard level set sizes were unified
+            __settings__ = setting_values[:16] + setting_values[17:]
+
+            variable_revision_number = 2
+
+        else:
+            __settings__ = setting_values
+
+        return __settings__, variable_revision_number, from_matlab
 
     def visible_settings(self):
         __settings__ = super(ActiveContourModel, self).settings()
@@ -216,12 +273,21 @@ class ActiveContourModel(cellprofiler.module.ImageSegmentation):
                 if self.level_set.value == LEVEL_SET_CIRCLE:
                     __settings__ += [
                         self.circle_center,
-                        self.circle_radius
+                        self.level_set_size
                     ]
                 elif self.level_set.value == LEVEL_SET_CHECKERBOARD:
                     __settings__ += [
-                        self.checkerboard_size
+                        self.checkerboard_iterative
                     ]
+                    # Iterative checking
+                    if self.checkerboard_iterative.value:
+                        __settings__ += [
+                            self.checkerboard_iterative_sizes
+                        ]
+                    else:
+                        __settings__ += [
+                            self.level_set_size
+                        ]
 
             # Add common smoothing function after level setting options
             __settings__ += [
@@ -278,7 +344,7 @@ class ActiveContourModel(cellprofiler.module.ImageSegmentation):
                     # TODO: fix this for 3d images
                     center_x = self.circle_center.x
                     center_y = self.circle_center.y
-                    radius = self.circle_radius.value
+                    radius = self.level_set_size.value
                     assert (center_x == center_y == -1) or (center_x != -1 and center_y != -1), \
                         "Coordinates must either both be -1 (default) or both positive"
 
@@ -292,7 +358,7 @@ class ActiveContourModel(cellprofiler.module.ImageSegmentation):
                                                                       center=center,
                                                                       radius=radius)
                 elif self.level_set.value == LEVEL_SET_CHECKERBOARD:
-                    square_size = self.checkerboard_size.value
+                    square_size = int(numpy.ceil(self.level_set_size.value))
                     level_set = skimage.segmentation.checkerboard_level_set(x_data.shape,
                                                                             square_size=square_size)
 
