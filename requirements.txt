@@ -2,5 +2,3 @@ cellh5
 imagej
 microscopeimagequality
 keras
-numpy
-scipy
