@@ -2,8 +2,13 @@
 import threading
 
 import cellprofiler.icons
-from cellprofiler.modules._help import PROTIP_RECOMEND_ICON, PROTIP_AVOID_ICON, TECH_NOTE_ICON
-
+try:
+    # version 3.0.0
+    from cellprofiler.modules._help import PROTIP_RECOMEND_ICON, PROTIP_AVOID_ICON, TECH_NOTE_ICON
+except:
+    from cellprofiler.modules._help import PROTIP_RECOMMEND_ICON as PROTIP_RECOMEND_ICON
+    from cellprofiler.modules._help import PROTIP_AVOID_ICON, TECH_NOTE_ICON
+    
 __doc__ = """<b>IdentifyYeastCells</b> identifies yeast (or other round) objects in the image. This module was designed 
 to work on brightfield images. However in some cases it can also be efficient with fluorescent imagery.
 
