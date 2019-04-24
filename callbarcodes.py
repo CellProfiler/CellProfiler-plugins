@@ -6,8 +6,15 @@
 #
 #################################
 
-import numpy
+import csv
+#import numpy
 import os
+import urllib2
+
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from StringIO import StringIO
 
 #################################
 #
@@ -139,7 +146,7 @@ class CallBarcodes(cellprofiler.module.Module):
     # you add user-interface functionality later.
     #
     module_name = "CallBarcodes"
-    category = "Measurement"
+    category = "Data Tools"
     variable_revision_number = 1
 
     #
@@ -199,24 +206,14 @@ Enter the number of cycles present in the data.
 This measurement should be """)
 
         self.metadata_field_barcode = cellprofiler.setting.Choice(
-            "Select metadata tags for grouping", [2], doc="""\
-*(Used only if images are to be grouped by metadata)*
-
-Select the tags by which you want to group the image files. You can
-select multiple tags. For example, if a set of images had metadata for
-“Run”, “Plate”, “Well”, and “Site”, selecting *Run* and *Plate* will
-create groups containing images that share the same [*Run*,\ *Plate*]
-pair of tags.""")
+            "Select the column of barcodes to match against", ["No CSV file"], choices_fn=self.get_choices,
+            doc="""\
+""")
 
         self.metadata_field_tag = cellprofiler.setting.Choice(
-            "Select metadata tags for grouping", [1], doc="""\
-*(Used only if images are to be grouped by metadata)*
-
-Select the tags by which you want to group the image files. You can
-select multiple tags. For example, if a set of images had metadata for
-“Run”, “Plate”, “Well”, and “Site”, selecting *Run* and *Plate* will
-create groups containing images that share the same [*Run*,\ *Plate*]
-pair of tags.""")
+            "Select the column with gene/transcript barcode names", ["No CSV file"], choices_fn=self.get_choices,
+            doc="""\
+""")
     #
     # The "settings" method tells CellProfiler about the settings you
     # have in your module. CellProfiler uses the list for saving
@@ -239,14 +236,23 @@ pair of tags.""")
             self.metadata_field_tag
         ]
 
-    def visible_settings(self):
-        return [
+    '''def visible_settings(self):
+        result = [
             self.ncycles,
             self.input_object_name,
             self.cycle1measure,
             self.csv_directory,
             self.csv_file_name
         ]
+        try:
+            headers = self.get_header()
+            #self.metadata_field_barcode.choices = headers
+            #self.metadata_field_tag.choices = headers
+            result += [self.metadata_field_barcode]
+        except:
+            pass
+        
+        return result'''
 
 
     def validate_module(self, pipeline):
@@ -278,11 +284,6 @@ pair of tags.""")
     @property
     def csv_path(self):
         '''The path and file name of the CSV file to be loaded'''
-        if cellprofiler.preferences.get_data_file() is not None:
-            return cellprofiler.preferences.get_data_file()
-        if self.csv_directory.dir_choice == cellprofiler.setting.URL_FOLDER_NAME:
-            return self.csv_file_name.value
-
         path = self.csv_directory.get_absolute_path()
         return os.path.join(path, self.csv_file_name.value)
 
@@ -325,22 +326,19 @@ pair of tags.""")
         Open the csv file indicated by the settings and read the fields
         of its first line. These should be the measurement columns.
         '''
-        entry = self.get_cache_info()
-        if "header" in entry:
-            return entry["header"]
-
         fd = self.open_csv(do_not_cache=do_not_cache)
         reader = csv.reader(fd)
         header = next(reader)
         fd.close()
-        if header[0].startswith('ELN_RUN_ID'):
-            try:
-                data = self.convert()
-            except Exception as e:
-                raise RuntimeError("%s" % e)
-            header = data.dtype.names
-        entry["header"] = [header_to_column(column) for column in header]
-        return entry["header"]
+        return header
+
+    def get_choices(self,pipeline):
+        try:
+            choices = self.get_header()
+        except:
+            choices = ["No CSV file"]
+        return choices
+
 
     #
     # CellProfiler calls "run" on each image set in your pipeline.
@@ -393,24 +391,8 @@ pair of tags.""")
 
         ###############################################################
 
-        #
-        # The minimum enclosing circle (MEC) is the smallest circle that
-        # will fit around the object. We get the centers and radii of
-        # all of the objects at once. You'll see how that lets us
-        # compute the X and Y position of each pixel in a label all at
-        # one go.
-        #
-        # First, get an array that lists the whole range of indexes in
-        # the labels matrix.
-        #
-        indexes = objects.indices
-        #
-        # The module computes a measurement based on the image intensity
-        # inside an object times a Zernike polynomial inscribed in the
-        # minimum enclosing circle around the object. The details are
-        # in the "measure_zernike" function. We call into the function with
-        # an N and M which describe the polynomial.
-        #
+
+        """
         for n, m in self.get_zernike_indexes():
             # Compute the zernikes for each object, returned in an array
             zr, zi = self.measure_zernike(pixels, labels, indexes, centers, radius, n, m)
@@ -433,7 +415,7 @@ pair of tags.""")
             zmean = numpy.mean(zr)
             zmedian = numpy.median(zr)
             zsd = numpy.std(zr)
-            statistics.append([feature, zmean, zmedian, zsd])
+            statistics.append([feature, zmean, zmedian, zsd])"""
 
     #
     # "display" lets you use matplotlib to display your results.
@@ -458,7 +440,7 @@ pair of tags.""")
         return score/len(query)
 
     def queryall(self,barcodelist, query):
-        scoredict={likelihood(x,query):x for x in barcodelist}
+        scoredict={self.likelihood(x,query):x for x in barcodelist}
         scores=scoredict.keys()
         scores.sort(reverse=True)
         return scores[0],scoredict[scores[0]]
