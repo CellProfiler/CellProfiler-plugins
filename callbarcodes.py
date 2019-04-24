@@ -150,6 +150,14 @@ class CallBarcodes(cellprofiler.module.Module):
     # settings you can use.
     #
     def create_settings(self):
+        self.csv_directory = cellprofiler.setting.DirectoryPath(
+            "Input data file location", allow_metadata=False, support_urls=True,
+            doc="""\
+Select the folder containing the CSV file to be loaded. {IO_FOLDER_CHOICE_HELP_TEXT}
+""".format(**{
+                "IO_FOLDER_CHOICE_HELP_TEXT": _help.IO_FOLDER_CHOICE_HELP_TEXT
+            }))
+
         def get_directory_fn():
             '''Get the directory for the CSV file name'''
             return self.csv_directory.get_absolute_path()
@@ -184,7 +192,31 @@ Enter the number of cycles present in the data.
             text="Number of cycles",
             value=8
         )
+        self.cycle1measures=cellprofiler.setting.MeasurementMultiChoice(
+            "Select all the measures from Cycle 1 to use for calling",
+            None,
+            doc="""\
+This measurement should be """)
 
+        self.metadata_field_barcode = cellprofiler.setting.Choice(
+            "Select metadata tags for grouping", None, doc="""\
+*(Used only if images are to be grouped by metadata)*
+
+Select the tags by which you want to group the image files. You can
+select multiple tags. For example, if a set of images had metadata for
+“Run”, “Plate”, “Well”, and “Site”, selecting *Run* and *Plate* will
+create groups containing images that share the same [*Run*,\ *Plate*]
+pair of tags.""")
+
+        self.metadata_field_tag = cellprofiler.setting.Choice(
+            "Select metadata tags for grouping", None, doc="""\
+*(Used only if images are to be grouped by metadata)*
+
+Select the tags by which you want to group the image files. You can
+select multiple tags. For example, if a set of images had metadata for
+“Run”, “Plate”, “Well”, and “Site”, selecting *Run* and *Plate* will
+create groups containing images that share the same [*Run*,\ *Plate*]
+pair of tags.""")
     #
     # The "settings" method tells CellProfiler about the settings you
     # have in your module. CellProfiler uses the list for saving
@@ -198,9 +230,12 @@ Enter the number of cycles present in the data.
     #
     def settings(self):
         return [
-            self.input_image_name,
-            self.input_object_name,
-            self.radial_degree
+            self.ncycles,
+            self.cycle1measures,
+            self.csv_directory,
+            self.csv_file_name,
+            self.metadata_field_barcode,
+            self.metadata_field_tag
         ]
 
     def validate_module(self, pipeline):
@@ -273,6 +308,28 @@ Enter the number of cycles present in the data.
         else:
             return open(self.csv_path, 'rb')
 
+    def get_header(self, do_not_cache=False):
+        '''Read the header fields from the csv file
+
+        Open the csv file indicated by the settings and read the fields
+        of its first line. These should be the measurement columns.
+        '''
+        entry = self.get_cache_info()
+        if "header" in entry:
+            return entry["header"]
+
+        fd = self.open_csv(do_not_cache=do_not_cache)
+        reader = csv.reader(fd)
+        header = next(reader)
+        fd.close()
+        if header[0].startswith('ELN_RUN_ID'):
+            try:
+                data = self.convert()
+            except Exception as e:
+                raise RuntimeError("%s" % e)
+            header = data.dtype.names
+        entry["header"] = [header_to_column(column) for column in header]
+        return entry["header"]
 
     #
     # CellProfiler calls "run" on each image set in your pipeline.
@@ -408,6 +465,7 @@ Enter the number of cycles present in the data.
     # We have functions that build the names so that we can
     # use the same functions in different places.
     #
+"""    
     def get_feature_name(self, n, m):
         '''Return a measurement feature name for the given Zernike'''
         #
@@ -423,7 +481,7 @@ Enter the number of cycles present in the data.
         input_image_name = self.input_image_name.value
 
         return '_'.join([C_MEASUREMENT_TEMPLATE, self.get_feature_name(n, m)])
-
+"""
     #
     # We have to tell CellProfiler about the measurements we produce.
     # There are two parts: one that is for database-type modules and one
@@ -476,7 +534,7 @@ Enter the number of cycles present in the data.
             return ["Intensity"]
 
         return []
-
+"""
     #
     # This module makes per-image measurements. That means we need
     # "get_measurement_images" to distinguish measurements made on two
@@ -533,3 +591,4 @@ Enter the number of cycles present in the data.
             z.imag * (zernike_indexes[:, 1] <= 0)[numpy.newaxis, numpy.newaxis, :]
 
         return numpy.sum(z * zernike_features[numpy.newaxis, numpy.newaxis, :], 2)
+"""
