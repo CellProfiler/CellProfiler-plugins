@@ -15,12 +15,12 @@ import os
 #
 ##################################
 
+from cellprofiler.modules import _help
 import cellprofiler.image
 import cellprofiler.module
 import cellprofiler.measurement
 import cellprofiler.object
 import cellprofiler.setting
-from cellprofiler.modules.loaddata import open_csv, get_header
 
 
 __doc__ = """\
@@ -173,7 +173,7 @@ Select the folder containing the CSV file to be loaded. {IO_FOLDER_CHOICE_HELP_T
             get_directory_fn=get_directory_fn,
             set_directory_fn=set_directory_fn,
             browse_msg="Choose CSV file",
-            exts=[("Data file (*.csv)", "*.csv"), ("All files (*.*)", "*.*")]
+            exts=[("Data file (*.csv)", "*.csv"), ("All files (*.*)", "*.*")])
 
         #
         # The ObjectNameSubscriber is similar to the ImageNameSubscriber.
@@ -192,14 +192,14 @@ Enter the number of cycles present in the data.
             text="Number of cycles",
             value=8
         )
-        self.cycle1measures=cellprofiler.setting.MeasurementMultiChoice(
-            "Select all the measures from Cycle 1 to use for calling",
-            None,
+        self.cycle1measure=cellprofiler.setting.Measurement(
+            "Select one of the measure from Cycle 1 to use for calling",
+            self.input_object_name.get_value,'AreaShape_Area',
             doc="""\
 This measurement should be """)
 
         self.metadata_field_barcode = cellprofiler.setting.Choice(
-            "Select metadata tags for grouping", None, doc="""\
+            "Select metadata tags for grouping", [2], doc="""\
 *(Used only if images are to be grouped by metadata)*
 
 Select the tags by which you want to group the image files. You can
@@ -209,7 +209,7 @@ create groups containing images that share the same [*Run*,\ *Plate*]
 pair of tags.""")
 
         self.metadata_field_tag = cellprofiler.setting.Choice(
-            "Select metadata tags for grouping", None, doc="""\
+            "Select metadata tags for grouping", [1], doc="""\
 *(Used only if images are to be grouped by metadata)*
 
 Select the tags by which you want to group the image files. You can
@@ -231,12 +231,23 @@ pair of tags.""")
     def settings(self):
         return [
             self.ncycles,
-            self.cycle1measures,
+            self.input_object_name,
+            self.cycle1measure,
             self.csv_directory,
             self.csv_file_name,
             self.metadata_field_barcode,
             self.metadata_field_tag
         ]
+
+    def visible_settings(self):
+        return [
+            self.ncycles,
+            self.input_object_name,
+            self.cycle1measure,
+            self.csv_directory,
+            self.csv_file_name
+        ]
+
 
     def validate_module(self, pipeline):
         csv_path = self.csv_path
@@ -262,7 +273,7 @@ pair of tags.""")
             raise cellprofiler.setting.ValidationError(
                 "The CSV file, %s, is not in the proper format."
                 " See this module's help for details on CSV format. (error: %s)" % (self.csv_path, e),
-                self.csv_file_name
+                self.csv_file_name)
 
     @property
     def csv_path(self):
@@ -481,7 +492,7 @@ pair of tags.""")
         input_image_name = self.input_image_name.value
 
         return '_'.join([C_MEASUREMENT_TEMPLATE, self.get_feature_name(n, m)])
-"""
+
     #
     # We have to tell CellProfiler about the measurements we produce.
     # There are two parts: one that is for database-type modules and one
@@ -534,7 +545,7 @@ pair of tags.""")
             return ["Intensity"]
 
         return []
-"""
+
     #
     # This module makes per-image measurements. That means we need
     # "get_measurement_images" to distinguish measurements made on two
