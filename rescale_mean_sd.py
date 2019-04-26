@@ -232,7 +232,7 @@ This is the standard deviation of intensity values after rescaling. Images will 
 #
 def normalize_convert_mu_sd_cp(pixels, mean, sd):
     #I rescale
-    pixels = pixels.astype(numpy.float64_t)
+    #pixels = pixels.astype(numpy.float64_t)
     mat_ms = mean + (pixels - pixels.mean()) * (sd/pixels.std())
 
     return mat_ms
