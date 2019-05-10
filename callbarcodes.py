@@ -386,7 +386,7 @@ Enter the name to be given to the classified object image.""")
             matchedbarcode.append(eachmatch)
             matchedbarcodeid.append(barcodes[eachmatch][0])
             matchedbarcodecode.append(barcodes[eachmatch][1])
-
+            print eachbarcode, eachscore, eachmatch, barcodes[eachmatch][0], barcodes[eachmatch][1]
         workspace.measurements.add_measurement(self.input_object_name.value, '_'.join([C_CALL_BARCODES,'MatchedTo_Barcode']),
                                      matchedbarcode)
         workspace.measurements.add_measurement(self.input_object_name.value, '_'.join([C_CALL_BARCODES,'MatchedTo_ID']),
@@ -408,48 +408,6 @@ Enter the name to be given to the classified object image.""")
         #
         workspace.display_data.statistics = statistics
 
-        #
-        # Get the input image and object. You need to get the .value
-        # because otherwise you'll get the setting object instead of
-        # the string name.
-        #
-        input_object_name = self.input_object_name.value
-
-        ###############################################################
-        #
-        # GETTING THE LABELS MATRIX FROM THE OBJECT SET
-        #
-        # The object set has all of the objects in it.
-        #
-        object_set = workspace.object_set
-
-        ###############################################################
-
-
-        """
-        for n, m in self.get_zernike_indexes():
-            # Compute the zernikes for each object, returned in an array
-            zr, zi = self.measure_zernike(pixels, labels, indexes, centers, radius, n, m)
-
-            # Get the name of the measurement feature for this zernike
-            feature = self.get_measurement_name(n, m)
-
-            # Add a measurement for this kind of object
-            if m != 0:
-                measurements.add_measurement(input_object_name, feature, zr)
-
-                # Do the same with -m
-                feature = self.get_measurement_name(n, -m)
-                measurements.add_measurement(input_object_name, feature, zi)
-            else:
-                # For zero, the total is the sum of real and imaginary parts
-                measurements.add_measurement(input_object_name, feature, zr + zi)
-
-            # Record the statistics.
-            zmean = numpy.mean(zr)
-            zmedian = numpy.median(zr)
-            zsd = numpy.std(zr)
-            statistics.append([feature, zmean, zmedian, zsd])"""
 
     #
     # "display" lets you use matplotlib to display your results.
@@ -557,9 +515,9 @@ Enter the name to be given to the classified object image.""")
 
         return [(input_object_name, '_'.join([C_CALL_BARCODES,'BarcodeCalled']), cellprofiler.measurement.COLTYPE_VARCHAR),
                 (input_object_name, '_'.join([C_CALL_BARCODES,'MatchedTo_Barcode']), cellprofiler.measurement.COLTYPE_VARCHAR),
-                (input_object_name, '_'.join([C_CALL_BARCODES,'MatchedTo_ID']), cellprofiler.measurement.INTEGER),
+                (input_object_name, '_'.join([C_CALL_BARCODES,'MatchedTo_ID']), cellprofiler.measurement.COLTYPE_INTEGER),
                 (input_object_name, '_'.join([C_CALL_BARCODES,'MatchedTo_GeneCode']), cellprofiler.measurement.COLTYPE_VARCHAR),
-                (input_object_name, '_'.join([C_CALL_BARCODES,'MatchedTo_Score']), cellprofiler.measurement.FLOAT)]
+                (input_object_name, '_'.join([C_CALL_BARCODES,'MatchedTo_Score']), cellprofiler.measurement.COLTYPE_FLOAT)]
 
     #
     # "get_categories" returns a list of the measurement categories produced
