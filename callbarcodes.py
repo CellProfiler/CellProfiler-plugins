@@ -7,8 +7,9 @@
 #################################
 
 import csv
-#import numpy
+import numpy
 import os
+import re
 import urllib2
 
 try:
@@ -158,8 +159,7 @@ class CallBarcodes(cellprofiler.module.Module):
     #
     def create_settings(self):
         self.csv_directory = cellprofiler.setting.DirectoryPath(
-            "Input data file location", allow_metadata=False, support_urls=True,
-            doc="""\
+            "Input data file location", allow_metadata=False, doc="""\
 Select the folder containing the CSV file to be loaded. {IO_FOLDER_CHOICE_HELP_TEXT}
 """.format(**{
                 "IO_FOLDER_CHOICE_HELP_TEXT": _help.IO_FOLDER_CHOICE_HELP_TEXT
@@ -200,7 +200,7 @@ Enter the number of cycles present in the data.
             value=8
         )
         self.cycle1measure=cellprofiler.setting.Measurement(
-            "Select one of the measure from Cycle 1 to use for calling",
+            "Select one of the measures from Cycle 1 to use for calling",
             self.input_object_name.get_value,'AreaShape_Area',
             doc="""\
 This measurement should be """)
@@ -214,6 +214,20 @@ This measurement should be """)
             "Select the column with gene/transcript barcode names", ["No CSV file"], choices_fn=self.get_choices,
             doc="""\
 """)
+
+        self.wants_image = cellprofiler.setting.Binary(
+            "Retain an image of the classified objects?", False, doc="""\
+Select "*{YES}*" to retain the image of the objects color-coded
+according to their classification, for use later in the pipeline (for
+example, to be saved by a **SaveImages** module).
+""" .format(**{"YES": cellprofiler.setting.YES
+                }))
+
+        self.outimage_name = cellprofiler.setting.ImageNameProvider(
+        "Enter the image name", cellprofiler.setting.NONE, doc="""\
+*(Used only if the classified object image is to be retained for later use in the pipeline)*
+
+Enter the name to be given to the classified object image.""")
     #
     # The "settings" method tells CellProfiler about the settings you
     # have in your module. CellProfiler uses the list for saving
@@ -233,27 +247,27 @@ This measurement should be """)
             self.csv_directory,
             self.csv_file_name,
             self.metadata_field_barcode,
-            self.metadata_field_tag
+            self.metadata_field_tag,
+            self.wants_image,
+            self.outimage_name
         ]
 
-    '''def visible_settings(self):
+    def visible_settings(self):
         result = [
             self.ncycles,
             self.input_object_name,
             self.cycle1measure,
             self.csv_directory,
-            self.csv_file_name
+            self.csv_file_name,
+            self.metadata_field_barcode,
+            self.metadata_field_tag,
+            self.wants_image
         ]
-        try:
-            headers = self.get_header()
-            #self.metadata_field_barcode.choices = headers
-            #self.metadata_field_tag.choices = headers
-            result += [self.metadata_field_barcode]
-        except:
-            pass
-        
-        return result'''
 
+        if self.wants_image:
+            result += [self.outimage_name]
+
+        return result
 
     def validate_module(self, pipeline):
         csv_path = self.csv_path
@@ -349,7 +363,38 @@ This measurement should be """)
         # make in here
         #
         measurements = workspace.measurements
+        listofmeasurements = measurements.get_feature_names(self.input_object_name.value)
 
+        measurements_for_calls = self.getallbarcodemeasurements(listofmeasurements, self.ncycles.value,
+                                                                self.cycle1measure.value)
+
+        calledbarcodes = self.callonebarcode(measurements_for_calls, measurements, self.input_object_name.value,
+                                            self.ncycles.value)
+
+        workspace.measurements.add_measurement(self.input_object_name.value, '_'.join([C_CALL_BARCODES,'BarcodeCalled']),
+                                     calledbarcodes)
+
+        barcodes = self.barcodeset(self.metadata_field_barcode.value, self.metadata_field_tag.value)
+
+        scorelist = []
+        matchedbarcode = []
+        matchedbarcodecode = []
+        matchedbarcodeid = []
+        for eachbarcode in calledbarcodes:
+            eachscore, eachmatch = self.queryall(barcodes, eachbarcode)
+            scorelist.append(eachscore)
+            matchedbarcode.append(eachmatch)
+            matchedbarcodeid.append(barcodes[eachmatch][0])
+            matchedbarcodecode.append(barcodes[eachmatch][1])
+
+        workspace.measurements.add_measurement(self.input_object_name.value, '_'.join([C_CALL_BARCODES,'MatchedTo_Barcode']),
+                                     matchedbarcode)
+        workspace.measurements.add_measurement(self.input_object_name.value, '_'.join([C_CALL_BARCODES,'MatchedTo_ID']),
+                                     matchedbarcodeid)
+        workspace.measurements.add_measurement(self.input_object_name.value, '_'.join([C_CALL_BARCODES,'MatchedTo_GeneCode']),
+                                     matchedbarcodecode)
+        workspace.measurements.add_measurement(self.input_object_name.value, '_'.join([C_CALL_BARCODES,'MatchedTo_Score']),
+                                     scorelist)
         #
         # We record some statistics which we will display later.
         # We format them so that Matplotlib can display them in a table.
@@ -369,17 +414,6 @@ This measurement should be """)
         # the string name.
         #
         input_object_name = self.input_object_name.value
-
-        ################################################################
-        #
-        # GETTING AN IMAGE FROM THE IMAGE SET
-        #
-        # Get the image set. The image set has all of the images in it.
-        #
-        image_set = workspace.image_set
-        #
-
-        ###############################################################
 
         ###############################################################
         #
@@ -427,53 +461,76 @@ This measurement should be """)
 
         figure.subplot_table(0, 0, statistics)
 
+    def getallbarcodemeasurements(self, measurements, ncycles, examplemeas):
+        stem = re.split('Cycle',examplemeas)[0]
+        measurementdict = {}
+        for eachmeas in measurements:
+            if stem in eachmeas:
+                to_parse = re.split('Cycle',eachmeas)[1]
+                find_cycle = re.search('[0-9]{1,2}',to_parse)
+                parsed_cycle = int(find_cycle.group(0))
+                find_base = re.search('[A-Z]',to_parse)
+                parsed_base = find_base.group(0)
+                if parsed_cycle <= ncycles:
+                    if parsed_cycle not in measurementdict.keys():
+                        measurementdict[parsed_cycle] = {eachmeas:parsed_base}
+                    else:
+                        measurementdict[parsed_cycle].update({eachmeas:parsed_base})
+        return measurementdict
 
+    def callonebarcode(self, measurementdict, measurements, object_name, ncycles):
+
+        master_cycles = []
+
+        for eachcycle in range(1,ncycles+1):
+            cycles_measures_perobj = []
+            cyclecode = []
+            cycledict = measurementdict[eachcycle]
+            cyclemeasures = cycledict.keys()
+            for eachmeasure in cyclemeasures:
+                cycles_measures_perobj.append(measurements.get_current_measurement(object_name, eachmeasure))
+                cyclecode.append(measurementdict[eachcycle][eachmeasure])
+            cycle_measures_perobj = numpy.transpose(numpy.array(cycles_measures_perobj))
+            max_per_obj = numpy.argmax(cycle_measures_perobj,1)
+            max_per_obj = list(max_per_obj)
+            max_per_obj = [cyclecode[x] for x in max_per_obj]
+            master_cycles.append(list(max_per_obj))
+
+        return list(map("".join, zip(*master_cycles)))
+
+
+    def barcodeset(self, barcodecol, genecol):
+        fd = self.open_csv()
+        reader = csv.DictReader(fd)
+        barcodeset = {}
+        count=1
+        for row in reader:
+            barcodeset[row[barcodecol]]=(count,row[genecol])
+            count+=1
+        fd.close()
+        return barcodeset
 
     def likelihood(self,barcode,query):
-        score=0
-        halfmatch={"A":"C","C":"A","G":"T","T":"G"}
-        for i in range(len(query)):
-            if query[i]==barcode[i]:
-                score+=1
-            elif halfmatch[query[i]]==barcode[i]:
-                score+=0.5
+        score=sum([self.matchscore(query[i],barcode[i]) for i in range(len(query))])
         return score/len(query)
 
-    def queryall(self,barcodelist, query):
+    def queryall(self,barcodeset, query):
+        barcodelist=barcodeset.keys()
         scoredict={self.likelihood(x,query):x for x in barcodelist}
         scores=scoredict.keys()
         scores.sort(reverse=True)
-        return scores[0],scoredict[scores[0]]
+        return (scores[0],scoredict[scores[0]])
+
+    def matchscore(self,querybase,truebase):
+        halfmatch={"A":"C","C":"A","G":"T","T":"G"}
+        if querybase==truebase:
+            return 1
+        elif querybase==halfmatch[truebase]:
+            return 0.5
+        else:
+            return 0
 
 
-
-    #
-    # Here, we go about naming the measurements.
-    #
-    # Measurement names have parts to them, separated by underbars.
-    # There's always a category and a feature name
-    # and sometimes there are modifiers such as the image that
-    # was measured or the scale at which it was measured.
-    #
-    # We have functions that build the names so that we can
-    # use the same functions in different places.
-    #
-"""    
-    def get_feature_name(self, n, m):
-        '''Return a measurement feature name for the given Zernike'''
-        #
-        # Something nice and simple for a name... Intensity_DNA_N4M2 for instance
-        #
-        if m >= 0:
-            return "Intensity_%s_N%dM%d" % (self.input_image_name.value, n, m)
-
-        return "Intensity_%s_N%dMM%d" % (self.input_image_name.value, n, -m)
-
-    def get_measurement_name(self, n, m):
-        '''Return the whole measurement name'''
-        input_image_name = self.input_image_name.value
-
-        return '_'.join([C_MEASUREMENT_TEMPLATE, self.get_feature_name(n, m)])
 
     #
     # We have to tell CellProfiler about the measurements we produce.
@@ -488,10 +545,6 @@ This measurement should be """)
     #
     def get_measurement_columns(self, pipeline):
         #
-        # We use a list comprehension here.
-        # See http://docs.python.org/tutorial/datastructures.html#list-comprehensions
-        # for how this works.
-        #
         # The first thing in the list is the object being measured. If it's
         # the whole image, use cellprofiler.measurement.IMAGE as the name.
         #
@@ -502,11 +555,11 @@ This measurement should be """)
         #
         input_object_name = self.input_object_name.value
 
-        return [(
-            input_object_name,
-            self.get_measurement_name(n, m),
-            cellprofiler.measurement.COLTYPE_FLOAT
-        ) for n, m in self.get_zernike_indexes(True)]
+        return [(input_object_name, '_'.join([C_CALL_BARCODES,'BarcodeCalled']), cellprofiler.measurement.COLTYPE_VARCHAR),
+                (input_object_name, '_'.join([C_CALL_BARCODES,'MatchedTo_Barcode']), cellprofiler.measurement.COLTYPE_VARCHAR),
+                (input_object_name, '_'.join([C_CALL_BARCODES,'MatchedTo_ID']), cellprofiler.measurement.INTEGER),
+                (input_object_name, '_'.join([C_CALL_BARCODES,'MatchedTo_GeneCode']), cellprofiler.measurement.COLTYPE_VARCHAR),
+                (input_object_name, '_'.join([C_CALL_BARCODES,'MatchedTo_Score']), cellprofiler.measurement.FLOAT)]
 
     #
     # "get_categories" returns a list of the measurement categories produced
@@ -515,7 +568,7 @@ This measurement should be """)
     #
     def get_categories(self, pipeline, object_name):
         if object_name == self.input_object_name:
-            return [C_MEASUREMENT_TEMPLATE]
+            return [C_CALL_BARCODES]
 
         return []
 
@@ -523,65 +576,7 @@ This measurement should be """)
     # Return the feature names if the object_name and category match
     #
     def get_measurements(self, pipeline, object_name, category):
-        if (object_name == self.input_object_name and category == C_MEASUREMENT_TEMPLATE):
-            return ["Intensity"]
+        if (object_name == self.input_object_name and category == C_CALL_BARCODES):
+            return ['BarcodeCalled', 'MatchedTo_Barcode', 'MatchedTo_ID', 'MatchedTo_GeneCode', 'MatchedTo_Score']
 
         return []
-
-    #
-    # This module makes per-image measurements. That means we need
-    # "get_measurement_images" to distinguish measurements made on two
-    # different images by this module
-    #
-    def get_measurement_images(self, pipeline, object_name, category, measurement):
-        #
-        # This might seem wasteful, but UI code can be slow. Just see
-        # if the measurement is in the list returned by get_measurements
-        #
-        if measurement in self.get_measurements(pipeline, object_name, category):
-            return [self.input_image_name.value]
-
-        return []
-
-    def get_measurement_scales(self, pipeline, object_name, category, measurement, image_name):
-        '''Get the scales for a measurement
-
-        For the Zernikes, the scales are of the form, N2M2 or N2MM2 for
-        negative azimuthal degree
-        '''
-        def get_scale(n, m):
-            if m >= 0:
-                return "N%dM%d" % (n, m)
-
-            return "N%dMM%d" % (n, -m)
-
-        if image_name in self.get_measurement_images(pipeline, object_name, category, measurement):
-            return [get_scale(n, m) for n, m in self.get_zernike_indexes(True)]
-
-        return []
-
-    @staticmethod
-    def get_image_from_features(radius, feature_dictionary):
-        '''Reconstruct the intensity image from the zernike features
-
-        radius - the radius of the minimum enclosing circle
-
-        feature_dictionary - keys are (n, m) tuples and values are the
-        magnitudes.
-
-        returns a greyscale image based on the feature dictionary.
-        '''
-        i, j = numpy.mgrid[-radius:(radius + 1), -radius:(radius + 1)].astype(float) / radius
-        mask = (i * i + j * j) <= 1
-
-        zernike_indexes = numpy.array(feature_dictionary.keys())
-        zernike_features = numpy.array(feature_dictionary.values())
-
-        z = centrosome.zernike.construct_zernike_polynomials(j, i, numpy.abs(zernike_indexes), mask=mask)
-        zn = (2 * zernike_indexes[:, 0] + 2) / ((zernike_indexes[:, 1] == 0) + 1) / numpy.pi
-        z *= zn[numpy.newaxis, numpy.newaxis, :]
-        z = z.real * (zernike_indexes[:, 1] >= 0)[numpy.newaxis, numpy.newaxis, :] + \
-            z.imag * (zernike_indexes[:, 1] <= 0)[numpy.newaxis, numpy.newaxis, :]
-
-        return numpy.sum(z * zernike_features[numpy.newaxis, numpy.newaxis, :], 2)
-"""
