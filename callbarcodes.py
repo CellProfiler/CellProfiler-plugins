@@ -380,13 +380,20 @@ Enter the name to be given to the classified object image.""")
         matchedbarcode = []
         matchedbarcodecode = []
         matchedbarcodeid = []
+        if self.wants_image:
+            objects = workspace.object_set.get_objects(self.input_object_name.value)
+            labels = objects.segmented
+            pixel_data = objects.segmented
+        count = 1
         for eachbarcode in calledbarcodes:
             eachscore, eachmatch = self.queryall(barcodes, eachbarcode)
             scorelist.append(eachscore)
             matchedbarcode.append(eachmatch)
             matchedbarcodeid.append(barcodes[eachmatch][0])
             matchedbarcodecode.append(barcodes[eachmatch][1])
-            print eachbarcode, eachscore, eachmatch, barcodes[eachmatch][0], barcodes[eachmatch][1]
+            if self.wants_image:
+                pixel_data = numpy.where(labels==count,barcodes[eachmatch][0],pixel_data)
+            count += 1
         workspace.measurements.add_measurement(self.input_object_name.value, '_'.join([C_CALL_BARCODES,'MatchedTo_Barcode']),
                                      matchedbarcode)
         workspace.measurements.add_measurement(self.input_object_name.value, '_'.join([C_CALL_BARCODES,'MatchedTo_ID']),
@@ -395,6 +402,9 @@ Enter the name to be given to the classified object image.""")
                                      matchedbarcodecode)
         workspace.measurements.add_measurement(self.input_object_name.value, '_'.join([C_CALL_BARCODES,'MatchedTo_Score']),
                                      scorelist)
+        if self.wants_image:
+            workspace.image_set.add(self.outimage_name.value,cellprofiler.image.Image(pixel_data.astype("uint16"),
+                                                                                      convert = False ))
         #
         # We record some statistics which we will display later.
         # We format them so that Matplotlib can display them in a table.
