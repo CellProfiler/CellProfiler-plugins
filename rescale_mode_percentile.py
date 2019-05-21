@@ -22,8 +22,8 @@ import cellprofiler.setting
 
 __doc__ = """\
 RescaleModePercentile
-=============
-**RescaleModePercentile** is an image processing module that rescales flourescent images.
+==================================
+**RescaleModePercentile** is an image processing module that rescales fluorescent images.
 It assumes that the majority of the pixels in an image are background. Based on this assumption, it sets the
 intensity minimum of the image to be the mode of the histogram. To remove noise, it sets the maximum intensity
 value in the image to a user-defined percentile.
@@ -39,7 +39,7 @@ See also
 This module is related to the RescaleMeanSD module.
 What do I need as input?
 ^^^^^^^^^^^^^^^^^^^^^^^^
-A .tiff flourescent image
+A .tiff fluorescent image
 What do I get as output?
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
