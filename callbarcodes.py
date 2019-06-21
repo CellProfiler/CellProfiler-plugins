@@ -215,19 +215,34 @@ This measurement should be """)
             doc="""\
 """)
 
-        self.wants_image = cellprofiler.setting.Binary(
-            "Retain an image of the classified objects?", False, doc="""\
+        self.wants_call_image = cellprofiler.setting.Binary(
+            "Retain an image of the barcodes color coded by call?", False, doc="""\
 Select "*{YES}*" to retain the image of the objects color-coded
-according to their classification, for use later in the pipeline (for
-example, to be saved by a **SaveImages** module).
-""" .format(**{"YES": cellprofiler.setting.YES
+according to which line of the CSV their barcode call matches to, 
+for use later in the pipeline (for example, to be saved by a **SaveImages** 
+module).""" .format(**{"YES": cellprofiler.setting.YES
                 }))
 
-        self.outimage_name = cellprofiler.setting.ImageNameProvider(
-        "Enter the image name", cellprofiler.setting.NONE, doc="""\
-*(Used only if the classified object image is to be retained for later use in the pipeline)*
+        self.outimage_calls_name = cellprofiler.setting.ImageNameProvider(
+        "Enter the called barcode image name", cellprofiler.setting.NONE, doc="""\
+*(Used only if the called barcode image is to be retained for later use in the pipeline)*
 
-Enter the name to be given to the classified object image.""")
+Enter the name to be given to the called barcode image.""")
+
+        self.wants_score_image = cellprofiler.setting.Binary(
+            "Retain an image of the barcodes color coded by score match?", False, doc="""\
+Select "*{YES}*" to retain the image of the objects where the intensity of the spot matches
+indicates the match score between the called barcode and its closest match, 
+for use later in the pipeline (for example, to be saved by a **SaveImages** 
+module).""" .format(**{"YES": cellprofiler.setting.YES
+                       }))
+
+        self.outimage_score_name = cellprofiler.setting.ImageNameProvider(
+        "Enter the barcode score image name", cellprofiler.setting.NONE, doc="""\
+*(Used only if the barcode score image is to be retained for later use in the pipeline)*
+
+Enter the name to be given to the barcode score image.""")
+
     #
     # The "settings" method tells CellProfiler about the settings you
     # have in your module. CellProfiler uses the list for saving
@@ -248,8 +263,10 @@ Enter the name to be given to the classified object image.""")
             self.csv_file_name,
             self.metadata_field_barcode,
             self.metadata_field_tag,
-            self.wants_image,
-            self.outimage_name
+            self.wants_call_image,
+            self.outimage_calls_name,
+            self.wants_score_image,
+            self.outimage_score_name
         ]
 
     def visible_settings(self):
@@ -261,11 +278,15 @@ Enter the name to be given to the classified object image.""")
             self.csv_file_name,
             self.metadata_field_barcode,
             self.metadata_field_tag,
-            self.wants_image
+            self.wants_call_image,
+            self.wants_score_image
         ]
 
-        if self.wants_image:
-            result += [self.outimage_name]
+        if self.wants_call_image:
+            result += [self.outimage_calls_name]
+
+        if self.wants_score_image:
+            result += [self.outimage_score_name]
 
         return result
 
@@ -380,10 +401,11 @@ Enter the name to be given to the classified object image.""")
         matchedbarcode = []
         matchedbarcodecode = []
         matchedbarcodeid = []
-        if self.wants_image:
+        if self.wants_call_image:
             objects = workspace.object_set.get_objects(self.input_object_name.value)
             labels = objects.segmented
-            pixel_data = objects.segmented
+            pixel_data_call = objects.segmented
+            pixel_data_score = objects.segmented
         count = 1
         for eachbarcode in calledbarcodes:
             eachscore, eachmatch = self.queryall(barcodes, eachbarcode)
@@ -391,8 +413,10 @@ Enter the name to be given to the classified object image.""")
             matchedbarcode.append(eachmatch)
             matchedbarcodeid.append(barcodes[eachmatch][0])
             matchedbarcodecode.append(barcodes[eachmatch][1])
-            if self.wants_image:
-                pixel_data = numpy.where(labels==count,barcodes[eachmatch][0],pixel_data)
+            if self.wants_call_image:
+                pixel_data_call = numpy.where(labels==count,barcodes[eachmatch][0],pixel_data_call)
+            if self.wants_score_image:
+                pixel_data_score = numpy.where(labels==count,65535*eachscore,pixel_data_score)
             count += 1
         workspace.measurements.add_measurement(self.input_object_name.value, '_'.join([C_CALL_BARCODES,'MatchedTo_Barcode']),
                                      matchedbarcode)
@@ -402,9 +426,12 @@ Enter the name to be given to the classified object image.""")
                                      matchedbarcodecode)
         workspace.measurements.add_measurement(self.input_object_name.value, '_'.join([C_CALL_BARCODES,'MatchedTo_Score']),
                                      scorelist)
-        if self.wants_image:
-            workspace.image_set.add(self.outimage_name.value,cellprofiler.image.Image(pixel_data.astype("uint16"),
+        if self.wants_call_image:
+            workspace.image_set.add(self.outimage_calls_name.value,cellprofiler.image.Image(pixel_data_call.astype("uint16"),
                                                                                       convert = False ))
+        if self.wants_score_image:
+            workspace.image_set.add(self.outimage_score_name.value,cellprofiler.image.Image(pixel_data_score.astype("uint16"),
+                                                                                        convert = False ))
         #
         # We record some statistics which we will display later.
         # We format them so that Matplotlib can display them in a table.
