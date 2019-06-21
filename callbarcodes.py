@@ -237,7 +237,7 @@ for use later in the pipeline (for example, to be saved by a **SaveImages**
 module).""" .format(**{"YES": cellprofiler.setting.YES
                        }))
 
-    self.outimage_score_name = cellprofiler.setting.ImageNameProvider(
+        self.outimage_score_name = cellprofiler.setting.ImageNameProvider(
         "Enter the barcode score image name", cellprofiler.setting.NONE, doc="""\
 *(Used only if the barcode score image is to be retained for later use in the pipeline)*
 
