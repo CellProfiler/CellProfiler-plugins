@@ -416,7 +416,7 @@ Enter the name to be given to the barcode score image.""")
             if self.wants_call_image:
                 pixel_data_call = numpy.where(labels==count,barcodes[eachmatch][0],pixel_data_call)
             if self.wants_score_image:
-                pixel_data_score = numpy.where(labels==count,eachscore,pixel_data_score)
+                pixel_data_score = numpy.where(labels==count,65535*eachscore,pixel_data_score)
             count += 1
         workspace.measurements.add_measurement(self.input_object_name.value, '_'.join([C_CALL_BARCODES,'MatchedTo_Barcode']),
                                      matchedbarcode)
