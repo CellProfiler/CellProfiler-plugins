@@ -13,6 +13,8 @@ Please see help here: https://github.com/CellProfiler/CellProfiler/blob/master/c
     cd PLUGIN_DIRECTORY
     git clone https://github.com/CellProfiler/CellProfiler-plugins.git
     ```
+    
+    Alternatively download zip and manually extract to PLUGIN_DIRECTORY.
 
 1. Install required dependencies:
 	```
