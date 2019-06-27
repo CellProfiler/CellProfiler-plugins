@@ -13,6 +13,8 @@ Please see help here: https://github.com/CellProfiler/CellProfiler/blob/master/c
     cd PLUGIN_DIRECTORY
     git clone https://github.com/CellProfiler/CellProfiler-plugins.git
     ```
+    
+    Alternatively download zip and manually extract to PLUGIN_DIRECTORY.
 
 1. Install required dependencies:
 	```
@@ -20,7 +22,7 @@ Please see help here: https://github.com/CellProfiler/CellProfiler/blob/master/c
 	pip install -r requirements.txt
 	```
 
-    To install CellProfiler-plugins on a windows machine with support for the deep learning module ClassifyPixels-UNet use
+    To install CellProfiler-plugins on a windows machine with support for the deep learning module ClassifyPixels-UNet make sure you have Visual Studio 2017 installed then use
     ```
     cd CellProfiler-plugins
     pip install -r requirements-windows.txt

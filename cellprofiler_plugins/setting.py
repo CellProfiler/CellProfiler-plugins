@@ -27,7 +27,7 @@ class MeasurementMultiChoiceForCategory(cellprofiler.setting.MeasurementMultiCho
 
         def valid_mc(c):
             '''Disallow any measurement column with "," or "|" in its names. Must be from specified category.'''
-            return not any([any([bad in f for f in c[:2]]) for bad in ",", "|"]) and c[0] == self.category_chooser.get_value()
+            return not any([any([bad in f for f in c[:2]]) for bad in (",", "|")]) and c[0] == self.category_chooser.get_value()
 
         self.set_choices([self.make_measurement_choice(c[0], c[1])
                           for c in columns if valid_mc(c)])
