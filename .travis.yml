@@ -2,19 +2,14 @@ addons:
   apt:
     packages:
       - libhdf5-serial-dev
-      - python-pip
 cache:
   apt: true
   directories: $HOME/.cache/pip
-dist: trusty
 env:
   - LC_ALL="en_US.UTF-8" CP_MYSQL_TEST_HOST="127.0.0.1" CP_MYSQL_TEST_USER="root" CP_MYSQL_TEST_PASSWORD=""
 install:
   - pip install --upgrade pip
-  - pip install --upgrade cython
-  - pip install --upgrade joblib
-  - pip install --upgrade numpy
-  - pip install --upgrade scipy
+  - pip install --upgrade cython joblib numpy pathlib2 scipy
   - pip install --editable git+https://github.com/CellProfiler/CellProfiler.git#egg=CellProfiler
   - pip freeze
 language: python
@@ -33,4 +28,3 @@ before_script:
   # exit-zero treats all errors as warnings.  The GitHub editor is 127 chars wide
   - flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 script: pytest
-sudo: false
