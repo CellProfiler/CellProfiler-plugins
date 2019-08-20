@@ -95,24 +95,13 @@ class CompensateColors(cellprofiler.module.ImageProcessing):
     variable_revision_number = 1
 
     def create_settings(self):
-
-        super(CompensateColors, self).create_settings()
-        self.image_group_a = cellprofiler.setting.SettingsGroup()
-        self.add_image(self.image_group_a, can_delete=False)
+        self.image_groups = []
+        self.add_image(can_delete=False)
         self.spacer_1 = cellprofiler.setting.Divider()
-        self.add_image_button = cellprofiler.setting.DoSomething("", 'Add another image', self.add_image(self.image_group_a))
-        self.spacer_2 = cellprofiler.setting.Divider(line=True)
-        self.image_a_count = cellprofiler.setting.HiddenCount(self.image_group_a)
-
-        self.image_group_b = cellprofiler.setting.SettingsGroup()
-        self.add_image(self.image_group_b, can_delete=False)
-        self.spacer_3 = cellprofiler.setting.Divider()
-        self.add_image_button = cellprofiler.setting.DoSomething("", 'Add another image', self.add_image(self.image_group_b))
-        self.spacer_4 = cellprofiler.setting.Divider(line=True)
-        self.image_b_count = cellprofiler.setting.HiddenCount(self.image_group_b)
-
-
-
+        self.add_image(can_delete=False)
+        self.spacer_2 = cellprofiler.setting.Divider()
+        self.add_image_button = cellprofiler.setting.DoSomething("", 'Add another image', self.add_image)
+        self.image_count = cellprofiler.setting.HiddenCount(self.image_groups)
         self.images_or_objects = cellprofiler.setting.Choice(
             'Select where to perform color compensation',
             [
@@ -122,10 +111,10 @@ class CompensateColors(cellprofiler.module.ImageProcessing):
             doc="""\
     You can measure the correlation in several ways:
     
-    -  *%(M_OBJECTS)s:* Measure correlation only in those pixels previously
+    -  *%(CC_OBJECTS)s:* Measure correlation only in those pixels previously
        identified as within an object. You will be asked to choose which object
        type to measure within.
-    -  *%(M_IMAGES)s:* Measure the correlation across all pixels in the
+    -  *%(CC_IMAGES)s:* Measure the correlation across all pixels in the
        images.
 
     All methods measure correlation on a pixel by pixel basis.
@@ -136,9 +125,7 @@ class CompensateColors(cellprofiler.module.ImageProcessing):
         self.add_object(can_delete=False)
         self.object_count = cellprofiler.setting.HiddenCount(self.object_groups)
 
-        self.spacer_2 = cellprofiler.setting.Divider(line=True)
-
-    def add_image(self, group, can_delete=True):
+    def add_image(self, can_delete=True):
         """Add an image to the image_groups collection
 
         can_delete - set this to False to keep from showing the "remove"
@@ -155,6 +142,16 @@ class CompensateColors(cellprofiler.module.ImageProcessing):
                 doc='Select an image to measure the correlation/colocalization in.'
             )
         )
+        group.append(
+            "class_num",
+            cellprofiler.setting.Integer(
+                'What compensation class does this image belong to?',
+                1
+            )
+        )
+
+        if len(self.image_groups) == 0:  # Insert space between 1st two images for aesthetics
+            group.append("extra_divider", cellprofiler.setting.Divider(line=False))
 
         if can_delete:
             group.append("remover", cellprofiler.setting.RemoveSettingButton("", "Remove this image", self.image_groups, group))
@@ -170,12 +167,10 @@ class CompensateColors(cellprofiler.module.ImageProcessing):
         group.append(
             "object_name",
             cellprofiler.setting.ObjectNameSubscriber(
-                'Select an object to measure',
+                'Select an object to perform compensation within',
                 cellprofiler.setting.NONE,
                 doc="""\
-*(Used only when "Within objects" or "Both" are selected)*
-
-Select the objects to be measured."""
+Select the objects to perform compensation within."""
             )
         )
 
@@ -184,38 +179,68 @@ Select the objects to be measured."""
         self.object_groups.append(group)
 
 
+    def settings(self):
+        """Return the settings to be saved in the pipeline"""
+        result = [self.image_count, self.object_count]
+        result += [image_group.image_name for image_group in self.image_groups]
+        result += [image_group.class_num for image_group in self.image_groups]
+        result += [self.images_or_objects]
+        result += [object_group.object_name for object_group in self.object_groups]
+        return result
+
     def visible_settings(self):
-
-        visible_settings = super(CompensateColors, self).visible_settings()
-
-        # Configure the visibility of additional settings below.
-        visible_settings += [
-            self.gradient_choice,
-            self.automatic_smoothing
-        ]
-
-        return visible_settings
+        result = []
+        for image_group in self.image_groups:
+            result += image_group.visible_settings()
+        result += [self.add_image_button, self.spacer_2, self.images_or_objects]
+        if self.images_or_objects == CC_OBJECTS:
+            for object_group in self.object_groups:
+                result += object_group.visible_settings()
+        return result
 
     def run(self, workspace):
 
         #so far this seems to work best with first masking to objects, then doing 2x2 (A and C, G and T)
         #consider adding masking functionality
 
-        t=numpy.concatenate((im1,im2))
+        imdict={}
 
-        M = t * 65535
+        sample_image = workspace.image_set.get_image(self.image_groups[0].image_name.value)
+        sample_shape = sample_image.shape
+
+        if self.images_or_objects == [CC_OBJECTS]:
+            object_name = self.object_groups[0]
+            objects = workspace.object_set.get_objects(object_name)
+            object_labels = objects.segmented
+            object_mask = numpy.where(object_labels > 0, 1, 0)
+
+        else:
+            object_mask = numpy.ones_like(self.image_group_a[0])
+
+
+        for eachgroup in self.image_groups():
+            eachimage = workspace.image_set.get_image(eachgroup.image_name.value)
+            eachimage = eachimage * object_mask
+            eachimage = numpy.where(eachimage == 0, (1/65535), eachimage)
+            eachimage = eachimage * 65535
+            if eachgroup.class_num not in imdict.keys():
+                imdict[eachgroup.class_num] = [[eachgroup.image_name.value],eachimage.reshape(-1)]
+            else:
+                imdict[eachgroup.class_num][0].append(eachgroup.image_name.value)
+                imdict[eachgroup.class_num][1]=numpy.concatenate((imdict[eachgroup.class_num][1],eachimage.reshape(-1)))
+
+        print imdict
+
+        X = numpy.array([imdict[1][1],imdict[2][1]])
 
         M = self.get_medians(X).T
         M = M / M.sum(axis=0)
         W = numpy.linalg.inv(M)
         Y = W.dot(X.T).T.astype(int)
 
-        Y[0].reshape(nimages,xsize,ysize)
-        Y[1].reshape(nimages,xsize,ysize)
+        Y[0].reshape(len(imdict[1][0]),sample_shape[0],sample_shape[1])
+        Y[1].reshape(len(imdict[2][0]),sample_shape[0],sample_shape[1])
 
-
-
-        super(ImageTemplate, self).run(workspace)
 
     #
     # "volumetric" indicates whether or not this module supports 3D images.
