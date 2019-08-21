@@ -221,6 +221,7 @@ Select the objects to perform compensation within."""
         sample_image = workspace.image_set.get_image(self.image_groups[0].image_name.value)
         sample_pixels = sample_image.pixel_data
         sample_shape = sample_pixels.shape
+
         if self.images_or_objects.value == CC_OBJECTS:
             object_name = self.object_groups[0]
             objects = workspace.object_set.get_objects(object_name.object_name.value)
@@ -233,7 +234,7 @@ Select the objects to perform compensation within."""
         for eachgroup in self.image_groups:
             eachimage = workspace.image_set.get_image(eachgroup.image_name.value).pixel_data
             eachimage = eachimage * object_mask
-            eachimage = numpy.where(eachimage == 0, (1/65535), eachimage)
+            eachimage = numpy.where(eachimage == 0, (1.0/65535), eachimage)
             eachimage = eachimage * 65535
             if eachgroup.class_num.value not in imdict.keys():
                 imdict[eachgroup.class_num.value] = [[eachgroup.image_name.value],eachimage.reshape(-1),[eachgroup.output_name.value]]
