@@ -81,15 +81,7 @@ CC_IMAGES = "Across entire image"
 CC_OBJECTS = "Within objects"
 
 class CompensateColors(cellprofiler.module.ImageProcessing):
-    #
-    # The module starts by declaring the name that's used for display,
-    # the category under which it is stored and the variable revision
-    # number which can be used to provide backwards compatibility if
-    # you add user-interface functionality later.
-    #
-    # This module's category is "Image Processing" which is defined
-    # by its superclass.
-    #
+
     module_name = "CompensateColors"
 
     variable_revision_number = 1
@@ -101,7 +93,6 @@ class CompensateColors(cellprofiler.module.ImageProcessing):
         self.add_image(can_delete=False)
         self.spacer_2 = cellprofiler.setting.Divider()
         self.add_image_button = cellprofiler.setting.DoSomething("", 'Add another image', self.add_image)
-        self.image_count = cellprofiler.setting.HiddenCount(self.image_groups)
         self.images_or_objects = cellprofiler.setting.Choice(
             'Select where to perform color compensation',
             [
@@ -124,6 +115,7 @@ class CompensateColors(cellprofiler.module.ImageProcessing):
         self.object_groups = []
         self.add_object(can_delete=False)
         self.object_count = cellprofiler.setting.HiddenCount(self.object_groups)
+        self.image_count = cellprofiler.setting.HiddenCount(self.image_groups)
 
     def add_image(self, can_delete=True):
         """Add an image to the image_groups collection
@@ -149,7 +141,13 @@ class CompensateColors(cellprofiler.module.ImageProcessing):
                 1
             )
         )
-
+        group.append(
+            "output_name",
+            cellprofiler.setting.ImageNameProvider(
+                'Select an output image name',
+                "None"
+            )
+        )
         if len(self.image_groups) == 0:  # Insert space between 1st two images for aesthetics
             group.append("extra_divider", cellprofiler.setting.Divider(line=False))
 
@@ -182,16 +180,32 @@ Select the objects to perform compensation within."""
     def settings(self):
         """Return the settings to be saved in the pipeline"""
         result = [self.image_count, self.object_count]
-        result += [image_group.image_name for image_group in self.image_groups]
-        result += [image_group.class_num for image_group in self.image_groups]
+        for image_group in self.image_groups:
+            result += [image_group.image_name, image_group.class_num, image_group.output_name]
         result += [self.images_or_objects]
         result += [object_group.object_name for object_group in self.object_groups]
         return result
+
+    def prepare_settings(self, setting_values):
+        """Make sure there are the right number of image and object slots for the incoming settings"""
+        image_count = int(setting_values[0])
+        object_count = int(setting_values[1])
+
+        del self.image_groups[image_count:]
+        while len(self.image_groups) < image_count:
+            self.add_image()
+
+        del self.object_groups[object_count:]
+        while len(self.object_groups) < object_count:
+            self.add_object()
 
     def visible_settings(self):
         result = []
         for image_group in self.image_groups:
             result += image_group.visible_settings()
+            #result += [image_group.image_name, image_group.class_num, image_group.output_name]
+            #if image_group.can_delete:
+                #result += [image_group.remover]
         result += [self.add_image_button, self.spacer_2, self.images_or_objects]
         if self.images_or_objects == CC_OBJECTS:
             for object_group in self.object_groups:
@@ -201,45 +215,57 @@ Select the objects to perform compensation within."""
     def run(self, workspace):
 
         #so far this seems to work best with first masking to objects, then doing 2x2 (A and C, G and T)
-        #consider adding masking functionality
 
         imdict={}
 
         sample_image = workspace.image_set.get_image(self.image_groups[0].image_name.value)
-        sample_shape = sample_image.shape
-
-        if self.images_or_objects == [CC_OBJECTS]:
+        sample_pixels = sample_image.pixel_data
+        sample_shape = sample_pixels.shape
+        if self.images_or_objects.value == CC_OBJECTS:
             object_name = self.object_groups[0]
-            objects = workspace.object_set.get_objects(object_name)
+            objects = workspace.object_set.get_objects(object_name.object_name.value)
             object_labels = objects.segmented
             object_mask = numpy.where(object_labels > 0, 1, 0)
-
         else:
-            object_mask = numpy.ones_like(self.image_group_a[0])
+            object_mask = numpy.ones_like(sample_pixels)
 
 
-        for eachgroup in self.image_groups():
-            eachimage = workspace.image_set.get_image(eachgroup.image_name.value)
+        for eachgroup in self.image_groups:
+            eachimage = workspace.image_set.get_image(eachgroup.image_name.value).pixel_data
             eachimage = eachimage * object_mask
             eachimage = numpy.where(eachimage == 0, (1/65535), eachimage)
             eachimage = eachimage * 65535
-            if eachgroup.class_num not in imdict.keys():
-                imdict[eachgroup.class_num] = [[eachgroup.image_name.value],eachimage.reshape(-1)]
+            if eachgroup.class_num.value not in imdict.keys():
+                imdict[eachgroup.class_num.value] = [[eachgroup.image_name.value],eachimage.reshape(-1),[eachgroup.output_name.value]]
             else:
-                imdict[eachgroup.class_num][0].append(eachgroup.image_name.value)
-                imdict[eachgroup.class_num][1]=numpy.concatenate((imdict[eachgroup.class_num][1],eachimage.reshape(-1)))
+                imdict[eachgroup.class_num.value][0].append(eachgroup.image_name.value)
+                imdict[eachgroup.class_num.value][1]=numpy.concatenate((imdict[eachgroup.class_num.value][1],eachimage.reshape(-1)))
+                imdict[eachgroup.class_num.value][2].append(eachgroup.output_name.value)
 
-        print imdict
-
-        X = numpy.array([imdict[1][1],imdict[2][1]])
+        keys=imdict.keys()
+        keys.sort()
+        imlist=[]
+        for eachkey in keys:
+            imlist.append(imdict[eachkey][1])
+        X = numpy.array(imlist)
+        X = X.T
 
         M = self.get_medians(X).T
         M = M / M.sum(axis=0)
         W = numpy.linalg.inv(M)
-        Y = W.dot(X.T).T.astype(int)
+        Y = W.dot(X.T).astype(int)
 
-        Y[0].reshape(len(imdict[1][0]),sample_shape[0],sample_shape[1])
-        Y[1].reshape(len(imdict[2][0]),sample_shape[0],sample_shape[1])
+        for eachdim in range(Y.shape[0]):
+            key=keys[eachdim]
+            im_out=Y[eachdim].reshape(len(imdict[key][0]),sample_shape[0],sample_shape[1])
+            im_out = im_out / 65535.
+            for each_im in range(len(imdict[key][0])):
+                im_out[each_im] = numpy.where(im_out[each_im] < 0, 0, im_out[each_im])
+                im_out[each_im] = numpy.where(im_out[each_im] > 1, 1, im_out[each_im])
+                output_image = cellprofiler.image.Image(im_out[each_im],
+                                                        parent_image=workspace.image_set.get_image(imdict[key][0][each_im]))
+                workspace.image_set.add(imdict[key][2][each_im], output_image)
+
 
 
     #
@@ -252,7 +278,7 @@ Select the objects to perform compensation within."""
         return False
 
 
-    def get_medians(X):
+    def get_medians(self, X):
         arr = []
         for i in range(X.shape[1]):
             arr += [numpy.median(X[X.argmax(axis=1) == i], axis=0)]
