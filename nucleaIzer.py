@@ -1,10 +1,10 @@
 # coding=utf-8
 
 """
-IdentifyNucleus
-===============
+NucleAIzer
+==========
 
-**IdentifyNucleus** identifies nuclei.
+**NucleAIzer** identifies nuclei.
 
 Instructions:
 
