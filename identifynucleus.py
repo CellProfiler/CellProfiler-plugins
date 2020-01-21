@@ -18,9 +18,9 @@ Instructions:
         https://github.com/spreka/biomagdsb
 
     This includes installing a specific commit of Matterport's Mask R-CNN
-    repository. This plugin _will not_ work with the latest commit! The 
-    model will not load if the Mask R-CNN modules are not available on your 
-    Python path since they use custom Keras layers! 
+    repository. This plugin _will not_ work with the latest commit! The
+    model will not load if the Mask R-CNN modules are not available on your
+    Python path since they use custom Keras layers!
 
     You'll also need to make sure you're running versions of Keras, NumPy,
     SciPy, and TensorFlow that work with `biomagdsb`, `Mask-RCNN`,
@@ -142,6 +142,9 @@ class IdentifyNucleus(cellprofiler.module.ImageSegmentation):
 
         for index in range(0, count):
             predicted_mask = predicted_masks[index]
+
+            if mask_data:
+                predicted_mask *= mask_data
 
             y_data = skimage.measure.label(predicted_mask)
 
