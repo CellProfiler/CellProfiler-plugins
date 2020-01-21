@@ -18,7 +18,9 @@ Instructions:
         https://github.com/spreka/biomagdsb
 
     This includes installing a specific commit of Matterport's Mask R-CNN
-    repository. This plugin _will not_ work with the latest commit!
+    repository. This plugin _will not_ work with the latest commit! The 
+    model will not load if the Mask R-CNN modules are not available on your 
+    Python path since they use custom Keras layers! 
 
     You'll also need to make sure you're running versions of Keras, NumPy,
     SciPy, and TensorFlow that work with `biomagdsb`, `Mask-RCNN`,
@@ -29,7 +31,7 @@ Instructions:
         tensorflow==1.15.0
 
     Finally, you'll need to download the model configuration and weights:
-    
+
         https://drive.google.com/drive/folders/1lbJ_LanxSO-n5rMjmhWAHtLcE9znHyJO?usp=sharing
 |
 
