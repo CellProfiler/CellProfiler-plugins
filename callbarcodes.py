@@ -386,14 +386,24 @@ Enter the name to be given to the barcode score image.""")
         measurements = workspace.measurements
         listofmeasurements = measurements.get_feature_names(self.input_object_name.value)
 
+        objectcount = len(measurements.get_current_measurement(self.input_object_name.value,listofmeasurements[0]))
+
         measurements_for_calls = self.getallbarcodemeasurements(listofmeasurements, self.ncycles.value,
                                                                 self.cycle1measure.value)
 
-        calledbarcodes = self.callonebarcode(measurements_for_calls, measurements, self.input_object_name.value,
-                                            self.ncycles.value)
+        calledbarcodes, avgbasescore, basescorelist = self.callonebarcode(measurements_for_calls, measurements, self.input_object_name.value,
+                                            self.ncycles.value, objectcount)
 
         workspace.measurements.add_measurement(self.input_object_name.value, '_'.join([C_CALL_BARCODES,'BarcodeCalled']),
                                      calledbarcodes)
+
+        workspace.measurements.add_measurement(self.input_object_name.value,'_'.join([C_CALL_BARCODES,'MeanQualityScore']),
+                                     avgbasescore)
+
+        for eachcycle in range(1,self.ncycles.value+1):
+            workspace.measurements.add_measurement(self.input_object_name.value,
+                                    '_'.join([C_CALL_BARCODES,'Cycle'+str.zfill(str(eachcycle),2)+'QualityScore']),
+                                    basescorelist[eachcycle-1])
 
         barcodes = self.barcodeset(self.metadata_field_barcode.value, self.metadata_field_tag.value)
 
@@ -473,9 +483,10 @@ Enter the name to be given to the barcode score image.""")
                         measurementdict[parsed_cycle].update({eachmeas:parsed_base})
         return measurementdict
 
-    def callonebarcode(self, measurementdict, measurements, object_name, ncycles):
+    def callonebarcode(self, measurementdict, measurements, object_name, ncycles, objectcount):
 
         master_cycles = []
+        score_array = numpy.zeros([ncycles,objectcount])
 
         for eachcycle in range(1,ncycles+1):
             cycles_measures_perobj = []
@@ -486,12 +497,19 @@ Enter the name to be given to the barcode score image.""")
                 cycles_measures_perobj.append(measurements.get_current_measurement(object_name, eachmeasure))
                 cyclecode.append(measurementdict[eachcycle][eachmeasure])
             cycle_measures_perobj = numpy.transpose(numpy.array(cycles_measures_perobj))
-            max_per_obj = numpy.argmax(cycle_measures_perobj,1)
-            max_per_obj = list(max_per_obj)
-            max_per_obj = [cyclecode[x] for x in max_per_obj]
-            master_cycles.append(list(max_per_obj))
+            argmax_per_obj = numpy.argmax(cycle_measures_perobj,1)
+            max_per_obj = numpy.max(cycle_measures_perobj,1)
+            sum_per_obj = numpy.sum(cycle_measures_perobj,1)
+            score_per_obj = max_per_obj/sum_per_obj
+            argmax_per_obj = list(argmax_per_obj)
+            argmax_per_obj = [cyclecode[x] for x in argmax_per_obj]
 
-        return list(map("".join, zip(*master_cycles)))
+            master_cycles.append(list(argmax_per_obj))
+            score_array[eachcycle-1] = score_per_obj
+
+        mean_per_object = score_array.mean(axis=0)
+
+        return list(map("".join, zip(*master_cycles))), mean_per_object, score_array
 
 
     def barcodeset(self, barcodecol, genecol):
@@ -550,11 +568,20 @@ Enter the name to be given to the barcode score image.""")
         #
         input_object_name = self.input_object_name.value
 
-        return [(input_object_name, '_'.join([C_CALL_BARCODES,'BarcodeCalled']), cellprofiler.measurement.COLTYPE_VARCHAR),
-                (input_object_name, '_'.join([C_CALL_BARCODES,'MatchedTo_Barcode']), cellprofiler.measurement.COLTYPE_VARCHAR),
+        result = []
+
+        result += [(input_object_name, '_'.join([C_CALL_BARCODES,'BarcodeCalled']), cellprofiler.measurement.COLTYPE_VARCHAR),
+           (input_object_name, '_'.join([C_CALL_BARCODES,'MeanQualityScore']), cellprofiler.measurement.COLTYPE_FLOAT)]
+
+        for eachcycle in range(1,self.ncycles.value+1):
+            result += [(input_object_name, '_'.join([C_CALL_BARCODES,'Cycle'+str.zfill(str(eachcycle),2)+'QualityScore']), cellprofiler.measurement.COLTYPE_FLOAT)]
+
+        result += [(input_object_name, '_'.join([C_CALL_BARCODES,'MatchedTo_Barcode']), cellprofiler.measurement.COLTYPE_VARCHAR),
                 (input_object_name, '_'.join([C_CALL_BARCODES,'MatchedTo_ID']), cellprofiler.measurement.COLTYPE_INTEGER),
                 (input_object_name, '_'.join([C_CALL_BARCODES,'MatchedTo_GeneCode']), cellprofiler.measurement.COLTYPE_VARCHAR),
                 (input_object_name, '_'.join([C_CALL_BARCODES,'MatchedTo_Score']), cellprofiler.measurement.COLTYPE_FLOAT)]
+
+        return result
 
     #
     # "get_categories" returns a list of the measurement categories produced
@@ -572,6 +599,13 @@ Enter the name to be given to the barcode score image.""")
     #
     def get_measurements(self, pipeline, object_name, category):
         if (object_name == self.input_object_name and category == C_CALL_BARCODES):
-            return ['BarcodeCalled', 'MatchedTo_Barcode', 'MatchedTo_ID', 'MatchedTo_GeneCode', 'MatchedTo_Score']
+            result = ['BarcodeCalled','MeanQualityScore']
+
+            for eachcycle in range(1,self.ncycles.value+1):
+                result += ['Cycle'+str.zfill(str(eachcycle),2)+'QualityScore']
+
+            result += ['MatchedTo_Barcode', 'MatchedTo_ID', 'MatchedTo_GeneCode', 'MatchedTo_Score']
+
+            return result
 
         return []
