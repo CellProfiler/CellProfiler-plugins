@@ -578,13 +578,12 @@ Enter the name to be given to the barcode score image.""")
         scores=scoredict.keys()
         scores.sort(reverse=True)
         matchcount = 1
-        while len(scoredict[scores[0]]) == 0:
-            scores = scores[1:]
+
         while matchcount <= self.number_matches.value:
+            while len(scoredict[scores[0]]) == 0:
+                scores = scores[1:]
             topscore = scoredict[scores[0]].pop(0)
             matchscoredict[matchcount] = (scores[0],topscore)
-            if len(scoredict[scores[0]]) == 0:
-                scores = scores[1:]
             matchcount += 1
         return matchscoredict
 
