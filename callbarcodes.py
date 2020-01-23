@@ -424,6 +424,10 @@ Enter the name to be given to the barcode score image.""")
                                     '_'.join([C_CALL_BARCODES,'Cycle'+str.zfill(str(eachcycle),2)+'QualityScore']),
                                     basescorelist[eachcycle-1])
 
+        imagemean = numpy.mean(avgbasescore)
+
+        workspace.measurements.add_measurement(cellprofiler.measurement.IMAGE, '_'.join([C_CALL_BARCODES,'ImageMeanQualityScore']), imagemean)
+
         barcodes = self.barcodeset(self.metadata_field_barcode.value, self.metadata_field_tag.value)
 
         scorelist = []
@@ -592,6 +596,8 @@ Enter the name to be given to the barcode score image.""")
 
         result = []
 
+        result += [(cellprofiler.measurement.IMAGE,'_'.join([C_CALL_BARCODES,'ImageMeanQualityScore']), cellprofiler.measurement.COLTYPE_FLOAT)]
+
         result += [(input_object_name, '_'.join([C_CALL_BARCODES,'BarcodeCalled']), cellprofiler.measurement.COLTYPE_VARCHAR),
            (input_object_name, '_'.join([C_CALL_BARCODES,'MeanQualityScore']), cellprofiler.measurement.COLTYPE_FLOAT)]
 
@@ -611,7 +617,7 @@ Enter the name to be given to the barcode score image.""")
     # if the name matches.
     #
     def get_categories(self, pipeline, object_name):
-        if object_name == self.input_object_name:
+        if object_name == self.input_object_name or object_name == cellprofiler.measurement.IMAGE:
             return [C_CALL_BARCODES]
 
         return []
@@ -628,6 +634,9 @@ Enter the name to be given to the barcode score image.""")
 
             result += ['MatchedTo_Barcode', 'MatchedTo_ID', 'MatchedTo_GeneCode', 'MatchedTo_Score']
 
-            return result
+        elif object_name == object_name == cellprofiler.measurement.IMAGE:
+            result = ['ImageMeanQualityScore']
+
+        return result
 
         return []
