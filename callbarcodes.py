@@ -215,6 +215,15 @@ This measurement should be """)
             doc="""\
 """)
 
+        self.number_matches = cellprofiler.setting.Integer(
+            doc="""\
+Enter how many matches to return.  The Barcode, ID, GeneCode, and Score will be returned for each of the top N matches.
+Use 1 to return only the best match."
+""",
+            text="Number of top N matches to return",
+            value=1
+        )
+
         self.has_empty_vector_barcode = cellprofiler.setting.Binary(
             "Do you have an empty vector barcode you would like to add to the barcode list?", False, doc="""\
 Select "*{YES}*" to manually enter a sequence that should be added to the uploaded barcode 
@@ -230,7 +239,7 @@ Enter the sequence that represents barcoding reads of an empty vector"""
         self.wants_call_image = cellprofiler.setting.Binary(
             "Retain an image of the barcodes color coded by call?", False, doc="""\
 Select "*{YES}*" to retain the image of the objects color-coded
-according to which line of the CSV their barcode call matches to, 
+according to which line of the CSV their barcode call best matches to, 
 for use later in the pipeline (for example, to be saved by a **SaveImages** 
 module).""" .format(**{"YES": cellprofiler.setting.YES
                 }))
@@ -275,6 +284,7 @@ Enter the name to be given to the barcode score image.""")
             self.csv_file_name,
             self.metadata_field_barcode,
             self.metadata_field_tag,
+            self.number_matches,
             self.has_empty_vector_barcode,
             self.empty_vector_barcode_sequence,
             self.wants_call_image,
@@ -292,6 +302,7 @@ Enter the name to be given to the barcode score image.""")
             self.csv_file_name,
             self.metadata_field_barcode,
             self.metadata_field_tag,
+            self.number_matches,
             self.has_empty_vector_barcode]
 
         if self.has_empty_vector_barcode:
@@ -430,10 +441,12 @@ Enter the name to be given to the barcode score image.""")
 
         barcodes = self.barcodeset(self.metadata_field_barcode.value, self.metadata_field_tag.value)
 
-        scorelist = []
-        matchedbarcode = []
-        matchedbarcodecode = []
-        matchedbarcodeid = []
+        Nmatchdigits = len(str(self.number_matches.value))
+
+        scoredict = {x:[] for x in range(1,self.number_matches.value + 1)}
+        matchedbarcode = {x:[] for x in range(1,self.number_matches.value + 1)}
+        matchedbarcodecode = {x:[] for x in range(1,self.number_matches.value + 1)}
+        matchedbarcodeid = {x:[] for x in range(1,self.number_matches.value + 1)}
         if self.wants_call_image:
             objects = workspace.object_set.get_objects(self.input_object_name.value)
             labels = objects.segmented
@@ -441,24 +454,28 @@ Enter the name to be given to the barcode score image.""")
             pixel_data_score = objects.segmented
         count = 1
         for eachbarcode in calledbarcodes:
-            eachscore, eachmatch = self.queryall(barcodes, eachbarcode)
-            scorelist.append(eachscore)
-            matchedbarcode.append(eachmatch)
-            matchedbarcodeid.append(barcodes[eachmatch][0])
-            matchedbarcodecode.append(barcodes[eachmatch][1])
-            if self.wants_call_image:
-                pixel_data_call = numpy.where(labels==count,barcodes[eachmatch][0],pixel_data_call)
-            if self.wants_score_image:
-                pixel_data_score = numpy.where(labels==count,65535*eachscore,pixel_data_score)
+            scoreresults = self.queryall(barcodes, eachbarcode)
+            for eachmatchN in range(1,self.number_matches.value+1):
+                eachscore, eachmatch = scoreresults[eachmatchN]
+                scoredict[eachmatchN].append(eachscore)
+                matchedbarcode[eachmatchN].append(eachmatch)
+                matchedbarcodeid[eachmatchN].append(barcodes[eachmatch][0])
+                matchedbarcodecode[eachmatchN].append(barcodes[eachmatch][1])
+                if eachmatchN == 1:
+                    if self.wants_call_image:
+                        pixel_data_call = numpy.where(labels==count,barcodes[eachmatch][0],pixel_data_call)
+                    if self.wants_score_image:
+                        pixel_data_score = numpy.where(labels==count,65535*eachscore,pixel_data_score)
             count += 1
-        workspace.measurements.add_measurement(self.input_object_name.value, '_'.join([C_CALL_BARCODES,'MatchedTo_Barcode']),
-                                     matchedbarcode)
-        workspace.measurements.add_measurement(self.input_object_name.value, '_'.join([C_CALL_BARCODES,'MatchedTo_ID']),
-                                     matchedbarcodeid)
-        workspace.measurements.add_measurement(self.input_object_name.value, '_'.join([C_CALL_BARCODES,'MatchedTo_GeneCode']),
-                                     matchedbarcodecode)
-        workspace.measurements.add_measurement(self.input_object_name.value, '_'.join([C_CALL_BARCODES,'MatchedTo_Score']),
-                                     scorelist)
+        for eachmatchN in range(1,self.number_matches.value+1):
+            workspace.measurements.add_measurement(self.input_object_name.value, '_'.join([C_CALL_BARCODES,'Match'+str.zfill(str(eachmatchN),Nmatchdigits)+'_Barcode']),
+                                         matchedbarcode[eachmatchN])
+            workspace.measurements.add_measurement(self.input_object_name.value, '_'.join([C_CALL_BARCODES,'Match'+str.zfill(str(eachmatchN),Nmatchdigits)+'_ID']),
+                                         matchedbarcodeid[eachmatchN])
+            workspace.measurements.add_measurement(self.input_object_name.value, '_'.join([C_CALL_BARCODES,'Match'+str.zfill(str(eachmatchN),Nmatchdigits)+'_GeneCode']),
+                                         matchedbarcodecode[eachmatchN])
+            workspace.measurements.add_measurement(self.input_object_name.value, '_'.join([C_CALL_BARCODES,'Match'+str.zfill(str(eachmatchN),Nmatchdigits)+'_Score']),
+                                         scoredict[eachmatchN])
         if self.wants_call_image:
             workspace.image_set.add(self.outimage_calls_name.value,cellprofiler.image.Image(pixel_data_call.astype("uint16"),
                                                                                       convert = False ))
@@ -539,26 +556,35 @@ Enter the name to be given to the barcode score image.""")
         fd = self.open_csv()
         reader = csv.DictReader(fd)
         barcodeset = {}
-        count=1
+        barcodecount = 1
         for row in reader:
-            barcodeset[row[barcodecol]]=(count,row[genecol])
-            count+=1
+            barcodeset[row[barcodecol]]=(barcodecount,row[genecol])
+            barcodecount += 1
         fd.close()
         if self.has_empty_vector_barcode:
-            barcodeset[self.empty_vector_barcode_sequence.value]=(count,"EmptyVector")
+            barcodeset[self.empty_vector_barcode_sequence.value]=(barcodecount,"EmptyVector")
 
         return barcodeset
 
     def likelihood(self,barcode,query):
         score=sum([self.matchscore(query[i],barcode[i]) for i in range(len(query))])
-        return score/len(query)
+        return float(score/len(query))
 
     def queryall(self,barcodeset, query):
+        matchscoredict={}
         barcodelist=barcodeset.keys()
-        scoredict={self.likelihood(x,query):x for x in barcodelist}
+        scoredict = {float(m)/(self.ncycles.value*2):[] for m in range((self.ncycles.value*2)+1)}
+        [scoredict[self.likelihood(x,query)].append(x) for x in barcodelist]
         scores=scoredict.keys()
         scores.sort(reverse=True)
-        return (scores[0],scoredict[scores[0]])
+        matchcount = 1
+        while matchcount <= self.number_matches.value:
+            topscore = scoredict[scores[0]].pop(0)
+            matchscoredict[matchcount] = (scores[0],topscore)
+            if len(scoredict[scores[0]]) == 0:
+                scores = scores[1:]
+            matchcount += 1
+        return matchscoredict
 
     def matchscore(self,querybase,truebase):
         halfmatch={"A":"C","C":"A","G":"T","T":"G"}
@@ -593,6 +619,7 @@ Enter the name to be given to the barcode score image.""")
         # in measurement.py for what you can use
         #
         input_object_name = self.input_object_name.value
+        Nmatchdigits = len(str(self.number_matches.value))
 
         result = []
 
@@ -604,10 +631,19 @@ Enter the name to be given to the barcode score image.""")
         for eachcycle in range(1,self.ncycles.value+1):
             result += [(input_object_name, '_'.join([C_CALL_BARCODES,'Cycle'+str.zfill(str(eachcycle),2)+'QualityScore']), cellprofiler.measurement.COLTYPE_FLOAT)]
 
-        result += [(input_object_name, '_'.join([C_CALL_BARCODES,'MatchedTo_Barcode']), cellprofiler.measurement.COLTYPE_VARCHAR),
-                (input_object_name, '_'.join([C_CALL_BARCODES,'MatchedTo_ID']), cellprofiler.measurement.COLTYPE_INTEGER),
-                (input_object_name, '_'.join([C_CALL_BARCODES,'MatchedTo_GeneCode']), cellprofiler.measurement.COLTYPE_VARCHAR),
-                (input_object_name, '_'.join([C_CALL_BARCODES,'MatchedTo_Score']), cellprofiler.measurement.COLTYPE_FLOAT)]
+        for eachmatchN in range(1,self.number_matches.value+1):
+            result += [(input_object_name,
+                        '_'.join([C_CALL_BARCODES,'Match'+str.zfill(str(eachmatchN),Nmatchdigits)+'_Barcode']),
+                        cellprofiler.measurement.COLTYPE_VARCHAR),
+                    (input_object_name,
+                     '_'.join([C_CALL_BARCODES,'Match'+str.zfill(str(eachmatchN),Nmatchdigits)+'_ID']),
+                     cellprofiler.measurement.COLTYPE_INTEGER),
+                    (input_object_name,
+                     '_'.join([C_CALL_BARCODES,'Match'+str.zfill(str(eachmatchN),Nmatchdigits)+'_GeneCode']),
+                     cellprofiler.measurement.COLTYPE_VARCHAR),
+                    (input_object_name,
+                     '_'.join([C_CALL_BARCODES,'Match'+str.zfill(str(eachmatchN),Nmatchdigits)+'_Score']),
+                     cellprofiler.measurement.COLTYPE_FLOAT)]
 
         return result
 
@@ -626,13 +662,17 @@ Enter the name to be given to the barcode score image.""")
     # Return the feature names if the object_name and category match
     #
     def get_measurements(self, pipeline, object_name, category):
+        Nmatchdigits = len(str(self.number_matches.value))
+
         if (object_name == self.input_object_name and category == C_CALL_BARCODES):
             result = ['BarcodeCalled','MeanQualityScore']
 
             for eachcycle in range(1,self.ncycles.value+1):
                 result += ['Cycle'+str.zfill(str(eachcycle),2)+'QualityScore']
 
-            result += ['MatchedTo_Barcode', 'MatchedTo_ID', 'MatchedTo_GeneCode', 'MatchedTo_Score']
+            for eachmatchN in range(1,self.number_matches.value+1):
+                result += ['Match'+str.zfill(str(eachmatchN),Nmatchdigits)+'_Barcode', 'Match'+str.zfill(str(eachmatchN),Nmatchdigits)+'_ID',
+                           'Match'+str.zfill(str(eachmatchN),Nmatchdigits)+'_GeneCode', 'Match'+str.zfill(str(eachmatchN),Nmatchdigits)+'_Score']
 
         elif object_name == object_name == cellprofiler.measurement.IMAGE:
             result = ['ImageMeanQualityScore']
