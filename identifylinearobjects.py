@@ -14,14 +14,10 @@ from scipy.ndimage import mean as mean_of_labels
 import cellprofiler.cpmodule as cpm
 import cellprofiler.measurements as cpmeas
 import cellprofiler.objects as cpo
-import cellprofiler.preferences as cpprefs
 import cellprofiler.settings as cps
-import identify as I
-from cellprofiler.settings import YES, NO
 
-from skimage.filter.rank import maximum
+import skimage.filter
 from skimage.transform import rotate
-#from skimage.morphology import binary_dilation
 
 C_LINEAROBJECTS = "LinearObject"
 F_ANGLE = "Angle"
@@ -105,7 +101,7 @@ class IdentifyLinearObjects(cpm.CPModule):
             angles. Two linear object centers are considered to represent different
             linear objects if their angular distance is larger than this number. The
             number is measured in degrees.""")
-        
+
         self.overlap_within_angle = cps.Binary(
             "Combine if overlapping and within angular distance?", False,doc = """
             This setting determines whether or not
@@ -219,22 +215,22 @@ class IdentifyLinearObjects(cpm.CPModule):
             nlabels = 0
             label_indexes = np.zeros(0, int)
             labels = np.zeros(mask.shape, int)
-        
+
         ifull=[]
         jfull=[]
         ij_labelsfull=[]
         labeldict={}
-        
+
         for label_id in np.unique(label_indexes):
             r = np.array(i)*(ij_labels==label_id)
             r=r[r!=0]
             c = np.array(j)*(ij_labels==label_id)
-            c=c[c!=0]            
+            c=c[c!=0]
             rect_strel=self.get_rectangle(angles[label_id-1])
             seedmask = np.zeros_like(mask, int)
             seedmask[r,c]=label_id
-            
-            reconstructedlinearobject=maximum(seedmask,rect_strel)
+
+            reconstructedlinearobject=skimage.filter.rank.maximum(seedmask,rect_strel)
             reconstructedlinearobject=reconstructedlinearobject*mask
             if self.overlap_within_angle==False:
                 itemp,jtemp=np.where(reconstructedlinearobject==label_id)
@@ -252,8 +248,8 @@ class IdentifyLinearObjects(cpm.CPModule):
                 angledict[eachangle+1]=[angles[eachangle]]
             nmerges=1
             while nmerges!=0:
-                nmerges=sum([self.mergeduplicates(firstlabel,secondlabel,labeldict,angledict) for firstlabel in label_indexes for secondlabel in label_indexes if firstlabel!=secondlabel])          
-            
+                nmerges=sum([self.mergeduplicates(firstlabel,secondlabel,labeldict,angledict) for firstlabel in label_indexes for secondlabel in label_indexes if firstlabel!=secondlabel])
+
             newlabels=labeldict.keys()
             newlabels.sort()
             newangles=angledict.keys()
@@ -264,14 +260,14 @@ class IdentifyLinearObjects(cpm.CPModule):
                 jfull+=[int(eachloc[1]) for eachloc in labeldict[newlabels[eachnewlabel]]]
                 ij_labelsfull+=[eachnewlabel+1]*len(labeldict[newlabels[eachnewlabel]])
                 angles.append(np.mean(angledict[newlabels[eachnewlabel]]))
-            angles=np.array(angles)   
-            
+            angles=np.array(angles)
+
         ijv = np.zeros([len(ifull),3],dtype=int)
         ijv[:,0]=ifull
         ijv[:,1]=jfull
         ijv[:,2]=ij_labelsfull
-        
-        
+
+
         #
         # Make the objects
         #
@@ -285,18 +281,18 @@ class IdentifyLinearObjects(cpm.CPModule):
         if self.show_window:
             workspace.display_data.mask = mask
             workspace.display_data.overlapping_labels = [
-                    l for l, idx in objects.get_labels()]
+                l for l, idx in objects.get_labels()]
         if self.overlap_within_angle==True:
             center_x = np.bincount(ijv[:, 2], ijv[:, 1])[objects.indices] / objects.areas
             center_y = np.bincount(ijv[:, 2], ijv[:, 0])[objects.indices] / objects.areas
-                   
+
         m = workspace.measurements
         assert isinstance(m, cpmeas.Measurements)
-        m.add_measurement(object_name, I.M_LOCATION_CENTER_X, center_x)
-        m.add_measurement(object_name, I.M_LOCATION_CENTER_Y, center_y)
+        m.add_measurement(object_name, "Location_Center_X", center_x)
+        m.add_measurement(object_name, "Location_Center_Y", center_y)
         m.add_measurement(object_name, M_ANGLE, angles * 180 / np.pi)
-        m.add_measurement(object_name, I.M_NUMBER_OBJECT_NUMBER, label_indexes)
-        m.add_image_measurement(I.FF_COUNT % object_name, nlabels)
+        m.add_measurement(object_name, "Number_Object_Number", label_indexes)
+        m.add_image_measurement("Count_%s" % object_name, nlabels)
 
     def display(self, workspace, figure):
         '''Show an informative display'''
@@ -354,7 +350,7 @@ class IdentifyLinearObjects(cpm.CPModule):
         strel[i,j] = True
         strel = binary_fill_holes(strel)
         return strel
-        
+
     def get_rectangle(self, angle):
         linearobject_width = self.object_width.value
         linearobject_length = self.object_length.value
@@ -533,29 +529,28 @@ class IdentifyLinearObjects(cpm.CPModule):
     def get_measurement_columns(self, pipeline):
         '''Return column definitions for measurements made by this module'''
         object_name = self.object_name.value
-        return [(object_name, I.M_LOCATION_CENTER_X, cpmeas.COLTYPE_INTEGER),
-                (object_name, I.M_LOCATION_CENTER_Y, cpmeas.COLTYPE_INTEGER),
+        return [(object_name, "Location_Center_X", cpmeas.COLTYPE_INTEGER),
+                (object_name, "Location_Center_Y", cpmeas.COLTYPE_INTEGER),
                 (object_name, M_ANGLE, cpmeas.COLTYPE_FLOAT),
-                (object_name, I.M_NUMBER_OBJECT_NUMBER, cpmeas.COLTYPE_INTEGER),
-                (cpmeas.IMAGE, I.FF_COUNT % object_name, cpmeas.COLTYPE_INTEGER)]
+                (object_name, "Number_Object_Number", cpmeas.COLTYPE_INTEGER),
+                (cpmeas.IMAGE, "Count_%s" % object_name, cpmeas.COLTYPE_INTEGER)]
 
     def get_categories(self, pipeline, object_name):
         if object_name == cpmeas.IMAGE:
-            return [ I.C_COUNT ]
+            return [ "Count" ]
         elif object_name == self.object_name:
-            return [I.C_LOCATION, I.C_NUMBER, C_LINEAROBJECTS]
+            return ["Location", "Number", C_LINEAROBJECTS]
         else:
             return []
 
     def get_measurements(self, pipeline, object_name, category):
-        if object_name == cpmeas.IMAGE and category == I.C_COUNT:
+        if object_name == cpmeas.IMAGE and category == "Count":
             return [self.object_name.value]
         elif object_name == self.object_name:
-            if category == I.C_LOCATION:
-                return [I.FTR_CENTER_X, I.FTR_CENTER_Y]
-            elif category == I.C_NUMBER:
-                return [I.FTR_OBJECT_NUMBER]
+            if category == "Location":
+                return ["Center_X", "Center_Y"]
+            elif category == "Number":
+                return ["Object_Number"]
             elif category == C_LINEAROBJECTS:
                 return [F_ANGLE]
         return []
-
