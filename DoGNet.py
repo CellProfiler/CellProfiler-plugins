@@ -2,17 +2,11 @@
 
 
 import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.patches as patches
-from matplotlib.patches import Rectangle,Ellipse
 
 import dognet
 import torch
 from torch.autograd import Variable
-import pandas as pd
-from sklearn.metrics import roc_curve, auc
 import skimage.draw
-from skimage.io import imread
 
 #################################
 #
@@ -94,28 +88,28 @@ Enter the name to give the output prediction image created by this module.
         return settings
 
     def run(self, workspace):
-        net = dognet.SimpleAnisotropic(3,11,2,learn_amplitude=False)
+        net = dognet.SimpleAnisotropic(3,15,5,learn_amplitude=False)
         net.to('cpu')
         net.load_state_dict(torch.load(self.t7_name.value))
 
         syn_normed=np.expand_dims(
             self.normalize(
-                workspace.image_set.get_image(self.synapsin_image), must_be_grayscale=True
+                workspace.image_set.get_image(self.synapsin_image.value, must_be_grayscale=True)
             )
             ,0)
         psd_normed=np.expand_dims(
             self.normalize(
-                workspace.image_set.get_image(self.PSD95_image), must_be_grayscale=True
+                workspace.image_set.get_image(self.PSD95_image.value, must_be_grayscale=True)
             )
             ,0)
         vglut_normed=np.expand_dims(
             self.normalize(
-                workspace.image_set.get_image(self.vGlut_image), must_be_grayscale=True
+                workspace.image_set.get_image(self.vGlut_image.value, must_be_grayscale=True)
             )
             ,0)
 
         data = np.concatenate([syn_normed,psd_normed,vglut_normed])
-
+        print(data.shape)
         y = self.inference(net,data)
 
         output_image = cellprofiler.image.Image(y[0,0])
@@ -123,11 +117,11 @@ Enter the name to give the output prediction image created by this module.
         workspace.image_set.add(self.prediction_image_name.value, output_image)
 
         if self.show_window:
-            workspace.display_data.syn_pixels = workspace.image_set.get_image(self.synapsin_image).pixel_data
+            workspace.display_data.syn_pixels = workspace.image_set.get_image(self.synapsin_image.value).pixel_data
 
-            workspace.display_data.psd_pixels = workspace.image_set.get_image(self.PSD95_image).pixel_data
+            workspace.display_data.psd_pixels = workspace.image_set.get_image(self.PSD95_image.value).pixel_data
 
-            workspace.display_data.vglut_pixels = workspace.image_set.get_image(self.vGlut_image).pixel_data
+            workspace.display_data.vglut_pixels = workspace.image_set.get_image(self.vGlut_image.value).pixel_data
 
             workspace.display_data.output_pixels = y[0,0]
 
@@ -136,9 +130,9 @@ Enter the name to give the output prediction image created by this module.
 
         figure.set_subplots(dimensions)
 
-        figure.subplot_imshow(0, 0, workspace.display_data.syn_pixels, "Synapsin")
+        figure.subplot_imshow_grayscale(0, 0, workspace.display_data.syn_pixels, "Synapsin")
 
-        figure.subplot_imshow(
+        figure.subplot_imshow_grayscale(
             1,
             0,
             workspace.display_data.psd_pixels,
@@ -146,7 +140,7 @@ Enter the name to give the output prediction image created by this module.
             sharexy=figure.subplot(0, 0),
         )
 
-        figure.subplot_imshow(
+        figure.subplot_imshow_grayscale(
             0,
             1,
             workspace.display_data.vglut_pixels,
@@ -154,16 +148,13 @@ Enter the name to give the output prediction image created by this module.
             sharexy=figure.subplot(0, 0),
         )
 
-        figure.subplot_imshow(
+        figure.subplot_imshow_grayscale(
             1,
             1,
             workspace.display_data.output_pixels,
             "Synapse prediction",
             sharexy=figure.subplot(0, 0),
         )
-
-    def get_normparams(self, data):
-        return data.mean(axis=(1,2)),data.min(axis=(1,2)),data.max(axis=(1,2))
 
     def normalize(self, im):
         meanx = im.pixel_data.mean()
@@ -181,15 +172,6 @@ Enter the name to give the output prediction image created by this module.
         if get_intermediate:
             return res.data.cpu().numpy(),inter.data.cpu().numpy()
         return res.data.cpu().numpy()
-
-    def make_labels(self, img,xs,ys,radius=5):
-        labels = np.zeros(img.shape[1:])
-        for xv,yv in zip(xs,ys):
-            rr,cc = skimage.draw.circle(xv,yv,radius,labels.shape)
-            rr,cc = skimage.draw.circle
-
-            labels[rr,cc]=1
-        return labels
 
     def volumetric(self):
         return False
