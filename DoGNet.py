@@ -52,10 +52,9 @@ DoGNet: A deep architecture for synapse detection in multiplexed fluorescence im
 PLOS Computational Biology 15(5): e1007012. https://doi.org/10.1371/journal.pcbi.1007012
 """
 
-class DoGNet(cellprofiler.module.ImageProcessing):
-
+class DoGNet(cellprofiler.module.Module):
+    category = "Advanced"
     module_name = "DoGNet"
-
     variable_revision_number = 1
 
     def create_settings(self):
@@ -85,7 +84,7 @@ Enter the name to give the output prediction image created by this module.
     def settings(self):
 
         settings = [
-            self.synapsin_image
+            self.synapsin_image,
             self.PSD95_image,
             self.vGlut_image,
             self.prediction_image_name,
@@ -95,31 +94,84 @@ Enter the name to give the output prediction image created by this module.
         return settings
 
     def run(self, workspace):
-
-        meanx = pic.mean(axis=(1,2))
-        minx = pic.min(axis=(1,2))
-        maxx = pic.max(axis=(1,2))
-        
         net = dognet.SimpleAnisotropic(3,11,2,learn_amplitude=False)
         net.to('cpu')
-        net.load_state_dict(torch.load(self.t7_name))
+        net.load_state_dict(torch.load(self.t7_name.value))
 
-        norm_raw = self.normalize(raw,self.get_normparams(raw))
+        syn_normed=np.expand_dims(
+            self.normalize(
+                workspace.image_set.get_image(self.synapsin_image), must_be_grayscale=True
+            )
+            ,0)
+        psd_normed=np.expand_dims(
+            self.normalize(
+                workspace.image_set.get_image(self.PSD95_image), must_be_grayscale=True
+            )
+            ,0)
+        vglut_normed=np.expand_dims(
+            self.normalize(
+                workspace.image_set.get_image(self.vGlut_image), must_be_grayscale=True
+            )
+            ,0)
 
-        data = np.concatenate([np.expand_dims(norm_raw[channels.index(s)],0) for s in req_channels])
+        data = np.concatenate([syn_normed,psd_normed,vglut_normed])
+
         y = self.inference(net,data)
-        xx,yy,_ = dognet.find_peaks(y[0,0],3)
-        pic= (data-data.min())/(data.max()-data.min())
+
+        output_image = cellprofiler.image.Image(y[0,0])
+
+        workspace.image_set.add(self.prediction_image_name.value, output_image)
+
+        if self.show_window:
+            workspace.display_data.syn_pixels = workspace.image_set.get_image(self.synapsin_image).pixel_data
+
+            workspace.display_data.psd_pixels = workspace.image_set.get_image(self.PSD95_image).pixel_data
+
+            workspace.display_data.vglut_pixels = workspace.image_set.get_image(self.vGlut_image).pixel_data
+
+            workspace.display_data.output_pixels = y[0,0]
+
+    def display(self, workspace, figure):
+        dimensions = (2, 2)
+
+        figure.set_subplots(dimensions)
+
+        figure.subplot_imshow(0, 0, workspace.display_data.syn_pixels, "Synapsin")
+
+        figure.subplot_imshow(
+            1,
+            0,
+            workspace.display_data.psd_pixels,
+            "PSD-95",
+            sharexy=figure.subplot(0, 0),
+        )
+
+        figure.subplot_imshow(
+            0,
+            1,
+            workspace.display_data.vglut_pixels,
+            "vGlut",
+            sharexy=figure.subplot(0, 0),
+        )
+
+        figure.subplot_imshow(
+            1,
+            1,
+            workspace.display_data.output_pixels,
+            "Synapse prediction",
+            sharexy=figure.subplot(0, 0),
+        )
 
     def get_normparams(self, data):
         return data.mean(axis=(1,2)),data.min(axis=(1,2)),data.max(axis=(1,2))
 
-    def normalize(self, im,norm_data):
-        meanx,minx,maxx = norm_data
-        x = np.copy(im.astype(np.float32))
-        x = x.transpose(1,2,0)
+    def normalize(self, im):
+        meanx = im.pixel_data.mean()
+        minx = im.pixel_data.min()
+        maxx = im.pixel_data.max()
+        x = np.copy(im.pixel_data.astype(np.float32))
         x = (x - meanx - minx)/(maxx - minx).astype(np.float32)
-        return x.transpose(2,0,1)
+        return x
 
     def inference(self, net,image,get_intermediate=False):
         x = np.expand_dims(image,0)
