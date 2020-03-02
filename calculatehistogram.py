@@ -15,12 +15,12 @@ The result is normalized from 0 to 1 by dividing all bins values by the value of
 import numpy as np
 import scipy.ndimage as scind
 
-import cellprofiler.cpimage as cpi
-import cellprofiler.cpmodule as cpm
-import cellprofiler.measurements as cpmeas
-import cellprofiler.objects as cpo
-import cellprofiler.settings as cps
-from cellprofiler.cpmath.cpmorphology import fixup_scipy_ndimage_result as fix
+import cellprofiler.image as cpi
+import cellprofiler.module as cpm
+import cellprofiler.measurement as cpmeas
+import cellprofiler.object as cpo
+import cellprofiler.setting as cps
+from centrosome.cpmorphology import fixup_scipy_ndimage_result as fix
 
 BINS='BinsHistBin'
 HISTOGRAM ='Histogram'
@@ -42,7 +42,7 @@ def get_histogram(pixels, b):
     bins=bins/np.max(bins)
     return bins
 
-class CalculateHistogram(cpm.CPModule):
+class CalculateHistogram(cpm.Module):
     
     module_name = "CalculateHistogram"
     category = "Measurement"
