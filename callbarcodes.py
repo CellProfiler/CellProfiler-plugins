@@ -49,114 +49,35 @@ YES          Yes           YES
 What do I need as input?
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-Are there any assumptions about input data someone using this module
-should be made aware of? For example, is there a strict requirement that
-image data be single-channel, or that the foreground is brighter than
-the background? Describe any assumptions here.
-
-This section can be omitted if there is no requirement on the input.
+To be added
 
 What do I get as output?
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-Describe the output of this module. This is necessary if the output is
-more complex than a single image. For example, if there is data displayed
-over the image then describe what the data represents.
-
-This section can be omitted if there is no specialized output.
+To be added
 
 Measurements made by this module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Describe the measurements made by this module. Typically, measurements
-are described in the following format:
-
-**Measurement category:**
-
--  *MeasurementName*: A brief description of the measurement.
--  *MeasurementName*: A brief description of the measurement.
-
-**Measurement category:**
-
--  *MeasurementName*: A brief description of the measurement.
--  *MeasurementName*: A brief description of the measurement.
-
-This module makes the following measurements:
-
-**MT** (the MeasurementTemplate category):
-
--  *Intensity_[IMAGE_NAME]_N[Ni]_M[Mj]*: the Zernike feature of the
-   IMAGE_NAME image with radial degree Ni and Azimuthal degree Mj,
-   Mj >= 0.
--  *Intensity_[IMAGE_NAME]_N[Ni]_MM[Mj]*: the Zernike feature of
-   the IMAGE_NAME image with radial degree Ni and Azimuthal degree
-   Mj, Mj < 0.
-
-Technical notes
-^^^^^^^^^^^^^^^
-
-Include implementation details or notes here. Additionally provide any 
-other background information about this module, including definitions
-or adopted conventions. Information which may be too specific to fit into
-the general description should be provided here.
-
-Omit this section if there is no technical information to mention.
-
-The Zernike features measured here are themselves interesting. You can 
-reconstruct the image of a cell, approximately, by constructing the Zernike 
-functions on a unit circle, multiplying the real parts by the corresponding 
-features for positive M, multiplying the imaginary parts by the corresponding 
-features for negative M and adding real and imaginary parts.
+To be added
 
 References
 ^^^^^^^^^^
+Optical Pooled Screens in Human Cells.
 
-Provide citations here, if appropriate. Citations are formatted as a list and,
-wherever possible, include a link to the original work. For example,
+Feldman D, Singh A, Schmid-Burgk JL, Carlson RJ, Mezger A, Garrity AJ, Zhang F, Blainey PC.
 
--  Meyer F, Beucher S (1990) “Morphological segmentation.” *J Visual
-   Communication and Image Representation* 1, 21-46.
-   (`link <http://dx.doi.org/10.1016/1047-3203(90)90014-M>`__)
+Cell. 2019 Oct 17;179(3):787-799.e17. doi: 10.1016/j.cell.2019.09.016.
 """
 
-#
-# Constants
-#
-# It's good programming practice to replace things like strings with
-# constants if they will appear more than once in your program. That way,
-# if someone wants to change the text, that text will change everywhere.
-# Also, you can't misspell it by accident.
-#
-'''This is the measurement template category'''
 C_CALL_BARCODES = "Barcode"
 
 
-#
-# The module class
-#
-# Your module should "inherit" from cellprofiler.module.Module.
-# This means that your module will use the methods from Module unless
-# you re-implement them. You can let Module do most of the work and
-# implement only what you need.
-#
 class CallBarcodes(cellprofiler.module.Module):
-    #
-    # The module starts by declaring the name that's used for display,
-    # the category under which it is stored and the variable revision
-    # number which can be used to provide backwards compatibility if
-    # you add user-interface functionality later.
-    #
     module_name = "CallBarcodes"
     category = "Data Tools"
     variable_revision_number = 1
 
-    #
-    # "create_settings" is where you declare the user interface elements
-    # (the "settings") which the user will use to customize your module.
-    #
-    # You can look at other modules and in cellprofiler.settings for
-    # settings you can use.
-    #
     def create_settings(self):
         self.csv_directory = cellprofiler.setting.DirectoryPath(
             "Input data file location", allow_metadata=False, doc="""\
@@ -182,11 +103,6 @@ Select the folder containing the CSV file to be loaded. {IO_FOLDER_CHOICE_HELP_T
             browse_msg="Choose CSV file",
             exts=[("Data file (*.csv)", "*.csv"), ("All files (*.*)", "*.*")])
 
-        #
-        # The ObjectNameSubscriber is similar to the ImageNameSubscriber.
-        # It will ask the user which object to pick from the list of
-        # objects provided by upstream modules.
-        #
         self.input_object_name = cellprofiler.setting.ObjectNameSubscriber(
             text="Input object name",
             doc="These are the objects that the module operates on.")
@@ -264,17 +180,6 @@ module).""" .format(**{"YES": cellprofiler.setting.YES
 
 Enter the name to be given to the barcode score image.""")
 
-    #
-    # The "settings" method tells CellProfiler about the settings you
-    # have in your module. CellProfiler uses the list for saving
-    # and restoring values for your module when it saves or loads a
-    # pipeline file.
-    #
-    # This module does not have a "visible_settings" method. CellProfiler
-    # will use "settings" to make the list of user-interface elements
-    # that let the user configure the module. See imagetemplate.py for
-    # a template for visible_settings that you can cut and paste here.
-    #
     def settings(self):
         return [
             self.ncycles,
@@ -404,15 +309,7 @@ Enter the name to be given to the barcode score image.""")
             choices = ["No CSV file"]
         return choices
 
-
-    #
-    # CellProfiler calls "run" on each image set in your pipeline.
-    #
     def run(self, workspace):
-        #
-        # Get the measurements object - we put the measurements we
-        # make in here
-        #
         measurements = workspace.measurements
         listofmeasurements = measurements.get_feature_names(self.input_object_name.value)
 
@@ -482,29 +379,6 @@ Enter the name to be given to the barcode score image.""")
         if self.wants_score_image:
             workspace.image_set.add(self.outimage_score_name.value,cellprofiler.image.Image(pixel_data_score.astype("uint16"),
                                                                                         convert = False ))
-        #
-        # We record some statistics which we will display later.
-        # We format them so that Matplotlib can display them in a table.
-        # The first row is a header that tells what the fields are.
-        #
-        statistics = [["Feature", "Mean", "Median", "SD"]]
-
-        #
-        # Put the statistics in the workspace display data so we
-        # can get at them when we display
-        #
-        workspace.display_data.statistics = statistics
-
-
-    #
-    # "display" lets you use matplotlib to display your results.
-    #
-    def display(self, workspace, figure):
-        statistics = workspace.display_data.statistics
-
-        figure.set_subplots((1, 1))
-
-        figure.subplot_table(0, 0, statistics)
 
     def getallbarcodemeasurements(self, measurements, ncycles, examplemeas):
         stem = re.split('Cycle',examplemeas)[0]
@@ -597,28 +471,7 @@ Enter the name to be given to the barcode score image.""")
             return 0
 
 
-
-    #
-    # We have to tell CellProfiler about the measurements we produce.
-    # There are two parts: one that is for database-type modules and one
-    # that is for the UI. The first part gives a comprehensive list
-    # of measurement columns produced. The second is more informal and
-    # tells CellProfiler how to categorize its measurements.
-    #
-    # "get_measurement_columns" gets the measurements for use in the database
-    # or in a spreadsheet. Some modules need this because they
-    # might make measurements of measurements and need those names.
-    #
     def get_measurement_columns(self, pipeline):
-        #
-        # The first thing in the list is the object being measured. If it's
-        # the whole image, use cellprofiler.measurement.IMAGE as the name.
-        #
-        # The second thing is the measurement name.
-        #
-        # The third thing is the column type. See the COLTYPE constants
-        # in measurement.py for what you can use
-        #
         input_object_name = self.input_object_name.value
         Nmatchdigits = len(str(self.number_matches.value))
 
@@ -648,20 +501,12 @@ Enter the name to be given to the barcode score image.""")
 
         return result
 
-    #
-    # "get_categories" returns a list of the measurement categories produced
-    # by this module. It takes an object name - only return categories
-    # if the name matches.
-    #
     def get_categories(self, pipeline, object_name):
         if object_name == self.input_object_name or object_name == cellprofiler.measurement.IMAGE:
             return [C_CALL_BARCODES]
 
         return []
 
-    #
-    # Return the feature names if the object_name and category match
-    #
     def get_measurements(self, pipeline, object_name, category):
         Nmatchdigits = len(str(self.number_matches.value))
 
