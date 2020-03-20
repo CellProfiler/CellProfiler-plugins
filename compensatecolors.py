@@ -192,6 +192,7 @@ Select the objects to perform compensation within."""
             result += [image_group.image_name, image_group.class_num, image_group.output_name]
         result += [self.images_or_objects]
         result += [object_group.object_name for object_group in self.object_groups]
+        result += [self.truncate]
         return result
 
     def prepare_settings(self, setting_values):
@@ -218,6 +219,7 @@ Select the objects to perform compensation within."""
         if self.images_or_objects == CC_OBJECTS:
             for object_group in self.object_groups:
                 result += object_group.visible_settings()
+        result += [self.truncate]
         return result
 
     def run(self, workspace):
