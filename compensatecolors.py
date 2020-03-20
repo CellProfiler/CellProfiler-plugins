@@ -116,6 +116,14 @@ class CompensateColors(cellprofiler.module.ImageProcessing):
         self.add_object(can_delete=False)
         self.object_count = cellprofiler.setting.HiddenCount(self.object_groups)
         self.image_count = cellprofiler.setting.HiddenCount(self.image_groups)
+        self.truncate = cellprofiler.setting.Binary(
+            "Set values <0 to 0 and >1 to 1?",
+            True,
+            doc="""\
+Values outside the range 0 to 1 might not be handled well by other
+modules. Select *Yes* to set values less than 0 to a minimum of 0 and 
+greater than 1 to a maximum value of 1."""
+        )
 
     def add_image(self, can_delete=True):
         """Add an image to the image_groups collection
@@ -261,8 +269,9 @@ Select the objects to perform compensation within."""
             im_out=Y[eachdim].reshape(len(imdict[key][0]),sample_shape[0],sample_shape[1])
             im_out = im_out / 65535.
             for each_im in range(len(imdict[key][0])):
-                im_out[each_im] = numpy.where(im_out[each_im] < 0, 0, im_out[each_im])
-                im_out[each_im] = numpy.where(im_out[each_im] > 1, 1, im_out[each_im])
+                if self.truncate():
+                    im_out[each_im] = numpy.where(im_out[each_im] < 0, 0, im_out[each_im])
+                    im_out[each_im] = numpy.where(im_out[each_im] > 1, 1, im_out[each_im])
                 output_image = cellprofiler.image.Image(im_out[each_im],
                                                         parent_image=workspace.image_set.get_image(imdict[key][0][each_im]))
                 workspace.image_set.add(imdict[key][2][each_im], output_image)
