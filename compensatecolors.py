@@ -30,14 +30,8 @@ of images; optionally, this can be done within an object set.
 ============ ============ ===============
 Supports 2D? Supports 3D? Respects masks?
 ============ ============ ===============
-YES          YES          YES
+YES          NO           YES
 ============ ============ ===============
-
-See also
-^^^^^^^^
-
-Is there another **Module** that is related to this one? If so, refer
-to that **Module** in this section. Otherwise, this section can be omitted.
 
 What do I need as input?
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -52,26 +46,13 @@ As this module can end up running many dozens of images, the output images
 will be named by the input name + a user designated suffix, rather than 
 manual assignment of each name.
 
-
-Technical notes
-^^^^^^^^^^^^^^^
-
-Include implementation details or notes here. Additionally provide any 
-other background information about this module, including definitions
-or adopted conventions. Information which may be too specific to fit into
-the general description should be provided here.
-
-Omit this section if there is no technical information to mention.
-
 References
 ^^^^^^^^^^
+Optical Pooled Screens in Human Cells.
 
-Provide citations here, if appropriate. Citations are formatted as a list and,
-wherever possible, include a link to the original work. For example,
+Feldman D, Singh A, Schmid-Burgk JL, Carlson RJ, Mezger A, Garrity AJ, Zhang F, Blainey PC.
 
--  Meyer F, Beucher S (1990) “Morphological segmentation.” *J Visual
-   Communication and Image Representation* 1, 21-46.
-   (`link <http://dx.doi.org/10.1016/1047-3203(90)90014-M>`__)
+Cell. 2019 Oct 17;179(3):787-799.e17. doi: 10.1016/j.cell.2019.09.016.
 """
 
 
@@ -278,14 +259,6 @@ Select the objects to perform compensation within."""
                                                         parent_image=workspace.image_set.get_image(imdict[key][0][each_im]))
                 workspace.image_set.add(imdict[key][2][each_im], output_image)
 
-
-
-    #
-    # "volumetric" indicates whether or not this module supports 3D images.
-    # The "gradient_image" function is inherently 2D, and we've noted this
-    # in the documentation for the module. Explicitly return False here
-    # to indicate that 3D images are not supported.
-    #
     def volumetric(self):
         return False
 
