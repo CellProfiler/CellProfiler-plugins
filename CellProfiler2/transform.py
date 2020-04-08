@@ -28,9 +28,9 @@ from scipy.ndimage import gaussian_gradient_magnitude, correlate1d
 #
 ##################################
 
-import cellprofiler.image as cpi
-import cellprofiler.module as cpm
-import cellprofiler.setting as cps
+import cellprofiler.cpimage as cpi
+import cellprofiler.cpmodule as cpm
+import cellprofiler.settings as cps
 
 from transformfilters import fourier_transform
 from transformfilters import check_fourier_transform
@@ -81,7 +81,7 @@ M_CHEBYSHEV_T="Chebyshev transform"
 #
 ###################################
 
-class Transforms(cpm.Module):
+class Transforms(cpm.CPModule):
     ###############################################
     #
     # The module starts by declaring the name that's used for display,

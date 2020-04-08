@@ -35,11 +35,11 @@ References
 import numpy as np
 import scipy.ndimage as scind
 
-import cellprofiler.image as cpi
-import cellprofiler.module as cpm
-import cellprofiler.measurement as cpmeas
-import cellprofiler.object as cpo
-import cellprofiler.setting as cps
+import cellprofiler.cpimage as cpi
+import cellprofiler.cpmodule as cpm
+import cellprofiler.measurements as cpmeas
+import cellprofiler.objects as cpo
+import cellprofiler.settings as cps
 
 def get_object_moment(pixels, func):
     labs=np.unique(labels)
@@ -102,7 +102,7 @@ MOM_TO_F={MOM_1: mean,
           MOM_3: skewness,
           MOM_4: kurtosis}
 
-class CalculateMoments(cpm.Module):
+class CalculateMoments(cpm.CPModule):
 
     module_name = "CalculateMoments"
     category = 'Measurement'

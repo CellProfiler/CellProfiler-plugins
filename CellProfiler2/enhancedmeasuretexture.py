@@ -122,14 +122,15 @@ import numpy as np
 import scipy.ndimage as scind
 
 import calculatemoments as cpmoments
-import cellprofiler.image as cpi
-import cellprofiler.module as cpm
-import cellprofiler.object as cpo
-import cellprofiler.setting as cps
-import cellprofiler.measurement as cpmeas
-from centrosome.cpmorphology import fixup_scipy_ndimage_result as fix
-from centrosome.haralick import Haralick, normalized_per_object
-from centrosome.filter import gabor, stretch
+import cellprofiler.cpimage as cpi
+import cellprofiler.cpmodule as cpm
+import cellprofiler.objects as cpo
+import cellprofiler.settings as cps
+import cellprofiler.measurements as cpmeas
+from cellprofiler.cpmath.cpmorphology import fixup_scipy_ndimage_result as fix
+from cellprofiler.cpmath.haralick import Haralick, normalized_per_object
+from cellprofiler.cpmath.filter import gabor, stretch
+from cellprofiler.cpmath.cpmorphology import fixup_scipy_ndimage_result as fix
 
 """The category of the per-object measurements made by this module"""
 TEXTURE = 'Texture'
@@ -170,7 +171,7 @@ HIST_COARS_BINS=3
 NB_SCALES=5
 DIR_BINS=125
 
-class EnhancedMeasureTexture(cpm.Module):
+class EnhancedMeasureTexture(cpm.CPModule):
 
     module_name = "EnhancedMeasureTexture"
     variable_revision_number = 3

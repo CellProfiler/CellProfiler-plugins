@@ -11,10 +11,10 @@ from centrosome.cpmorphology import get_line_pts
 from scipy.ndimage import binary_erosion, binary_fill_holes
 from scipy.ndimage import mean as mean_of_labels
 
-import cellprofiler.module as cpm
-import cellprofiler.measurement as cpmeas
-import cellprofiler.object as cpo
-import cellprofiler.setting as cps
+import cellprofiler.cpmodule as cpm
+import cellprofiler.measurements as cpmeas
+import cellprofiler.objects as cpo
+import cellprofiler.settings as cps
 
 import skimage.filter
 from skimage.transform import rotate
@@ -30,7 +30,7 @@ LABEL_ALPHA = 1.0
 '''Alpha value for the shapes'''
 LINEAROBJECT_ALPHA = .25
 
-class IdentifyLinearObjects(cpm.Module):
+class IdentifyLinearObjects(cpm.CPModule):
     module_name = "IdentifyLinearObjects"
     variable_revision_number = 1
     category = ["Other", "Object Processing"]
