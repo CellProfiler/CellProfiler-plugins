@@ -252,7 +252,7 @@ Select the objects to perform compensation within."""
                 import skimage.exposure
                 eachimage =  skimage.exposure.rescale_intensity(
                     eachimage, 
-                    in_range = (min(eachimage),max(eachimage)),
+                    in_range = (eachimage.min(),eachimage.max()),
                     out_range = ((1.0/65535),1.0))
             eachimage = eachimage * 65535
             if eachgroup.class_num.value not in imdict.keys():
