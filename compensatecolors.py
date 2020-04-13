@@ -287,16 +287,16 @@ Select the objects to perform compensation within."""
         keys=imdict.keys()
         keys.sort()
 
-        if self.do_match_histograms != 'No':
+        if self.do_match_histograms.value != 'No':
             histogram_template = imdict[self.histogram_match_class.value][1]
-            if self.do_match_histograms == 'Yes, post-masking to objects':
+            if self.do_match_histograms.value == 'Yes, post-masking to objects':
                 histogram_mask = numpy.tile(object_mask.reshape(-1),len(imdict[self.histogram_match_class.value][0]))
                 histogram_template = histogram_mask * histogram_template
 
         # apply transformations, if any
         for eachkey in keys:
             reshaped_pixels = imdict[eachkey][1]
-            if self.do_match_histograms == 'Yes, pre-masking or on unmasked images':
+            if self.do_match_histograms.value == 'Yes, pre-masking or on unmasked images':
                 if eachkey ! = self.histogram_match_class.value:
                     reshaped_pixels = skimage.exposure.match_histograms(reshaped_pixels,histogram_template)
             if self.images_or_objects.value == CC_OBJECTS:
