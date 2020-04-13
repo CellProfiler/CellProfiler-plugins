@@ -7,6 +7,7 @@
 #################################
 
 import numpy
+import skimage.exposure
 
 #################################
 #
@@ -267,20 +268,14 @@ Select the objects to perform compensation within."""
             objects = workspace.object_set.get_objects(object_name.object_name.value)
             object_labels = objects.segmented
             object_mask = numpy.where(object_labels > 0, 1, 0)
-        else:
-            object_mask = numpy.ones_like(sample_pixels)
-
 
         for eachgroup in self.image_groups:
             eachimage = workspace.image_set.get_image(eachgroup.image_name.value).pixel_data
             if self.do_rescale_input.value == 'Yes':
-                import skimage.exposure
                 eachimage =  skimage.exposure.rescale_intensity(
                     eachimage, 
                     in_range = (eachimage.min(),eachimage.max()),
                     out_range = ((1.0/65535),1.0))
-            eachimage = eachimage * object_mask
-            eachimage = numpy.where(eachimage == 0, (1.0/65535), eachimage)
             eachimage = eachimage * 65535
             if eachgroup.class_num.value not in imdict.keys():
                 imdict[eachgroup.class_num.value] = [[eachgroup.image_name.value],eachimage.reshape(-1),[eachgroup.output_name.value]]
@@ -292,13 +287,27 @@ Select the objects to perform compensation within."""
         keys=imdict.keys()
         keys.sort()
 
-        if self.do_match_histograms.value == 'Yes, post-masking to objects':
-            import skimage.exposure
-            to_match = self.histogram_match_class.value
-            for eachkey in range(len(keys)):
-                eachkey = eachkey + 1
-                if eachkey != to_match:
-                    imdict[eachkey][1] = skimage.exposure.match_histograms(imdict[eachkey][1],imdict[to_match][1])
+        if self.do_match_histograms != 'No':
+            histogram_template = imdict[self.histogram_match_class.value][1]
+            if self.do_match_histograms == 'Yes, post-masking to objects':
+                histogram_mask = numpy.tile(object_mask.reshape(-1),len(imdict[self.histogram_match_class.value][0]))
+                histogram_template = histogram_mask * histogram_template
+
+        # apply transformations, if any
+        for eachkey in keys:
+            reshaped_pixels = imdict[eachkey][1]
+            if self.do_match_histograms == 'Yes, pre-masking or on unmasked images':
+                if eachkey ! = self.histogram_match_class.value:
+                    reshaped_pixels = skimage.exposure.match_histograms(reshaped_pixels,histogram_template)
+            if self.images_or_objects.value == CC_OBJECTS:
+                category_count = len(imdict[keys][0])
+                category_mask = numpy.tile(object_mask.reshape(-1),category_count)
+                reshaped_pixels = reshaped_pixels * category_mask
+                reshaped_pixels = numpy.where(reshaped_pixels == 0, 1, reshaped_pixels)
+            if self.do_match_histograms.value == 'Yes, post-masking to objects':
+                if eachkey != self.histogram_match_class.value:
+                    reshaped_pixels = skimage.exposure.match_histograms(reshaped_pixels,histogram_template)
+            imdict[eachkey][1] = reshaped_pixels
 
         imlist=[]
         for eachkey in keys:
@@ -315,7 +324,6 @@ Select the objects to perform compensation within."""
             key=keys[eachdim]
             im_out=Y[eachdim].reshape(len(imdict[key][0]),sample_shape[0],sample_shape[1])
             if self.do_rescale_output.value == 'Yes, per group':
-                 import skimage.exposure
                  im_out = skimage.exposure.rescale_intensity(
                      im_out, 
                      in_range = (im_out.min(), im_out.max()),
@@ -325,7 +333,6 @@ Select the objects to perform compensation within."""
                 im_out[each_im] = numpy.where(im_out[each_im] < 0, 0, im_out[each_im])
                 im_out[each_im] = numpy.where(im_out[each_im] > 1, 1, im_out[each_im])
                 if self.do_rescale_output.value == 'Yes, per image':
-                    import skimage.exposure
                     im_out[each_im] = skimage.exposure.rescale_intensity(
                         im_out[each_im], 
                         in_range = (im_out[each_im].min(), im_out[each_im].max()),
