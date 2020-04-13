@@ -297,7 +297,7 @@ Select the objects to perform compensation within."""
         for eachkey in keys:
             reshaped_pixels = imdict[eachkey][1]
             if self.do_match_histograms.value == 'Yes, pre-masking or on unmasked images':
-                if eachkey ! = self.histogram_match_class.value:
+                if eachkey != self.histogram_match_class.value:
                     reshaped_pixels = skimage.exposure.match_histograms(reshaped_pixels,histogram_template)
             if self.images_or_objects.value == CC_OBJECTS:
                 category_count = len(imdict[keys][0])
