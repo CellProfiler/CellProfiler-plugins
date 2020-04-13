@@ -292,21 +292,22 @@ Select the objects to perform compensation within."""
             if self.do_match_histograms.value == 'Yes, post-masking to objects':
                 histogram_mask = numpy.tile(object_mask.reshape(-1),len(imdict[self.histogram_match_class.value][0]))
                 histogram_template = histogram_mask * histogram_template
+                histogram_template = numpy.where(histogram_template == 0, 1, histogram_template)
 
         # apply transformations, if any
         for eachkey in keys:
             reshaped_pixels = imdict[eachkey][1]
             if self.do_match_histograms.value == 'Yes, pre-masking or on unmasked images':
                 if eachkey != self.histogram_match_class.value:
-                    reshaped_pixels = skimage.exposure.match_histograms(reshaped_pixels,histogram_template)
+                    reshaped_pixels = match_histograms(reshaped_pixels,histogram_template)
             if self.images_or_objects.value == CC_OBJECTS:
-                category_count = len(imdict[keys][0])
+                category_count = len(imdict[eachkey][0])
                 category_mask = numpy.tile(object_mask.reshape(-1),category_count)
                 reshaped_pixels = reshaped_pixels * category_mask
                 reshaped_pixels = numpy.where(reshaped_pixels == 0, 1, reshaped_pixels)
             if self.do_match_histograms.value == 'Yes, post-masking to objects':
                 if eachkey != self.histogram_match_class.value:
-                    reshaped_pixels = skimage.exposure.match_histograms(reshaped_pixels,histogram_template)
+                    reshaped_pixels = match_histograms(reshaped_pixels,histogram_template)
             imdict[eachkey][1] = reshaped_pixels
 
         imlist=[]
@@ -360,3 +361,61 @@ Select the objects to perform compensation within."""
         M = numpy.array(arr)
         return M
 
+def _match_cumulative_cdf(source, template):
+    """
+    Return modified source array so that the cumulative density function of
+    its values matches the cumulative density function of the template.
+
+    TAKEN FROM SKIMAGE 0.16, delete when moving to CellProfiler 4
+    """
+    src_values, src_unique_indices, src_counts = numpy.unique(source.ravel(),
+                                                           return_inverse=True,
+                                                           return_counts=True)
+    tmpl_values, tmpl_counts = numpy.unique(template.ravel(), return_counts=True)
+
+    # calculate normalized quantiles for each array
+    src_quantiles = numpy.cumsum(src_counts).astype('float') / source.size
+    tmpl_quantiles = numpy.cumsum(tmpl_counts).astype('float') / template.size
+
+    interp_a_values = numpy.interp(src_quantiles, tmpl_quantiles, tmpl_values)
+    return interp_a_values[src_unique_indices].reshape(source.shape)
+
+
+def match_histograms(image, reference):
+    """Adjust an image so that its cumulative histogram matches that of another.
+
+    The adjustment is applied separately for each channel.
+
+     its values matches the cumulative density function of the template.
+
+    TAKEN FROM SKIMAGE 0.16, delete when moving to CellProfiler 4
+
+    Parameters
+    ----------
+    image : ndarray
+        Input image. Can be gray-scale or in color.
+    reference : ndarray
+        Image to match histogram of. Must have the same number of channels as
+        image.
+    multichannel : bool, optional
+        Apply the matching separately for each channel.
+
+    Returns
+    -------
+    matched : ndarray
+        Transformed input image.
+
+    Raises
+    ------
+    ValueError
+        Thrown when the number of channels in the input image and the reference
+        differ.
+
+    References
+    ----------
+    .. [1] http://paulbourke.net/miscellaneous/equalisation/
+
+    """
+    matched = _match_cumulative_cdf(image, reference)
+
+    return matched
