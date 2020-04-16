@@ -118,12 +118,24 @@ class CompensateColors(cellprofiler.module.ImageProcessing):
         self.object_count = cellprofiler.setting.HiddenCount(self.object_groups)
         self.image_count = cellprofiler.setting.HiddenCount(self.image_groups)
         self.do_rescale_input = cellprofiler.setting.Choice(
-            'Should individual images be rescaled 0-1 before compensating?',
+            'Should individual images be rescaled 0-1 before compensating pre-masking or on unmasked images?',
             ['No',
             'Yes'],
             doc="""\
 Choose if the images should be rescaled 0-1 before compensation.
 If performing compensation inside an object, rescaling will happen before masking to 
+that object"""
+        )
+
+        self.do_rescale_after_mask = cellprofiler.setting.Choice(
+            'Should images be rescaled 0-1 before compensating but after masking to objects?',
+            ['No',
+            'Yes, per image',
+            'Yes, per group'],
+            doc="""\
+Choose if the images should be rescaled 0-1 before compensation; you can choose whether
+to do this for each image individually or across all images in a group. 
+If performing compensation inside an object, rescaling will happen after masking to 
 that object"""
         )
 
@@ -145,8 +157,7 @@ to perform it if masking inside an object."""
         self.do_rescale_output = cellprofiler.setting.Choice(
             'Should images be rescaled 0-1 after compensating?',
             ['No',
-            'Yes, per image',
-            'Yes, per group'],
+            'Yes'],
             doc="""\
 Choose if the images should be rescaled 0-1 after compensation; you can choose whether
 to do this for each image individually or across all images in a group. 
@@ -220,7 +231,7 @@ Select the objects to perform compensation within."""
             result += [image_group.image_name, image_group.class_num, image_group.output_name]
         result += [self.images_or_objects]
         result += [object_group.object_name for object_group in self.object_groups]
-        result += [self.do_rescale_input, self.do_match_histograms, self.do_rescale_output]
+        result += [self.do_rescale_input, self.do_rescale_after_mask, self.do_match_histograms, self.do_rescale_output]
         return result
 
     def prepare_settings(self, setting_values):
@@ -247,7 +258,7 @@ Select the objects to perform compensation within."""
         if self.images_or_objects == CC_OBJECTS:
             for object_group in self.object_groups:
                 result += object_group.visible_settings()
-        result += [self.do_rescale_input, self.do_match_histograms] 
+        result += [self.do_rescale_input, self.do_rescale_after_mask, self.do_match_histograms] 
         if self.do_match_histograms != 'No':
             result += [self.histogram_match_class]
         result += [self.do_rescale_output]
@@ -275,7 +286,16 @@ Select the objects to perform compensation within."""
                 eachimage =  skimage.exposure.rescale_intensity(
                     eachimage, 
                     in_range = (eachimage.min(),eachimage.max()),
-                    out_range = ((1.0/65535),1.0))
+                    out_range = ((1.0/65535),1.0)
+                    )
+            if self.do_rescale_after_mask.value == 'Yes, per image':
+                eachimage = eachimage * object_mask
+                eachimage_no_bg = eachimage[eachimage != 0] #don't measure the background
+                eachimage = skimage.exposure.rescale_intensity(
+                    eachimage,
+                    in_range = (eachimage_no_bg.min(),eachimage_no_bg.max()),
+                    out_range = ((1.0/65535),1.0)
+                    )
             eachimage = eachimage * 65535
             if eachgroup.class_num.value not in imdict.keys():
                 imdict[eachgroup.class_num.value] = [[eachgroup.image_name.value],eachimage.reshape(-1),[eachgroup.output_name.value]]
@@ -305,6 +325,13 @@ Select the objects to perform compensation within."""
                 category_mask = numpy.tile(object_mask.reshape(-1),category_count)
                 reshaped_pixels = reshaped_pixels * category_mask
                 reshaped_pixels = numpy.where(reshaped_pixels == 0, 1, reshaped_pixels)
+            if self.do_rescale_after_mask.value == 'Yes, per group':
+                reshaped_pixels_no_bg = reshaped_pixels[reshaped_pixels >1] #don't measure the background
+                reshaped_pixels = skimage.exposure.rescale_intensity(
+                    reshaped_pixels,
+                    in_range = (reshaped_pixels_no_bg.min(),reshaped_pixels_no_bg.max()),
+                    out_range = (1,65535)
+                    )
             if self.do_match_histograms.value == 'Yes, post-masking to objects':
                 if eachkey != self.histogram_match_class.value:
                     reshaped_pixels = match_histograms(reshaped_pixels,histogram_template)
@@ -324,16 +351,11 @@ Select the objects to perform compensation within."""
         for eachdim in range(Y.shape[0]):
             key=keys[eachdim]
             im_out=Y[eachdim].reshape(len(imdict[key][0]),sample_shape[0],sample_shape[1])
-            if self.do_rescale_output.value == 'Yes, per group':
-                 im_out = skimage.exposure.rescale_intensity(
-                     im_out, 
-                     in_range = (im_out.min(), im_out.max()),
-                     out_range = (0.0,65535.0))
             im_out = im_out / 65535.0
             for each_im in range(len(imdict[key][0])):
                 im_out[each_im] = numpy.where(im_out[each_im] < 0, 0, im_out[each_im])
                 im_out[each_im] = numpy.where(im_out[each_im] > 1, 1, im_out[each_im])
-                if self.do_rescale_output.value == 'Yes, per image':
+                if self.do_rescale_output.value == 'Yes':
                     im_out[each_im] = skimage.exposure.rescale_intensity(
                         im_out[each_im], 
                         in_range = (im_out[each_im].min(), im_out[each_im].max()),
