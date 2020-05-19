@@ -39,7 +39,7 @@ threshlist = [
     "Measurement",
     "RobustBackground"
     ]
-    
+
 __doc__ = """\
 TestAllThresholds
 =================
@@ -124,79 +124,220 @@ class TestAllThresholds(cellprofiler.module.ImageProcessing):
         # module-specific help text by modifying the setting's "doc"
         # string.
         #
-        self.x_name.doc = """\
-This is the image that the module operates on. You can choose any image
-that is made available by a prior module.
-
-**ImageTemplate** will do something to this image.
-"""
+        self.x_name.doc = """What image do you want to threshold?"""
 
         #
         # Here's a choice box - the user gets a drop-down list of what
         # can be done.
         #
-        self.gradient_choice = cellprofiler.setting.Choice(
-            text="Gradient choice:",
-            # The choice takes a list of possibilities. The first one
-            # is the default - the one the user will typically choose.
-            choices=[GRADIENT_DIRECTION_X, GRADIENT_DIRECTION_Y, GRADIENT_MAGNITUDE],
-            # The default value is the first choice in choices. You can
-            # specify a different initial value using the value keyword.
-            value=GRADIENT_MAGNITUDE,
-            #
-            # Here, in the documentation, we do a little trick so that
-            # we use the actual text that's displayed in the documentation.
-            #
-            # {GRADIENT_MAGNITUDE} will get changed into "Gradient magnitude"
-            # etc. Python will look in keyword arguments for format()
-            # for the "GRADIENT_" names and paste them in where it sees
-            # a matching {GRADIENT_...}.
-            #
-            doc="""\
-Choose what to calculate:
+        self.do_adaptive = cellprofiler.setting.Binary(
+            text="Do you want to test adaptive thresholding?",
+            value=True,  # The default value is to choose automatically
+            doc="""Choose *"Yes"* to try adaptive thresholding, using a user-provided window 
+            size."""
+        )
 
--  *{GRADIENT_MAGNITUDE}*: calculate the magnitude of the gradient at
-   each pixel.
--  *{GRADIENT_DIRECTION_X}*: get the relative contribution of the
-   gradient in the X direction (.5 = no contribution, 0 to .5 =
-   decreasing with increasing X, .5 to 1 = increasing with increasing
-   X).
--  *{GRADIENT_DIRECTION_Y}*: get the relative contribution of the
-   gradient in the Y direction.
+        self.adaptive_window_size = cellprofiler.setting.Integer(
+            text="Adaptive window size",
+            value=50,  
+            minval=1,  # We don't let the user type in really small values
+            maxval=1000,  # or large values
+            doc="""Enter the size of the window (in pixels) to be used for the adaptive method. 
+            Often a good choice is some multiple of the largest expected object size.
+            Note that windows greater than half the image size may report an error."""
+        )
+
+        self.do_manual = cellprofiler.setting.Binary(
+            text="Do you want to test manual thresholding?",
+            value=True,  # The default value is to choose automatically
+            doc="""\
+Choose *"Yes"* to try manual thresholding, using a user-provided value 
+"""
+        )
+
+        self.manual_threshold = cellprofiler.setting.Float(
+            text="Manual threshold",
+            value=0.2,  
+            minval=0,  # We don't let the user type in really small values
+            maxval=1,  # or large values
+            doc="""\
+Enter the manual threshold to try
+"""
+        )
+
+        self.do_measured = cellprofiler.setting.Binary(
+            text="Do you want to test thresholding based on a measurement?",
+            value=True,  # The default value is to choose automatically
+            doc="""\
+Choose *"Yes"* to try a threshold based on a previously measured value. 
+"""
+        )
+
+        self.measured_threshold = cellprofiler.setting.Measurement(
+            text="Select the measurement to use to threshold.",
+            cellprofiler.measurement.IMAGE,
+            doc = """\
+Choose a measurement previously created in the pipeline, or uploaded
+as a piece of metadata
+"""
+        )
+
+        self.do_robust = cellprofiler.setting.Binary(
+            text="Do you want to test RobustBackground thresholding?",
+            value=True,  # The default value is to choose automatically
+            doc="""\
+Choose *"Yes"* to try a threshold based on a previously measured value. 
+"""
+        )
+
+        self.lower_outlier_fraction = cellprofiler.setting.Float(
+            "Lower outlier fraction",
+            0.05,
+            minval=0,
+            maxval=1,
+            doc="""\
+*(Used only when customizing the "RobustBackground" method)*
+
+Discard this fraction of the pixels in the image starting with those of
+the lowest intensity.
+"""
+        )
+
+        self.upper_outlier_fraction = cellprofiler.setting.Float(
+            "Upper outlier fraction",
+            0.05,
+            minval=0,
+            maxval=1,
+            doc="""\
+*(Used only when customizing the "RobustBackground" method)*
+
+Discard this fraction of the pixels in the image starting with those of
+the highest intensity.
+"""
+        )
+
+        self.averaging_method = cellprofiler.setting.Choice(
+            "Averaging method",
+            [RB_MEAN, RB_MEDIAN, RB_MODE],
+            doc="""\
+*(Used only when customizing the "RobustBackground" method)*
+
+This setting determines how the intensity midpoint is determined.
+
+-  *{RB_MEAN}*: Use the mean of the pixels remaining after discarding
+   the outliers. This is a good choice if the cell density is variable
+   or high.
+-  *{RB_MEDIAN}*: Use the median of the pixels. This is a good choice
+   if, for all images, more than half of the pixels are in the
+   background after removing outliers.
+-  *{RB_MODE}*: Use the most frequently occurring value from among the
+   pixel values. The RobustBackground method groups the
+   intensities into bins (the number of bins is the square root of the
+   number of pixels in the unmasked portion of the image) and chooses
+   the intensity associated with the bin with the most pixels.
+""".format
+        )
+
+        self.variance_method = cellprofiler.setting.Choice(
+            "Variance method",
+            [RB_SD, RB_MAD],
+            doc="""\
+*(Used only when customizing the "RobustBackground" method)*
+
+Robust background adds a number of deviations (standard or MAD) to the
+average to get the final background. This setting chooses the method
+used to assess the variance in the pixels, after removing outliers.
+Choose one of *{RB_SD}* or *{RB_MAD}* (the median of the absolute
+difference of the pixel intensities from their median).
 """.format(**{
-                "GRADIENT_MAGNITUDE": GRADIENT_MAGNITUDE,
-                "GRADIENT_DIRECTION_X": GRADIENT_DIRECTION_X,
-                "GRADIENT_DIRECTION_Y": GRADIENT_DIRECTION_Y
+                "RB_MAD": RB_MAD,
+                "RB_SD": RB_SD
             })
         )
 
-        #
-        # A binary setting displays a checkbox.
-        #
-        self.automatic_smoothing = cellprofiler.setting.Binary(
-            text="Automatically choose the smoothing scale?",
-            value=True,  # The default value is to choose automatically
-            doc="The module will automatically choose a smoothing scale for you if you leave this checked."
+        self.number_of_deviations = cellprofiler.setting.Float(
+            "# of deviations",
+            2,
+            doc="""\
+*(Used only when customizing the "RobustBackground" method)*
+
+Robust background calculates the variance, multiplies it by the value
+given by this setting and adds it to the average. Adding several
+deviations raises the threshold well above the average.
+Use a larger number to be more stringent about identifying foreground pixels.
+Use a smaller number to be less stringent. It’s even possible to
+use a negative number if you want the threshold to be lower than the average
+(e.g., for images that are densely covered by foreground).
+"""
         )
 
-        #
-        # We do a little smoothing which supplies a scale to the gradient.
-        #
-        # We use a float setting so that the user can give us a number
-        # for the scale. The control will turn red if the user types in
-        # an invalid scale.
-        #
-        self.scale = cellprofiler.setting.Float(
-            text="Scale",
-            value=1,  # The default value is 1 - a short-range scale
-            minval=0.1,  # We don't let the user type in really small values
-            maxval=100,  # or large values
+        self.threshold_smoothing_scale = cellprofiler.setting.Float(
+            "Threshold smoothing scale",
+            0,
+            minval=0,
             doc="""\
-This is a scaling factor that supplies the sigma for a gaussian that's
-used to smooth the image. The gradient is calculated on the smoothed
-image, so large scales will give you long-range gradients and small
-scales will give you short-range gradients.
+This setting controls the scale used to smooth the input image before
+the threshold is applied.
+The input image can be optionally smoothed before being thresholded.
+Smoothing can improve the uniformity of the resulting objects, by
+removing holes and jagged edges caused by noise in the acquired image.
+Smoothing is most likely *not* appropriate if the input image is binary,
+if it has already been smoothed or if it is an output of a pixel-based classifier.
+The scale should be approximately the size of the artifacts to be
+eliminated by smoothing. A Gaussian is used with a sigma adjusted so
+that 1/2 of the Gaussian’s distribution falls within the diameter given
+by the scale (sigma = scale / 0.674)
+Use a value of 0 for no smoothing. Use a value of 1.3488 for smoothing
+with a sigma of 1.
 """
+        )
+
+        self.threshold_correction_factor = cellprofiler.setting.Float(
+            "Threshold correction factor",
+            1,
+            doc="""\
+This setting allows you to adjust the threshold as calculated by the
+above method. The value entered here adjusts the threshold either
+upwards or downwards, by multiplying it by this value. A value of 1
+means no adjustment, 0 to 1 makes the threshold more lenient and > 1
+makes the threshold more stringent.
+
+When the threshold is calculated automatically, you may find that the value 
+is consistently
+too stringent or too lenient across all images. This setting is helpful
+for adjusting the threshold to a value that you empirically determine is
+more suitable. For example, the {Otsu automatic thresholding
+inherently assumes that 50% of the image is covered by objects. If a
+larger percentage of the image is covered, the Otsu method will give a
+slightly biased threshold that may have to be corrected using this
+setting.
+"""
+        )
+
+        self.threshold_range = cellprofiler.setting.FloatRange(
+            "Lower and upper bounds on threshold",
+            (0, 1),
+            minval=0,
+            maxval=1,
+            doc="""\
+Enter the minimum and maximum allowable threshold, a value from 0 to 1.
+This is helpful as a safety precaution: when the threshold as calculated
+automatically is clearly outside a reasonable range, the min/max allowable
+threshold will override the automatic threshold.
+
+For example, if there are no objects in the field of view, the automatic
+threshold might be calculated as unreasonably low; the algorithm will
+still attempt to divide the foreground from background (even though
+there is no foreground), and you may end up with spurious false positive
+foreground regions. In such cases, you can estimate the background pixel
+intensity and set the lower bound according to this
+empirically-determined value.
+"""
+        )
+
+        self.choose_final_threshold = cellprofiler.setting.Choice(
+            "Which threshold should be used to generate your output image?",
+            choices=threshlist, value = 'Minimum cross entropy'
         )
 
     #
