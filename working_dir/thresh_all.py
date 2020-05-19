@@ -378,23 +378,22 @@ empirically-determined value.
     # for display.
     #
     def visible_settings(self):
-        #
-        # The superclass's "visible_settings" method returns [self.x_name,
-        # self.y_name], which are the input and output image settings.
-        #
-        visible_settings = super(ImageTemplate, self).visible_settings()
-
-        # Configure the visibility of additional settings below.
-        visible_settings += [
-            self.gradient_choice,
-            self.automatic_smoothing
-        ]
-
-        #
-        # Show the user the scale only if self.wants_smoothing is checked
-        #
-        if not self.automatic_smoothing:
-            visible_settings += [self.scale]
+        
+        visible_settings = [self.x_name, self.do_adaptive] 
+        if self.do_adaptive:
+            visible_settings += [self.adaptive_window_size]
+        visible_settings += [self.do_manual]
+        if self.do_manual:
+            visible_settings += [self.manual_threshold] 
+        visible_settings += [self.do_measured]
+        if self.do_measured:
+            visible_settings += [self.measured_threshold]
+        visible_settings += [self.do_robust]
+        if self.do_robust:
+            visible_settings += [self.lower_outlier_fraction,self.upper_outlier_fraction, 
+            self.averaging_method, self.variance_method,self.number_of_deviations]
+        visible_settings += [self.threshold_smoothing_scale, self.threshold_correction_factor,
+            self.threshold_range, self.y_name, self.choose_final_threshold]
 
         return visible_settings
 
