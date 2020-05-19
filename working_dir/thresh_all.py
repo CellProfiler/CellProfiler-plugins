@@ -133,8 +133,10 @@ class TestAllThresholds(cellprofiler.module.ImageProcessing):
         self.do_adaptive = cellprofiler.setting.Binary(
             text="Do you want to test adaptive thresholding?",
             value=True,  # The default value is to choose automatically
-            doc="""Choose *"Yes"* to try adaptive thresholding, using a user-provided window 
-            size."""
+            doc="""\
+Choose *"Yes"* to try adaptive thresholding, using a user-provided window 
+size.
+"""
         )
 
         self.adaptive_window_size = cellprofiler.setting.Integer(
@@ -142,9 +144,11 @@ class TestAllThresholds(cellprofiler.module.ImageProcessing):
             value=50,  
             minval=1,  # We don't let the user type in really small values
             maxval=1000,  # or large values
-            doc="""Enter the size of the window (in pixels) to be used for the adaptive method. 
-            Often a good choice is some multiple of the largest expected object size.
-            Note that windows greater than half the image size may report an error."""
+            doc="""\
+Enter the size of the window (in pixels) to be used for the adaptive method. 
+Often a good choice is some multiple of the largest expected object size.
+Note that windows greater than half the image size may report an error.
+"""
         )
 
         self.do_manual = cellprofiler.setting.Binary(
@@ -235,7 +239,12 @@ This setting determines how the intensity midpoint is determined.
    intensities into bins (the number of bins is the square root of the
    number of pixels in the unmasked portion of the image) and chooses
    the intensity associated with the bin with the most pixels.
-""".format
+""".format(**{
+                "RB_MEAN": RB_MEAN,
+                "RB_MEDIAN": RB_MEDIAN,
+                "RB_MODE": RB_MODE
+            }
+            )       
         )
 
         self.variance_method = cellprofiler.setting.Choice(
@@ -351,14 +360,14 @@ empirically-determined value.
         # The superclass's "settings" method returns [self.x_name, self.y_name],
         # which are the input and output image settings.
         #
-        settings = super(ImageTemplate, self).settings()
-
-        # Append additional settings here.
-        return settings + [
-            self.gradient_choice,
-            self.automatic_smoothing,
-            self.scale
-        ]
+        return [
+            self.x_name, self.do_adaptive, self.adaptive_window_size,
+            self.do_manual, self.manual_threshold, self.do_measured,
+            self.measured_threshold, self.do_robust, self.lower_outlier_fraction,
+            self.upper_outlier_fraction, self.averaging_method, self.variance_method,
+            self.number_of_deviations, self.threshold_smoothing_scale, self.threshold_correction_factor,
+            self.threshold_range, self.y_name, self.choose_final_threshold
+            ]
 
     #
     # "visible_settings" tells CellProfiler which settings should be
