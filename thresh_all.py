@@ -16,9 +16,30 @@ import scipy.ndimage
 ##################################
 
 import cellprofiler.image
+import cellprofiler.measurement
 import cellprofiler.module
 import cellprofiler.setting
+import cellprofiler.modules.threshold as threshold
 
+RB_MEAN = "Mean"
+RB_MEDIAN = "Median"
+RB_MODE = "Mode"
+RB_SD = "Standard deviation"
+RB_MAD = "Median absolute deviation"
+
+threshlist = [
+    "Global 2-class Otsu", 
+    "Global 3-class Otsu (middle to fore)", 
+    "Global 3-class Otsu (middle to back)",
+    "Local 2-class Otsu", 
+    "Local 3-class Otsu (middle to fore)", 
+    "Local 3-class Otsu (middle to back)",
+    "Minimum cross entropy",
+    "Manual", 
+    "Measurement",
+    "RobustBackground"
+    ]
+    
 __doc__ = """\
 TestAllThresholds
 =================
