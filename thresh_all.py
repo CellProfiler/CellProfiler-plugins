@@ -20,25 +20,11 @@ import cellprofiler.module
 import cellprofiler.setting
 
 __doc__ = """\
-ImageTemplate
-=============
+TestAllThresholds
+=================
 
-**ImageTemplate** is an example image processing module. It's recommended to
-put a brief description of this module here and go into more detail below.
-
-This is an example of a module that takes one image as an input and
-produces a second image for downstream processing. You can use this as
-a starting point for your own module: rename this file and put it in your
-plugins directory.
-
-The text you see here will be displayed as the help for your module, formatted
-as `reStructuredText <http://docutils.sourceforge.net/rst.html>`_.
-
-Note whether or not this module supports 3D image data and respects masks.
-A module which respects masks applies an image's mask and operates only on
-the image data not obscured by the mask. Update the table below to indicate 
-which image processing features this module supports.
-
+**TestAllThresholds** is a module that allows you to test many thresholds, and pass
+one forward as the finally selected method to other thresholds.
 |
 
 ============ ============ ===============
@@ -50,114 +36,42 @@ YES          NO           YES
 See also
 ^^^^^^^^
 
-Is there another **Module** that is related to this one? If so, refer
-to that **Module** in this section. Otherwise, this section can be omitted.
+All the thresholds here are implemented and taken from **Threshold**. 
+See that module's help for more information
 
 What do I need as input?
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-Are there any assumptions about input data someone using this module
-should be made aware of? For example, is there a strict requirement that
-image data be single-channel, or that the foreground is brighter than
-the background? Describe any assumptions here.
-
-This section can be omitted if there is no requirement on the input.
+An input greyscale image; if you want to use a measurement to threshold on, it should be
+calculated before this module (eg. calculated by MeasureImageIntensity, or loaded as a 
+piece of metadata).
 
 What do I get as output?
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-Describe the output of this module. This is necessary if the output is
-more complex than a single image. For example, if there is data displayed
-over the image then describe what the data represents.
+A thresholded image; when the eye is open, you can see the results of multiple thresholds.
+You will automatically view in the display Minimum Cross Entropy, Otsu 2-class, 
+Otsu 3 class (middle to foreground), and Otsu 3-class (middle to background).
+You can optionally add adaptive versions of the 3 Otsus, with a specified window size.
+You can also optionally add manual thresholds, measurement based thresholds, and RobustBackground.
 
-This section can be omitted if there is no specialized output.
 
 Measurements made by this module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Describe the measurements made by this module, if any. Typically, measurements
-are described in the following format:
-
-**Measurement category:**
-
--  *MeasurementName*: A brief description of the measurement.
--  *MeasurementName*: A brief description of the measurement.
-
-**Measurement category:**
-
--  *MeasurementName*: A brief description of the measurement.
--  *MeasurementName*: A brief description of the measurement.
-
-This section can be omitted if no measurements are made by this module.
-
 Technical notes
 ^^^^^^^^^^^^^^^
 
-Include implementation details or notes here. Additionally provide any 
-other background information about this module, including definitions
-or adopted conventions. Information which may be too specific to fit into
-the general description should be provided here.
+Inspired by scikit-image's version, as well as ImageJ's AutoThreshold.
 
-Omit this section if there is no technical information to mention.
-
-References
-^^^^^^^^^^
-
-Provide citations here, if appropriate. Citations are formatted as a list and,
-wherever possible, include a link to the original work. For example,
-
--  Meyer F, Beucher S (1990) “Morphological segmentation.” *J Visual
-   Communication and Image Representation* 1, 21-46.
-   (`link <http://dx.doi.org/10.1016/1047-3203(90)90014-M>`__)
 """
-
-#
-# Constants
-#
-# It's good programming practice to replace things like strings with
-# constants if they will appear more than once in your program. That way,
-# if someone wants to change the text, that text will change everywhere.
-# Also, you can't misspell it by accident.
-#
-GRADIENT_MAGNITUDE = "Gradient magnitude"
-GRADIENT_DIRECTION_X = "Gradient direction - X"
-GRADIENT_DIRECTION_Y = "Gradient direction - Y"
-
 
 #
 # The module class.
 #
-# Your module should "inherit" from cellprofiler.module.Module, or a
-# subclass of cellprofiler.module.Module. This module inherits from
-# cellprofiler.module.ImageProcessing, which is the base class for
-# image processing modules. Image processing modules take an image as
-# input and output an image.
-#
-# This module will use the methods from cellprofiler.module.ImageProcessing
-# unless you re-implement them. You can let cellprofiler.module.ImageProcessing
-# do most of the work and implement only what you need.
-#
-# Other classes you can inherit from are:
-#
-# -  cellprofiler.module.ImageSegmentation: modules which take an image
-#    as input and output a segmentation (objects) should inherit from this
-#    class.
-# -  cellprofiler.module.ObjectProcessing: modules which operate on objects
-#    should inherit from this class. These are modules that take objects as
-#    input and output new objects.
-#
-class ImageTemplate(cellprofiler.module.ImageProcessing):
-    #
-    # The module starts by declaring the name that's used for display,
-    # the category under which it is stored and the variable revision
-    # number which can be used to provide backwards compatibility if
-    # you add user-interface functionality later.
-    #
-    # This module's category is "Image Processing" which is defined
-    # by its superclass.
-    #
-    module_name = "ImageTemplate"
+class TestAllThresholds(cellprofiler.module.ImageProcessing):
 
+    module_name = "TestAllThresholds"
     variable_revision_number = 1
 
     #
