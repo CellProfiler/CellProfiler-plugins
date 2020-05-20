@@ -476,45 +476,35 @@ empirically-determined value.
         import matplotlib.pyplot
         import matplotlib.gridspec as gridspec
 
-        figure2 = matplotlib.pyplot.figure(figsize=(16,24), dpi=150, constrained_layout = True)
+        figure2 = matplotlib.pyplot.figure(figsize=(24,16), dpi=300, constrained_layout = True)
         gs = gridspec.GridSpec(y_plots, x_plots, figure=figure2)
         for eachplot in range(len(self.to_run)):
             ax = figure2.add_subplot(gs[eachplot])
             ax.imshow(self.thresh_dict[self.to_run[eachplot]][2],cmap='gray')
-            title = ax.set_title("\n".join(wrap(self.to_run[eachplot],20)), fontdict = {'fontsize':32})
+            title = ax.set_title("\n".join(wrap(self.to_run[eachplot],20)), fontdict = {'fontsize':40})
             ax.axis('off')
 
         thresh_panel = cellprofiler.gui.tools.figure_to_image(figure2)
 
-        figure3 = matplotlib.pyplot.figure(figsize=(8,12), dpi=150, constrained_layout = True)
-        gs = gridspec.GridSpec(3, 1, figure=figure3)
-        images = workspace.image_set
-        x = images.get_image(self.x_name.value)
-        ax1 = figure3.add_subplot(gs[0])
-        ax1.imshow(x.pixel_data*x.mask,cmap='gray')
-        title = ax1.set_title(self.x_name.value, fontdict = {'fontsize':32})
-        ax2 = figure3.add_subplot(gs[1])
-        ax2.imshow(self.thresh_dict[self.choose_final_threshold.value][2],cmap='gray')
-        title = ax2.set_title("\n".join(wrap(self.choose_final_threshold.value,20)), fontdict = {'fontsize':32})
-        ax3 = figure3.add_subplot(gs[2])
-        ax3.hist(x.pixel_data.reshape(-1),100)
-        title = ax3.set_title("Histogram", fontdict = {'fontsize':32})
-        #for eachplot in range(len(self.to_run)):
-            #ax = figure2.add_subplot(gs[eachplot])
-            #ax.imshow(self.thresh_dict[self.to_run[eachplot]][2],cmap='gray')
-            #title = ax.set_title("\n".join(wrap(self.to_run[eachplot],20)), fontdict = {'fontsize':16})
-            #ax.axis('off')
+        figure3 = matplotlib.pyplot.figure(figsize=(12,8),dpi=300)
+        ax = figure3.add_subplot(111)
+        ax.hist(workspace.display_data.input_pixel_data.reshape(-1),100)
+        matplotlib.pyplot.axvline(self.thresh_dict[self.choose_final_threshold.value][0], color='r', linewidth=2)
+        matplotlib.pyplot.axvline(self.threshold_range.value[0], color='k', linestyle='dotted', linewidth=2)
+        matplotlib.pyplot.axvline(self.threshold_range.value[1], color='k', linestyle='dotted', linewidth=2)
 
         hist_panel = cellprofiler.gui.tools.figure_to_image(figure3)
 
         figure.clf()
 
-        figure.set_subplots((2,1))
+        figure.set_subplots((2,2))
 
-        ax1 = figure.subplot_imshow_grayscale(0,0,hist_panel)
-        ax1.axis('off')
-        ax2 = figure.subplot_imshow_grayscale(1,0, thresh_panel)
-        ax2.axis('off')
+        ax1 = figure.subplot_imshow_grayscale(0,0,workspace.display_data.input_pixel_data, title=self.x_name.value)
+        ax2 = figure.subplot_imshow_grayscale(1,0,workspace.display_data.output_pixel_data, title=self.y_name.value,sharexy=ax1)
+        ax3 = figure.subplot_imshow(0,1,hist_panel, title = 'Histogram')
+        ax3.axis('off')
+        ax4 = figure.subplot_imshow_grayscale(1,1, thresh_panel)
+        ax4.axis('off')
 
 
     #
