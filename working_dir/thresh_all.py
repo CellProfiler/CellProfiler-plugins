@@ -404,7 +404,16 @@ empirically-determined value.
     # CellProfiler calls "run" on each image set in your pipeline.
     #
     def run(self, workspace):
-        pass
+        
+        x_name = self.x_name.value
+
+        images = workspace.image_set
+
+        x = images.get_image(x_name)
+        
+        local_threshold, global_threshold = self.get_threshold(x, workspace, self.choose_final_threshold.value)
+
+        print(local_threshold, global_threshold)
 
     #
     # "volumetric" indicates whether or not this module supports 3D images.
@@ -412,3 +421,34 @@ empirically-determined value.
     #
     def volumetric(self):
         return False
+
+    def get_threshold(self, image, workspace, method):
+        if method == "Minimum cross entropy":
+            return Threshold._threshold_li(image)
+
+        if method == "Manual":
+            return self.manual_threshold.value, self.manual_threshold.value
+
+        if method == "Measurement":
+            m = workspace.measurements
+
+            # Thresholds are stored as single element arrays.  Cast to float to extract the value.
+            t_orig = float(m.get_current_image_measurement(self.measured_threshold.value))
+
+            t_final = t_orig * self.threshold_correction_factor.value
+
+            return min(max(t_final, self.threshold_range.min), self.threshold_range.max), t_orig
+
+        """if self.threshold_operation == centrosome.threshold.TM_ROBUST_BACKGROUND:
+            return self._threshold_robust_background(image)
+
+        if self.threshold_operation == centrosome.threshold.TM_OTSU:
+            if self.two_class_otsu.value == O_TWO_CLASS:
+                return self._threshold_otsu(image)
+
+        return self._threshold_otsu3(image)
+        
+        #Pull from here as we implement them
+        ["Global 2-class Otsu", "Global 3-class Otsu (middle to fore)", "Global 3-class Otsu (middle to back)",
+        "Local 2-class Otsu", "Local 3-class Otsu (middle to fore)", "Local 3-class Otsu (middle to back)",
+        "RobustBackground"]"""
