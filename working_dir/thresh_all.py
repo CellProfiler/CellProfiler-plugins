@@ -19,7 +19,7 @@ import cellprofiler.image
 import cellprofiler.measurement
 import cellprofiler.module
 import cellprofiler.setting
-import cellprofiler.modules.threshold as threshold
+from cellprofiler.modules.threshold import Threshold
 
 RB_MEAN = "Mean"
 RB_MEDIAN = "Median"
@@ -114,7 +114,7 @@ class TestAllThresholds(cellprofiler.module.ImageProcessing):
         #    in your module.
         # -  y_name: an ImageNameProvider makes the image available to subsequent
         #    modules.
-        super(ImageTemplate, self).create_settings()
+        super(TestAllThresholds, self).create_settings()
 
         #
         # reST help that gets displayed when the user presses the
@@ -177,9 +177,12 @@ Choose *"Yes"* to try a threshold based on a previously measured value.
 """
         )
 
+        def object_function():
+            return cellprofiler.measurement.IMAGE
+
         self.measured_threshold = cellprofiler.setting.Measurement(
             text="Select the measurement to use to threshold.",
-            cellprofiler.measurement.IMAGE,
+            object_fn= object_function,
             doc = """\
 Choose a measurement previously created in the pipeline, or uploaded
 as a piece of metadata
@@ -401,68 +404,11 @@ empirically-determined value.
     # CellProfiler calls "run" on each image set in your pipeline.
     #
     def run(self, workspace):
-        #
-        # The superclass's "run" method handles retreiving the input image
-        # and saving the output image. Module-specific behavior is defined
-        # by setting "self.function", defined in this module. "self.function"
-        # is called after retrieving the input image and before saving
-        # the output image.
-        #
-        # The first argument of "self.function" is always the input image
-        # data (as a numpy array). The remaining arguments are the values of
-        # the module settings as they are returned from "settings" (excluding
-        # "self.y_data", or the output image).
-        #
-        self.function = gradient_image
-
-        super(ImageTemplate, self).run(workspace)
+        pass
 
     #
     # "volumetric" indicates whether or not this module supports 3D images.
-    # The "gradient_image" function is inherently 2D, and we've noted this
-    # in the documentation for the module. Explicitly return False here
-    # to indicate that 3D images are not supported.
+    # Thresholding supports 3D, but our display does not, so let's say false.
     #
     def volumetric(self):
         return False
-
-#
-# This is the function that gets called during "run" to create the output image.
-# The first parameter must be the input image data. The remaining parameters are
-# the additional settings defined in "settings", in the order they are returned.
-#
-# This function must return the output image data (as a numpy array).
-#
-def gradient_image(pixels, gradient_choice, automatic_smoothing, scale):
-    #
-    # Get the smoothing parameter
-    #
-    if automatic_smoothing:
-        # Pick the mode of the power spectrum - obviously this
-        # is pretty hokey, not intended to really find a good number.
-        #
-        fft = numpy.fft.fft2(pixels)
-        power2 = numpy.sqrt((fft * fft.conjugate()).real)
-        mode = numpy.argwhere(power2 == power2.max())[0]
-        scale = numpy.sqrt(numpy.sum((mode + .5) ** 2))
-
-    gradient_magnitude = scipy.ndimage.gaussian_gradient_magnitude(pixels, scale)
-
-    if gradient_choice == GRADIENT_MAGNITUDE:
-        gradient_image = gradient_magnitude
-    else:
-        # Image data is indexed by rows and columns, with a given point located at
-        # position (row, column). Here, x represents the column coordinate (at index 1)
-        # and y represents the row coordinate (at index 0).
-        #
-        # You can learn more about image coordinate systems here:
-        # http://scikit-image.org/docs/dev/user_guide/numpy_images.html#coordinate-conventions
-        x = scipy.ndimage.correlate1d(gradient_magnitude, [-1, 0, 1], 1)
-        y = scipy.ndimage.correlate1d(gradient_magnitude, [-1, 0, 1], 0)
-        norm = numpy.sqrt(x ** 2 + y ** 2)
-        if gradient_choice == GRADIENT_DIRECTION_X:
-            gradient_image = .5 + x / norm / 2
-        else:
-            gradient_image = .5 + y / norm / 2
-
-    return gradient_image
