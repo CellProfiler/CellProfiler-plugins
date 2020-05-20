@@ -412,9 +412,29 @@ empirically-determined value.
 
         x = images.get_image(x_name)
         
-        final_threshold, original_threshold, output_image = self.get_threshold(x, workspace, self.choose_final_threshold.value)
+        to_run = ["Global 2-class Otsu",  "Global 3-class Otsu (middle to fore)", 
+        "Global 3-class Otsu (middle to back)", "Minimum cross entropy"]
 
-        print(final_threshold, original_threshold)
+        if self.do_adaptive.value:
+            to_run = to_run[:-1]+ ["Local 2-class Otsu", "Local 3-class Otsu (middle to fore)", 
+            "Local 3-class Otsu (middle to back)"] + [to_run[-1]]
+        
+        if self.do_robust.value:
+            to_run.append("RobustBackground")
+
+        if self.do_manual.value:
+            to_run.append("Manual")
+
+        if self.do_measured.value:
+            to_run.append("Measurement")
+
+        thresh_dict = {}
+
+        for each_thresh in to_run:
+            final_threshold, original_threshold, output_image = self.get_threshold(x, workspace, each_thresh)
+            thresh_dict[each_thresh] = (final_threshold, original_threshold, output_image)
+
+        print('hello')
 
     #
     # "volumetric" indicates whether or not this module supports 3D images.
