@@ -412,31 +412,31 @@ empirically-determined value.
 
         x = images.get_image(x_name)
         
-        to_run = ["Global 2-class Otsu",  "Global 3-class Otsu (middle to fore)", 
+        self.to_run = ["Global 2-class Otsu",  "Global 3-class Otsu (middle to fore)", 
         "Global 3-class Otsu (middle to back)", "Minimum cross entropy"]
 
         if self.do_adaptive.value:
-            to_run = to_run[:-1]+ ["Local 2-class Otsu", "Local 3-class Otsu (middle to fore)", 
-            "Local 3-class Otsu (middle to back)"] + [to_run[-1]]
+            self.to_run = self.to_run[:-1]+ ["Local 2-class Otsu", "Local 3-class Otsu (middle to fore)", 
+            "Local 3-class Otsu (middle to back)"] + [self.to_run[-1]]
         
         if self.do_robust.value:
-            to_run.append("RobustBackground")
+            self.to_run.append("RobustBackground")
 
         if self.do_manual.value:
-            to_run.append("Manual")
+            self.to_run.append("Manual")
 
         if self.do_measured.value:
-            to_run.append("Measurement")
+            self.to_run.append("Measurement")
 
-        thresh_dict = {}
+        self.thresh_dict = {}
 
-        for each_thresh in to_run:
+        for each_thresh in self.to_run:
             final_threshold, original_threshold, output_image = self.get_threshold(x, workspace, each_thresh)
-            thresh_dict[each_thresh] = (final_threshold, original_threshold, output_image)
+            self.thresh_dict[each_thresh] = (final_threshold, original_threshold, output_image)
 
         measurements = workspace.measurements
 
-        output_final_thresh, output_orig_thresh, output_binary = thresh_dict[self.choose_final_threshold.value]
+        output_final_thresh, output_orig_thresh, output_binary = self.thresh_dict[self.choose_final_threshold.value]
 
         y = cellprofiler.image.Image(
             image=output_binary,
@@ -453,22 +453,69 @@ empirically-determined value.
             workspace.display_data.output_pixel_data = y.pixel_data
 
     def display(self, workspace, figure):
-        figure.set_subplots((2, 1))
+        from cellprofiler.gui.tools import figure_to_image, only_display_image
 
-        figure.subplot_imshow_grayscale(
-            0,
-            0,
-            workspace.display_data.input_pixel_data,
-            title=u"Original image: {}".format(self.x_name.value)
-        )
+        if len(self.to_run)==4:
+            x_plots = 2
+            y_plots = 2
+        elif len(self.to_run)<7:
+            x_plots = 2
+            y_plots = 3
+        elif len(self.to_run)<10:
+            x_plots = 3
+            y_plots = 3
+        else:
+            x_plots = 3
+            y_plots = 4
+        
+        from textwrap import wrap
 
-        figure.subplot_imshow_grayscale(
-            1,
-            0,
-            workspace.display_data.output_pixel_data,
-            title=u"Thresholded image: {}".format(self.y_name.value),
-            sharexy=figure.subplot(0, 0)
-        )
+        count = 0
+        
+        import matplotlib
+        import matplotlib.pyplot
+        import matplotlib.gridspec as gridspec
+
+        figure2 = matplotlib.pyplot.figure(figsize=(16,24), dpi=150, constrained_layout = True)
+        gs = gridspec.GridSpec(y_plots, x_plots, figure=figure2)
+        for eachplot in range(len(self.to_run)):
+            ax = figure2.add_subplot(gs[eachplot])
+            ax.imshow(self.thresh_dict[self.to_run[eachplot]][2],cmap='gray')
+            title = ax.set_title("\n".join(wrap(self.to_run[eachplot],20)), fontdict = {'fontsize':32})
+            ax.axis('off')
+
+        thresh_panel = cellprofiler.gui.tools.figure_to_image(figure2)
+
+        figure3 = matplotlib.pyplot.figure(figsize=(8,12), dpi=150, constrained_layout = True)
+        gs = gridspec.GridSpec(3, 1, figure=figure3)
+        images = workspace.image_set
+        x = images.get_image(self.x_name.value)
+        ax1 = figure3.add_subplot(gs[0])
+        ax1.imshow(x.pixel_data*x.mask,cmap='gray')
+        title = ax1.set_title(self.x_name.value, fontdict = {'fontsize':32})
+        ax2 = figure3.add_subplot(gs[1])
+        ax2.imshow(self.thresh_dict[self.choose_final_threshold.value][2],cmap='gray')
+        title = ax2.set_title("\n".join(wrap(self.choose_final_threshold.value,20)), fontdict = {'fontsize':32})
+        ax3 = figure3.add_subplot(gs[2])
+        ax3.hist(x.pixel_data.reshape(-1),100)
+        title = ax3.set_title("Histogram", fontdict = {'fontsize':32})
+        #for eachplot in range(len(self.to_run)):
+            #ax = figure2.add_subplot(gs[eachplot])
+            #ax.imshow(self.thresh_dict[self.to_run[eachplot]][2],cmap='gray')
+            #title = ax.set_title("\n".join(wrap(self.to_run[eachplot],20)), fontdict = {'fontsize':16})
+            #ax.axis('off')
+
+        hist_panel = cellprofiler.gui.tools.figure_to_image(figure3)
+
+        figure.clf()
+
+        figure.set_subplots((2,1))
+
+        ax1 = figure.subplot_imshow_grayscale(0,0,hist_panel)
+        ax1.axis('off')
+        ax2 = figure.subplot_imshow_grayscale(1,0, thresh_panel)
+        ax2.axis('off')
+
 
     #
     # "volumetric" indicates whether or not this module supports 3D images.
