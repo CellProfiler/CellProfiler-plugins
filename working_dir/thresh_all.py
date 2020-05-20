@@ -442,22 +442,36 @@ empirically-determined value.
         workspace, module = self.make_workspace(image.pixel_data,mask=image.mask)
 
         if method == "Minimum cross entropy":
-            t_final, t_orig, self.run_mce(image, workspace, module)
-            return t_final, t_orig, self.apply_threshold(image, t_final, self.threshold_smoothing_scale)
+            t_final, t_orig = self.run_mce(image, workspace, module)
+            return t_final, t_orig, self.apply_threshold(image, t_final, self.threshold_smoothing_scale.value)
 
-        """if self.threshold_operation == centrosome.threshold.TM_ROBUST_BACKGROUND:
-            return self._threshold_robust_background(image)
+        if method == "Global 2-class Otsu":
+            t_final, t_orig = self.run_global_otsu_2(image, workspace, module)
+            return t_final, t_orig, self.apply_threshold(image, t_final, self.threshold_smoothing_scale.value)
 
-        if self.threshold_operation == centrosome.threshold.TM_OTSU:
-            if self.two_class_otsu.value == O_TWO_CLASS:
-                return self._threshold_otsu(image)
+        if method == "Global 3-class Otsu (middle to fore)":
+            t_final, t_orig = self.run_global_otsu_3f(image, workspace, module)
+            return t_final, t_orig, self.apply_threshold(image, t_final, self.threshold_smoothing_scale.value)
 
-        return self._threshold_otsu3(image)
-        
-        #Pull from here as we implement them
-        [, "Global 3-class Otsu (middle to fore)", "Global 3-class Otsu (middle to back)",
-        "Local 2-class Otsu", "Local 3-class Otsu (middle to fore)", "Local 3-class Otsu (middle to back)",
-        "RobustBackground"]"""
+        if method == "Global 3-class Otsu (middle to back)":
+            t_final, t_orig = self.run_global_otsu_3b(image, workspace, module)
+            return t_final, t_orig, self.apply_threshold(image, t_final, self.threshold_smoothing_scale.value)
+
+        if method == "Local 2-class Otsu":
+            t_final, t_orig = self.run_local_otsu_2(image, workspace, module)
+            return numpy.mean(t_final), t_orig, self.apply_threshold(image, t_final, self.threshold_smoothing_scale.value)
+
+        if method == "Local 3-class Otsu (middle to fore)":
+            t_final, t_orig = self.run_local_otsu_3f(image, workspace, module)
+            return numpy.mean(t_final), t_orig, self.apply_threshold(image, t_final, self.threshold_smoothing_scale.value)
+
+        if method == "Local 3-class Otsu (middle to back)":
+            t_final, t_orig = self.run_local_otsu_3b(image, workspace, module)
+            return numpy.mean(t_final), t_orig, self.apply_threshold(image, t_final, self.threshold_smoothing_scale.value)
+
+        if method == "RobustBackground":
+            t_final, t_orig = self.run_robustbackground(image, workspace, module)
+            return t_final, t_orig, self.apply_threshold(image, t_final, self.threshold_smoothing_scale.value)
 
     def make_workspace(self, image, mask=None, dimensions=2):
         '''Make a workspace for running Threshold. Taken from CellProfiler's test suite.'''
@@ -503,4 +517,62 @@ empirically-determined value.
         t_final, t_orig = module.get_threshold(image, workspace)
         return t_final, t_orig
     
+    def run_global_otsu_2(self, image, workspace, module):
+        module.threshold_scope.value = "Global"
+        module.global_operation.value = "Otsu"
+        module.two_class_otsu.value = "Two classes"
+        t_final, t_orig = module.get_threshold(image, workspace)
+        return t_final, t_orig
+
+    def run_global_otsu_3f(self, image, workspace, module):
+        module.threshold_scope.value = "Global"
+        module.global_operation.value = "Otsu"
+        module.two_class_otsu.value = "Three classes"
+        module.assign_middle_to_foreground.value = "Foreground"
+        t_final, t_orig = module.get_threshold(image, workspace)
+        return t_final, t_orig
+
+    def run_global_otsu_3b(self, image, workspace, module):
+        module.threshold_scope.value = "Global"
+        module.global_operation.value = "Otsu"
+        module.two_class_otsu.value = "Three classes"
+        module.assign_middle_to_foreground.value = "Background"
+        t_final, t_orig = module.get_threshold(image, workspace)
+        return t_final, t_orig
     
+    def run_local_otsu_2(self, image, workspace, module):
+        module.threshold_scope.value = "Adaptive"
+        module.global_operation.value = "Otsu"
+        module.two_class_otsu.value = "Two classes"
+        module.adaptive_window_size.value = self.adaptive_window_size.value
+        t_final, t_orig = module.get_threshold(image, workspace)
+        return t_final, t_orig
+
+    def run_local_otsu_3f(self, image, workspace, module):
+        module.threshold_scope.value = "Adaptive"
+        module.global_operation.value = "Otsu"
+        module.two_class_otsu.value = "Three classes"
+        module.assign_middle_to_foreground.value = "Foreground"
+        module.adaptive_window_size.value = self.adaptive_window_size.value
+        t_final, t_orig = module.get_threshold(image, workspace)
+        return t_final, t_orig
+
+    def run_local_otsu_3b(self, image, workspace, module):
+        module.threshold_scope.value = "Adaptive"
+        module.global_operation.value = "Otsu"
+        module.two_class_otsu.value = "Three classes"
+        module.assign_middle_to_foreground.value = "Background"
+        module.adaptive_window_size.value = self.adaptive_window_size.value
+        t_final, t_orig = module.get_threshold(image, workspace)
+        return t_final, t_orig
+
+    def run_robustbackground(self, image, workspace, module):
+        module.threshold_scope.value = "Global"
+        module.global_operation.value = "RobustBackground"
+        module.averaging_method.value = self.averaging_method.value
+        module.variance_method.value = self.variance_method.value
+        module.number_of_deviations.value =  self.number_of_deviations.value
+        module.lower_outlier_fraction.value = self.lower_outlier_fraction.value
+        module.upper_outlier_fraction.value = self.upper_outlier_fraction.value
+        t_final, t_orig = module.get_threshold(image, workspace)
+        return t_final, t_orig
