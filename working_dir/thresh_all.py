@@ -6,6 +6,7 @@
 #
 #################################
 
+import centrosome
 import numpy
 import scipy.ndimage
 
@@ -411,9 +412,9 @@ empirically-determined value.
 
         x = images.get_image(x_name)
         
-        local_threshold, global_threshold = self.get_threshold(x, workspace, self.choose_final_threshold.value)
+        final_threshold, original_threshold, output_image = self.get_threshold(x, workspace, self.choose_final_threshold.value)
 
-        print(local_threshold, global_threshold)
+        print(final_threshold, original_threshold)
 
     #
     # "volumetric" indicates whether or not this module supports 3D images.
@@ -423,11 +424,8 @@ empirically-determined value.
         return False
 
     def get_threshold(self, image, workspace, method):
-        if method == "Minimum cross entropy":
-            return Threshold._threshold_li(image)
-
         if method == "Manual":
-            return self.manual_threshold.value, self.manual_threshold.value
+            return self.manual_threshold.value, self.manual_threshold.value, self.apply_threshold(image, self.manual_threshold.value, 0)
 
         if method == "Measurement":
             m = workspace.measurements
@@ -437,7 +435,15 @@ empirically-determined value.
 
             t_final = t_orig * self.threshold_correction_factor.value
 
-            return min(max(t_final, self.threshold_range.min), self.threshold_range.max), t_orig
+            t_final = min(max(t_final, self.threshold_range.min), self.threshold_range.max)
+
+            return t_final, t_orig, self.apply_threshold(image, t_final, 0)
+
+        workspace, module = self.make_workspace(image.pixel_data,mask=image.mask)
+
+        if method == "Minimum cross entropy":
+            t_final, t_orig, self.run_mce(image, workspace, module)
+            return t_final, t_orig, self.apply_threshold(image, t_final, self.threshold_smoothing_scale)
 
         """if self.threshold_operation == centrosome.threshold.TM_ROBUST_BACKGROUND:
             return self._threshold_robust_background(image)
@@ -449,6 +455,52 @@ empirically-determined value.
         return self._threshold_otsu3(image)
         
         #Pull from here as we implement them
-        ["Global 2-class Otsu", "Global 3-class Otsu (middle to fore)", "Global 3-class Otsu (middle to back)",
+        [, "Global 3-class Otsu (middle to fore)", "Global 3-class Otsu (middle to back)",
         "Local 2-class Otsu", "Local 3-class Otsu (middle to fore)", "Local 3-class Otsu (middle to back)",
         "RobustBackground"]"""
+
+    def make_workspace(self, image, mask=None, dimensions=2):
+        '''Make a workspace for running Threshold. Taken from CellProfiler's test suite.'''
+        module = Threshold()
+        module.x_name.value = 'input'
+        module.y_name.value = 'output'
+        module.threshold_range.value = self.threshold_range.value
+        module.threshold_correction_factor.value = self.threshold_correction_factor.value
+        module.threshold_smoothing_scale.value = self.threshold_smoothing_scale.value
+        pipeline = cellprofiler.pipeline.Pipeline()
+        object_set = cellprofiler.object.ObjectSet()
+        image_set_list = cellprofiler.image.ImageSetList()
+        image_set = image_set_list.get_image_set(0)
+        workspace = cellprofiler.workspace.Workspace(pipeline,
+                                                     module,
+                                                     image_set,
+                                                     object_set,
+                                                     cellprofiler.measurement.Measurements(),
+                                                     image_set_list)
+        image_set.add('input',
+                      cellprofiler.image.Image(image, dimensions=dimensions) if mask is None
+                      else cellprofiler.image.Image(image, mask, dimensions=dimensions))
+        return workspace, module
+
+    def apply_threshold(self, image, threshold, smoothing):
+        data = image.pixel_data
+
+        mask = image.mask
+
+        sigma = smoothing / 0.6744 / 2.0
+
+        blurred_image = centrosome.smooth.smooth_with_function_and_mask(
+            data,
+            lambda x: scipy.ndimage.gaussian_filter(x, sigma, mode="constant", cval=0),
+            mask
+        )
+
+        return (blurred_image >= threshold) & mask
+
+    def run_mce(self, image, workspace, module):
+        module.threshold_scope.value = "Global"
+        module.global_operation.value = "Minimum cross entropy"
+        t_final, t_orig = module.get_threshold(image, workspace)
+        return t_final, t_orig
+    
+    
