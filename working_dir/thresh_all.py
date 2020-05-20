@@ -179,7 +179,7 @@ Choose *"Yes"* to try a threshold based on a previously measured value.
         )
 
         def object_function():
-            return cellprofiler.measurement.IMAGE
+            return "Image"
 
         self.measured_threshold = cellprofiler.setting.Measurement(
             text="Select the measurement to use to threshold.",
@@ -434,8 +434,19 @@ empirically-determined value.
             final_threshold, original_threshold, output_image = self.get_threshold(x, workspace, each_thresh)
             thresh_dict[each_thresh] = (final_threshold, original_threshold, output_image)
 
-        print('hello')
+        measurements = workspace.measurements
 
+        output_final_thresh, output_orig_thresh, output_binary = thresh_dict[self.choose_final_threshold.value]
+
+        y = cellprofiler.image.Image(
+            image=output_binary,
+            parent_image=x
+        )
+
+        images.add(self.y_name.value, y)
+
+        self.add_threshold_measurements(self.y_name.value, measurements, output_final_thresh, output_orig_thresh)
+        self.add_fg_bg_measurements(self.y_name.value, measurements, x, output_binary)
     #
     # "volumetric" indicates whether or not this module supports 3D images.
     # Thresholding supports 3D, but our display does not, so let's say false.
@@ -596,3 +607,82 @@ empirically-determined value.
         module.upper_outlier_fraction.value = self.upper_outlier_fraction.value
         t_final, t_orig = module.get_threshold(image, workspace)
         return t_final, t_orig
+
+    def get_measurement_objects_name(self):
+        return self.y_name.value
+
+    def add_threshold_measurements(self, objname, measurements, local_threshold, global_threshold):
+        measurements.add_measurement("Image", "Threshold_FinalThreshold_" + objname, local_threshold)
+
+        measurements.add_measurement("Image", "Threshold_OrigThreshold_" + objname, global_threshold)
+
+    def add_fg_bg_measurements(self, objname, measurements, image, binary_image):
+        data = image.pixel_data
+
+        mask = image.mask
+
+        wv = centrosome.threshold.weighted_variance(data, mask, binary_image)
+
+        measurements.add_measurement(
+            "Image",
+            "Threshold_WeightedVariance_" + objname,
+            numpy.array([wv], dtype=float)
+        )
+
+        entropies = centrosome.threshold.sum_of_entropies(data, mask, binary_image)
+
+        measurements.add_measurement(
+            "Image",
+            "Threshold_SumOfEntropies_" + objname,
+            numpy.array([entropies], dtype=float)
+        )
+
+    def get_measurement_columns(self, pipeline, object_name=None):
+        if object_name is None:
+            object_name = self.y_name.value
+
+        return [
+            (
+                "Image",
+                "Threshold_FinalThreshold_" + object_name,
+                cellprofiler.measurement.COLTYPE_FLOAT
+            ),
+            (
+                "Image",
+                "Threshold_OrigThreshold_" + object_name,
+                cellprofiler.measurement.COLTYPE_FLOAT
+            ),
+            (
+                "Image",
+                "Threshold_WeightedVariance_" + object_name,
+                cellprofiler.measurement.COLTYPE_FLOAT
+            ),
+            (
+                "Image",
+                "Threshold_SumOfEntropies_" + object_name,
+                cellprofiler.measurement.COLTYPE_FLOAT
+            )
+        ]
+
+    def get_categories(self, pipeline, object_name):
+        if object_name == "Image":
+            return ["Threshold"]
+
+        return []
+
+    def get_measurements(self, pipeline, object_name, category):
+        if object_name == "Image" and category == "Threshold":
+            return [
+                "OrigThreshold",
+                "FinalThreshold",
+                "SumOfEntropies",
+                "WeightedVariance"
+            ]
+
+        return []
+
+    def get_measurement_images(self, pipeline, object_name, category, measurement):
+        if measurement in self.get_measurements(pipeline, object_name, category):
+            return [self.get_measurement_objects_name()]
+
+        return []
