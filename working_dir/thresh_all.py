@@ -447,6 +447,29 @@ empirically-determined value.
 
         self.add_threshold_measurements(self.y_name.value, measurements, output_final_thresh, output_orig_thresh)
         self.add_fg_bg_measurements(self.y_name.value, measurements, x, output_binary)
+
+        if self.show_window:
+            workspace.display_data.input_pixel_data = x.pixel_data
+            workspace.display_data.output_pixel_data = y.pixel_data
+
+    def display(self, workspace, figure):
+        figure.set_subplots((2, 1))
+
+        figure.subplot_imshow_grayscale(
+            0,
+            0,
+            workspace.display_data.input_pixel_data,
+            title=u"Original image: {}".format(self.x_name.value)
+        )
+
+        figure.subplot_imshow_grayscale(
+            1,
+            0,
+            workspace.display_data.output_pixel_data,
+            title=u"Thresholded image: {}".format(self.y_name.value),
+            sharexy=figure.subplot(0, 0)
+        )
+
     #
     # "volumetric" indicates whether or not this module supports 3D images.
     # Thresholding supports 3D, but our display does not, so let's say false.
