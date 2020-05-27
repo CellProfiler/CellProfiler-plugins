@@ -164,6 +164,25 @@ to do this for each image individually or across all images in a group.
 """
         )
 
+        self.do_scalar_multiply = cellprofiler.setting.Binary(
+            'Should the images be divided by a scalar based on group percentiles', 
+            False,
+            doc="""\
+Choose if per group, the images should have a certain user-defined percentile compared,
+and then divided by the ratio between the percentile value of a given group and the 
+dimmest group. Example: if the 99th percentile for A, C, G, and T is 0.5, 0.25, 0.3, 
+and 0.1, respectively, the pixel values for those groups will be divided by 5, 2.5, 3, 
+and 1.  This will be applied before masking or rescaling or histogram compensation."""
+        )
+
+        self.scalar_percentile = cellprofiler.setting.Float(    
+            'What percentile should be used for multiplication',
+            value = 99,
+            minval = 0.1,
+            maxval = 100,
+            doc = "Enter a percentile between 0.1 and 100 to use for comparing ratios"
+        )
+
     def add_image(self, can_delete=True):
         """Add an image to the image_groups collection
 
@@ -232,6 +251,7 @@ Select the objects to perform compensation within."""
         result += [self.images_or_objects]
         result += [object_group.object_name for object_group in self.object_groups]
         result += [self.do_rescale_input, self.do_rescale_after_mask, self.do_match_histograms, self.do_rescale_output]
+        result += [self.do_scalar_multiply, self.scalar_percentile]
         return result
 
     def prepare_settings(self, setting_values):
@@ -258,6 +278,9 @@ Select the objects to perform compensation within."""
         if self.images_or_objects == CC_OBJECTS:
             for object_group in self.object_groups:
                 result += object_group.visible_settings()
+        result += [self.do_scalar_multiply]
+        if self.do_scalar_multiply:
+            result += [self.scalar_percentile]
         result += [self.do_rescale_input, self.do_rescale_after_mask, self.do_match_histograms] 
         if self.do_match_histograms != 'No':
             result += [self.histogram_match_class]
@@ -274,6 +297,27 @@ Select the objects to perform compensation within."""
         sample_pixels = sample_image.pixel_data
         sample_shape = sample_pixels.shape
 
+        group_scaling = {}
+
+        if self.do_scalar_multiply.value:
+            temp_im_dict = {}
+            for eachgroup in self.image_groups:
+                eachimage = workspace.image_set.get_image(eachgroup.image_name.value).pixel_data
+                if eachgroup.class_num.value not in temp_im_dict.keys():
+                    temp_im_dict[eachgroup.class_num.value] = list(eachimage)
+                else:
+                    temp_im_dict[eachgroup.class_num.value] += list(eachimage)
+            for eachclass in temp_im_dict.keys():
+                group_scaling[eachclass] = numpy.percentile(temp_im_dict[eachclass], self.scalar_percentile.value)
+            min_intensity = numpy.min(group_scaling.values())
+            for key, value in group_scaling.iteritems():
+                group_scaling[key] = value / min_intensity
+        
+        else:
+            for eachgroup in self.image_groups:
+                if eachgroup.class_num.value not in group_scaling.keys():
+                    group_scaling[eachgroup.class_num.value] = 1.0
+
         if self.images_or_objects.value == CC_OBJECTS:
             object_name = self.object_groups[0]
             objects = workspace.object_set.get_objects(object_name.object_name.value)
@@ -282,6 +326,7 @@ Select the objects to perform compensation within."""
 
         for eachgroup in self.image_groups:
             eachimage = workspace.image_set.get_image(eachgroup.image_name.value).pixel_data
+            eachimage = eachimage / group_scaling[eachgroup.class_num.value]
             if self.do_rescale_input.value == 'Yes':
                 eachimage =  skimage.exposure.rescale_intensity(
                     eachimage, 
@@ -296,7 +341,7 @@ Select the objects to perform compensation within."""
                     in_range = (eachimage_no_bg.min(),eachimage_no_bg.max()),
                     out_range = ((1.0/65535),1.0)
                     )
-            eachimage = eachimage * 65535
+            eachimage = numpy.round(eachimage * 65535)
             if eachgroup.class_num.value not in imdict.keys():
                 imdict[eachgroup.class_num.value] = [[eachgroup.image_name.value],eachimage.reshape(-1),[eachgroup.output_name.value]]
             else:
