@@ -250,7 +250,7 @@ Select the objects to perform compensation within."""
             result += [image_group.image_name, image_group.class_num, image_group.output_name]
         result += [self.images_or_objects]
         result += [object_group.object_name for object_group in self.object_groups]
-        result += [self.do_rescale_input, self.do_rescale_after_mask, self.do_match_histograms, self.do_rescale_output]
+        result += [self.do_rescale_input, self.do_rescale_after_mask, self.do_match_histograms, self.histogram_match_class, self.do_rescale_output]
         result += [self.do_scalar_multiply, self.scalar_percentile]
         return result
 
