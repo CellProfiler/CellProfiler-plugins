@@ -401,7 +401,7 @@ Enter the name to be given to the barcode score image.""")
         matchedbarcode = []
         matchedbarcodecode = []
         matchedbarcodeid = []
-        if self.wants_call_image:
+        if self.wants_call_image or self.wants_score_image:
             objects = workspace.object_set.get_objects(self.input_object_name.value)
             labels = objects.segmented
             pixel_data_call = objects.segmented
