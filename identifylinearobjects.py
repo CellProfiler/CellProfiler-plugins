@@ -16,7 +16,7 @@ import cellprofiler.measurement as cpmeas
 import cellprofiler.object as cpo
 import cellprofiler.setting as cps
 
-import skimage.filter
+import skimage.filters
 from skimage.transform import rotate
 
 C_LINEAROBJECTS = "LinearObject"
@@ -83,9 +83,9 @@ class IdentifyLinearObjects(cpm.Module):
             <b>IdentifyLinearObjects</b> automatically calculates the parameters
             used to determine whether two found-linear object centers belong to the
             same linear object.
-            <p>Select <i>%(YES)s</i> to have <b>IdentifyLinearObjects</b>
+            <p>Select <i>"Yes"</i> to have <b>IdentifyLinearObjects</b>
             automatically calculate the distance from the linear object length
-            and width. Select <i>%(NO)s</i> to set the distances manually.</p>"""%globals())
+            and width. Select <i>"No"</i> to set the distances manually.</p>"""%globals())
 
         self.space_distance = cps.Float(
             "Spatial distance", 5, minval = 1,doc = """
@@ -108,8 +108,8 @@ class IdentifyLinearObjects(cpm.Module):
             <b>IdentifyLinearObjects</b> merges putative linear objects that are within the
             angular distance specified AND in which pixels from the two 
             linear objects overlap.
-            <p>Select <i>%(YES)s</i> to have <b>IdentifyLinearObjects</b>
-            merge these linear objects. Select <i>%(NO)s</i> use only the spatial
+            <p>Select <i>"Yes"</i> to have <b>IdentifyLinearObjects</b>
+            merge these linear objects. Select <i>"No"</i> use only the spatial
             distance and angular distance parameters above.</p>"""%globals())
 
     def settings(self):
@@ -230,7 +230,7 @@ class IdentifyLinearObjects(cpm.Module):
             seedmask = np.zeros_like(mask, int)
             seedmask[r,c]=label_id
 
-            reconstructedlinearobject=skimage.filter.rank.maximum(seedmask,rect_strel)
+            reconstructedlinearobject=skimage.filters.rank.maximum(seedmask,rect_strel)
             reconstructedlinearobject=reconstructedlinearobject*mask
             if self.overlap_within_angle==False:
                 itemp,jtemp=np.where(reconstructedlinearobject==label_id)
@@ -297,15 +297,15 @@ class IdentifyLinearObjects(cpm.Module):
     def display(self, workspace, figure):
         '''Show an informative display'''
         #import matplotlib
-        import cellprofiler.gui.cpfigure
+        import cellprofiler.gui.figure
         cplabels=[]
         figure.set_subplots((1, 1))
-        assert isinstance(figure, cellprofiler.gui.cpfigure.CPFigureFrame)
+        assert isinstance(figure, cellprofiler.gui.figure.Figure)
         title = self.object_name.value
         cplabels.append(
             dict(name = self.object_name.value,
                  labels = workspace.display_data.overlapping_labels,
-                 mode = cellprofiler.gui.cpfigure.CPLDM_ALPHA))
+                 mode = cellprofiler.gui.figure.CPLDM_ALPHA))
         mask = workspace.display_data.mask
         if mask.ndim == 2:
             figure.subplot_imshow_grayscale(
