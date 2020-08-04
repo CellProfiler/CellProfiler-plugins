@@ -7,6 +7,7 @@
 #################################
 
 import numpy
+import skimage.exposure
 
 #################################
 #
@@ -116,6 +117,71 @@ class CompensateColors(cellprofiler.module.ImageProcessing):
         self.add_object(can_delete=False)
         self.object_count = cellprofiler.setting.HiddenCount(self.object_groups)
         self.image_count = cellprofiler.setting.HiddenCount(self.image_groups)
+        self.do_rescale_input = cellprofiler.setting.Choice(
+            'Should individual images be rescaled 0-1 before compensating pre-masking or on unmasked images?',
+            ['No',
+            'Yes'],
+            doc="""\
+Choose if the images should be rescaled 0-1 before compensation.
+If performing compensation inside an object, rescaling will happen before masking to 
+that object"""
+        )
+
+        self.do_rescale_after_mask = cellprofiler.setting.Choice(
+            'Should images be rescaled 0-1 before compensating but after masking to objects?',
+            ['No',
+            'Yes, per image',
+            'Yes, per group'],
+            doc="""\
+Choose if the images should be rescaled 0-1 before compensation; you can choose whether
+to do this for each image individually or across all images in a group. 
+If performing compensation inside an object, rescaling will happen after masking to 
+that object"""
+        )
+
+        self.do_match_histograms = cellprofiler.setting.Choice(
+            'Should histogram matching be performed between the image groups?',
+            ['No',
+            'Yes, pre-masking or on unmasked images',
+            'Yes, post-masking to objects'],
+            doc="""\
+Choose if the images should undergo histogram equalization per group, and when
+to perform it if masking inside an object."""
+        )
+
+        self.histogram_match_class = cellprofiler.setting.Integer(
+            'What compensation class should serve as the template histogram?',
+            1
+        )
+
+        self.do_rescale_output = cellprofiler.setting.Choice(
+            'Should images be rescaled 0-1 after compensating?',
+            ['No',
+            'Yes'],
+            doc="""\
+Choose if the images should be rescaled 0-1 after compensation; you can choose whether
+to do this for each image individually or across all images in a group. 
+"""
+        )
+
+        self.do_scalar_multiply = cellprofiler.setting.Binary(
+            'Should the images be divided by a scalar based on group percentiles', 
+            False,
+            doc="""\
+Choose if per group, the images should have a certain user-defined percentile compared,
+and then divided by the ratio between the percentile value of a given group and the 
+dimmest group. Example: if the 99th percentile for A, C, G, and T is 0.5, 0.25, 0.3, 
+and 0.1, respectively, the pixel values for those groups will be divided by 5, 2.5, 3, 
+and 1.  This will be applied before masking or rescaling or histogram compensation."""
+        )
+
+        self.scalar_percentile = cellprofiler.setting.Float(    
+            'What percentile should be used for multiplication',
+            value = 99,
+            minval = 0.1,
+            maxval = 100,
+            doc = "Enter a percentile between 0.1 and 100 to use for comparing ratios"
+        )
 
     def add_image(self, can_delete=True):
         """Add an image to the image_groups collection
@@ -184,6 +250,8 @@ Select the objects to perform compensation within."""
             result += [image_group.image_name, image_group.class_num, image_group.output_name]
         result += [self.images_or_objects]
         result += [object_group.object_name for object_group in self.object_groups]
+        result += [self.do_rescale_input, self.do_rescale_after_mask, self.do_match_histograms, self.histogram_match_class, self.do_rescale_output]
+        result += [self.do_scalar_multiply, self.scalar_percentile]
         return result
 
     def prepare_settings(self, setting_values):
@@ -210,6 +278,13 @@ Select the objects to perform compensation within."""
         if self.images_or_objects == CC_OBJECTS:
             for object_group in self.object_groups:
                 result += object_group.visible_settings()
+        result += [self.do_scalar_multiply]
+        if self.do_scalar_multiply:
+            result += [self.scalar_percentile]
+        result += [self.do_rescale_input, self.do_rescale_after_mask, self.do_match_histograms] 
+        if self.do_match_histograms != 'No':
+            result += [self.histogram_match_class]
+        result += [self.do_rescale_output]
         return result
 
     def run(self, workspace):
@@ -222,20 +297,51 @@ Select the objects to perform compensation within."""
         sample_pixels = sample_image.pixel_data
         sample_shape = sample_pixels.shape
 
+        group_scaling = {}
+
+        if self.do_scalar_multiply.value:
+            temp_im_dict = {}
+            for eachgroup in self.image_groups:
+                eachimage = workspace.image_set.get_image(eachgroup.image_name.value).pixel_data
+                if eachgroup.class_num.value not in temp_im_dict.keys():
+                    temp_im_dict[eachgroup.class_num.value] = list(eachimage)
+                else:
+                    temp_im_dict[eachgroup.class_num.value] += list(eachimage)
+            for eachclass in temp_im_dict.keys():
+                group_scaling[eachclass] = numpy.percentile(temp_im_dict[eachclass], self.scalar_percentile.value)
+            min_intensity = numpy.min(group_scaling.values())
+            for key, value in group_scaling.iteritems():
+                group_scaling[key] = value / min_intensity
+        
+        else:
+            for eachgroup in self.image_groups:
+                if eachgroup.class_num.value not in group_scaling.keys():
+                    group_scaling[eachgroup.class_num.value] = 1.0
+
         if self.images_or_objects.value == CC_OBJECTS:
             object_name = self.object_groups[0]
             objects = workspace.object_set.get_objects(object_name.object_name.value)
             object_labels = objects.segmented
             object_mask = numpy.where(object_labels > 0, 1, 0)
-        else:
-            object_mask = numpy.ones_like(sample_pixels)
-
 
         for eachgroup in self.image_groups:
             eachimage = workspace.image_set.get_image(eachgroup.image_name.value).pixel_data
-            eachimage = eachimage * object_mask
-            eachimage = numpy.where(eachimage == 0, (1.0/65535), eachimage)
-            eachimage = eachimage * 65535
+            eachimage = eachimage / group_scaling[eachgroup.class_num.value]
+            if self.do_rescale_input.value == 'Yes':
+                eachimage =  skimage.exposure.rescale_intensity(
+                    eachimage, 
+                    in_range = (eachimage.min(),eachimage.max()),
+                    out_range = ((1.0/65535),1.0)
+                    )
+            if self.do_rescale_after_mask.value == 'Yes, per image':
+                eachimage = eachimage * object_mask
+                eachimage_no_bg = eachimage[eachimage != 0] #don't measure the background
+                eachimage = skimage.exposure.rescale_intensity(
+                    eachimage,
+                    in_range = (eachimage_no_bg.min(),eachimage_no_bg.max()),
+                    out_range = ((1.0/65535),1.0)
+                    )
+            eachimage = numpy.round(eachimage * 65535)
             if eachgroup.class_num.value not in imdict.keys():
                 imdict[eachgroup.class_num.value] = [[eachgroup.image_name.value],eachimage.reshape(-1),[eachgroup.output_name.value]]
             else:
@@ -245,6 +351,37 @@ Select the objects to perform compensation within."""
 
         keys=imdict.keys()
         keys.sort()
+
+        if self.do_match_histograms.value != 'No':
+            histogram_template = imdict[self.histogram_match_class.value][1]
+            if self.do_match_histograms.value == 'Yes, post-masking to objects':
+                histogram_mask = numpy.tile(object_mask.reshape(-1),len(imdict[self.histogram_match_class.value][0]))
+                histogram_template = histogram_mask * histogram_template
+                histogram_template = numpy.where(histogram_template == 0, 1, histogram_template)
+
+        # apply transformations, if any
+        for eachkey in keys:
+            reshaped_pixels = imdict[eachkey][1]
+            if self.do_match_histograms.value == 'Yes, pre-masking or on unmasked images':
+                if eachkey != self.histogram_match_class.value:
+                    reshaped_pixels = match_histograms(reshaped_pixels,histogram_template)
+            if self.images_or_objects.value == CC_OBJECTS:
+                category_count = len(imdict[eachkey][0])
+                category_mask = numpy.tile(object_mask.reshape(-1),category_count)
+                reshaped_pixels = reshaped_pixels * category_mask
+                reshaped_pixels = numpy.where(reshaped_pixels == 0, 1, reshaped_pixels)
+            if self.do_rescale_after_mask.value == 'Yes, per group':
+                reshaped_pixels_no_bg = reshaped_pixels[reshaped_pixels >1] #don't measure the background
+                reshaped_pixels = skimage.exposure.rescale_intensity(
+                    reshaped_pixels,
+                    in_range = (reshaped_pixels_no_bg.min(),reshaped_pixels_no_bg.max()),
+                    out_range = (1,65535)
+                    )
+            if self.do_match_histograms.value == 'Yes, post-masking to objects':
+                if eachkey != self.histogram_match_class.value:
+                    reshaped_pixels = match_histograms(reshaped_pixels,histogram_template)
+            imdict[eachkey][1] = reshaped_pixels
+
         imlist=[]
         for eachkey in keys:
             imlist.append(imdict[eachkey][1])
@@ -259,10 +396,15 @@ Select the objects to perform compensation within."""
         for eachdim in range(Y.shape[0]):
             key=keys[eachdim]
             im_out=Y[eachdim].reshape(len(imdict[key][0]),sample_shape[0],sample_shape[1])
-            im_out = im_out / 65535.
+            im_out = im_out / 65535.0
             for each_im in range(len(imdict[key][0])):
                 im_out[each_im] = numpy.where(im_out[each_im] < 0, 0, im_out[each_im])
                 im_out[each_im] = numpy.where(im_out[each_im] > 1, 1, im_out[each_im])
+                if self.do_rescale_output.value == 'Yes':
+                    im_out[each_im] = skimage.exposure.rescale_intensity(
+                        im_out[each_im], 
+                        in_range = (im_out[each_im].min(), im_out[each_im].max()),
+                        out_range = (0.0,1.0))
                 output_image = cellprofiler.image.Image(im_out[each_im],
                                                         parent_image=workspace.image_set.get_image(imdict[key][0][each_im]))
                 workspace.image_set.add(imdict[key][2][each_im], output_image)
@@ -286,3 +428,61 @@ Select the objects to perform compensation within."""
         M = numpy.array(arr)
         return M
 
+def _match_cumulative_cdf(source, template):
+    """
+    Return modified source array so that the cumulative density function of
+    its values matches the cumulative density function of the template.
+
+    TAKEN FROM SKIMAGE 0.16, delete when moving to CellProfiler 4
+    """
+    src_values, src_unique_indices, src_counts = numpy.unique(source.ravel(),
+                                                           return_inverse=True,
+                                                           return_counts=True)
+    tmpl_values, tmpl_counts = numpy.unique(template.ravel(), return_counts=True)
+
+    # calculate normalized quantiles for each array
+    src_quantiles = numpy.cumsum(src_counts).astype('float') / source.size
+    tmpl_quantiles = numpy.cumsum(tmpl_counts).astype('float') / template.size
+
+    interp_a_values = numpy.interp(src_quantiles, tmpl_quantiles, tmpl_values)
+    return interp_a_values[src_unique_indices].reshape(source.shape)
+
+
+def match_histograms(image, reference):
+    """Adjust an image so that its cumulative histogram matches that of another.
+
+    The adjustment is applied separately for each channel.
+
+     its values matches the cumulative density function of the template.
+
+    TAKEN FROM SKIMAGE 0.16, delete when moving to CellProfiler 4
+
+    Parameters
+    ----------
+    image : ndarray
+        Input image. Can be gray-scale or in color.
+    reference : ndarray
+        Image to match histogram of. Must have the same number of channels as
+        image.
+    multichannel : bool, optional
+        Apply the matching separately for each channel.
+
+    Returns
+    -------
+    matched : ndarray
+        Transformed input image.
+
+    Raises
+    ------
+    ValueError
+        Thrown when the number of channels in the input image and the reference
+        differ.
+
+    References
+    ----------
+    .. [1] http://paulbourke.net/miscellaneous/equalisation/
+
+    """
+    matched = _match_cumulative_cdf(image, reference)
+
+    return matched
