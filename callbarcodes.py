@@ -505,27 +505,12 @@ Enter the name to be given to the barcode score image.""")
         fd.close()
         return barcodeset
 
-    def likelihood(self,barcode,query):
-        score=sum([self.matchscore(query[i],barcode[i]) for i in range(len(query))])
-        return score/len(query)
-
     def queryall(self,barcodeset, query):
         barcodelist=barcodeset.keys()
-        scoredict={self.likelihood(x,query):x for x in barcodelist}
-        scores=scoredict.keys()
+        scoredict={sum([1 for x in range(len(query)) if query[x]==y[x]])/float(len(query)):y for y in barcodelist}
+        scores=list(scoredict.keys())
         scores.sort(reverse=True)
         return (scores[0],scoredict[scores[0]])
-
-    def matchscore(self,querybase,truebase):
-        halfmatch={"A":"C","C":"A","G":"T","T":"G"}
-        if querybase==truebase:
-            return 1
-        elif querybase==halfmatch[truebase]:
-            return 0.5
-        else:
-            return 0
-
-
 
     #
     # We have to tell CellProfiler about the measurements we produce.
