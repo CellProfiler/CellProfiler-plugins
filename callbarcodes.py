@@ -95,17 +95,17 @@ This module makes the following measurements:
 Technical notes
 ^^^^^^^^^^^^^^^
 
-Include implementation details or notes here. Additionally provide any 
+Include implementation details or notes here. Additionally provide any
 other background information about this module, including definitions
 or adopted conventions. Information which may be too specific to fit into
 the general description should be provided here.
 
 Omit this section if there is no technical information to mention.
 
-The Zernike features measured here are themselves interesting. You can 
-reconstruct the image of a cell, approximately, by constructing the Zernike 
-functions on a unit circle, multiplying the real parts by the corresponding 
-features for positive M, multiplying the imaginary parts by the corresponding 
+The Zernike features measured here are themselves interesting. You can
+reconstruct the image of a cell, approximately, by constructing the Zernike
+functions on a unit circle, multiplying the real parts by the corresponding
+features for positive M, multiplying the imaginary parts by the corresponding
 features for negative M and adding real and imaginary parts.
 
 References
@@ -218,8 +218,8 @@ This measurement should be """)
         self.wants_call_image = cellprofiler.setting.Binary(
             "Retain an image of the barcodes color coded by call?", False, doc="""\
 Select "*{YES}*" to retain the image of the objects color-coded
-according to which line of the CSV their barcode call matches to, 
-for use later in the pipeline (for example, to be saved by a **SaveImages** 
+according to which line of the CSV their barcode call matches to,
+for use later in the pipeline (for example, to be saved by a **SaveImages**
 module).""" .format(**{"YES": cellprofiler.setting.YES
                 }))
 
@@ -232,8 +232,8 @@ Enter the name to be given to the called barcode image.""")
         self.wants_score_image = cellprofiler.setting.Binary(
             "Retain an image of the barcodes color coded by score match?", False, doc="""\
 Select "*{YES}*" to retain the image of the objects where the intensity of the spot matches
-indicates the match score between the called barcode and its closest match, 
-for use later in the pipeline (for example, to be saved by a **SaveImages** 
+indicates the match score between the called barcode and its closest match,
+for use later in the pipeline (for example, to be saved by a **SaveImages**
 module).""" .format(**{"YES": cellprofiler.setting.YES
                        }))
 
@@ -500,8 +500,9 @@ Enter the name to be given to the barcode score image.""")
         barcodeset = {}
         count=1
         for row in reader:
-            barcodeset[row[barcodecol]]=(count,row[genecol])
-            count+=1
+            if len(row[barcodecol]) != 0:
+                barcodeset[row[barcodecol]]=(count,row[genecol])
+                count+=1
         fd.close()
         return barcodeset
 
