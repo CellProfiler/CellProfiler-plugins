@@ -289,7 +289,7 @@ Enter the name to be given to the barcode score image.""")
         csv_path = self.csv_path
 
         if not os.path.isfile(csv_path):
-            raise cellprofiler_core.setting.ValidationErro("No such CSV file: %s" % csv_path,
+            raise cellprofiler_core.setting.ValidationError("No such CSV file: %s" % csv_path,
                                                            self.csv_file_name)
 
         try:
@@ -297,16 +297,16 @@ Enter the name to be given to the barcode score image.""")
         except IOError as e:
             import errno
             if e.errno == errno.EWOULDBLOCK:
-                raise cellprofiler_core.setting.ValidationErro("Another program (Excel?) is locking the CSV file %s." %
+                raise cellprofiler_core.setting.ValidationError("Another program (Excel?) is locking the CSV file %s." %
                                                            self.csv_path, self.csv_file_name)
             else:
-                raise cellprofiler_core.setting.ValidationErro("Could not open CSV file %s (error: %s)" %
+                raise cellprofiler_core.setting.ValidationError("Could not open CSV file %s (error: %s)" %
                                                            (self.csv_path, e), self.csv_file_name)
 
         try:
             self.get_header()
         except Exception as e:
-            raise cellprofiler_core.setting.ValidationErro(
+            raise cellprofiler_core.setting.ValidationError(
                 "The CSV file, %s, is not in the proper format."
                 " See this module's help for details on CSV format. (error: %s)" % (self.csv_path, e),
                 self.csv_file_name)
