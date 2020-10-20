@@ -297,7 +297,7 @@ def haar_analysis(image):
     rowout=np.zeros(nx)
     for y in range(0,ny):
         rowin=image[y,:]
-        m=len(rowin)/2
+        m=len(rowin)//2
         for n in range(0,m):
             rowout[n]=(M[0,0]*rowin[2*n])+(M[0,1]*rowin[(2*n)+1])
             rowout[n+m]=(M[1,0]*rowin[2*n])+(M[1,1]*rowin[(2*n)+1])
@@ -307,7 +307,7 @@ def haar_analysis(image):
     colout=np.zeros(ny)
     for x in range(0,nx):
         colin=result[:,x]
-        m=len(colin)/2
+        m=len(colin)//2
         for n in range(0,m):
             colout[n]=(M[0,0]*colin[2*n])+(M[0,1]*colin[(2*n)+1])
             colout[n+m]=(M[1,0]*colin[2*n])+(M[1,1]*colin[(2*n)+1])
@@ -351,7 +351,7 @@ def haar_synthesis(image):
     colout=np.zeros(ny)
     for x in range(0, nx):
         colin=image[:,x]
-        m=len(colin)/2
+        m=len(colin)//2
         for n in range(0, m):
             colout[2*n]=(M[0,0]*colin[n])+(M[0,1]*colin[m+n]);
             colout[(2*n)+1]=(M[1,0]*colin[n])+(M[1,1]*colin[m+n]);
@@ -361,7 +361,7 @@ def haar_synthesis(image):
     rowout=np.zeros(nx)
     for y in range(0, ny):
         rowin=result[y,:]
-        m=len(rowin)/2
+        m=len(rowin)//2
         for n in range(0, m):
             rowout[2*n]=(M[0,0]*rowin[n])+(M[0,1]*rowin[m+n]);
             rowout[(2*n)+1]=(M[1,0]*rowin[n])+(M[1,1]*rowin[m+n]);
