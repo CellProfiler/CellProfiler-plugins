@@ -435,7 +435,7 @@ Select the objects to perform compensation within."""
                 imdict[eachgroup.class_num.value][1]=numpy.concatenate((imdict[eachgroup.class_num.value][1],eachimage.reshape(-1)))
                 imdict[eachgroup.class_num.value][2].append(eachgroup.output_name.value)
 
-        keys=imdict.keys()
+        keys=list(imdict.keys())
         keys.sort()
 
         if self.do_match_histograms.value != 'No':
