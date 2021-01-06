@@ -10,9 +10,12 @@ import csv
 import numpy
 import os
 import re
-from urllib.request import urlretrieve
+import urllib.request, urllib.error, urllib.parse
 
-from io import StringIO
+try:
+    from io import StringIO
+except ImportError:
+    from io import StringIO
 
 #################################
 #
@@ -26,7 +29,13 @@ import cellprofiler_core.module
 import cellprofiler_core.measurement
 import cellprofiler_core.object
 import cellprofiler_core.setting
-
+import cellprofiler_core.constants.setting
+import cellprofiler_core.setting.text
+import cellprofiler_core.setting.choice
+import cellprofiler_core.setting.subscriber
+import cellprofiler_core.utilities.image
+import cellprofiler_core.preferences
+import cellprofiler_core.constants.measurement
 
 __doc__ = """\
 CallBarcodes
@@ -124,14 +133,14 @@ wherever possible, include a link to the original work. For example,
 # if someone wants to change the text, that text will change everywhere.
 # Also, you can't misspell it by accident.
 #
-'''This is the measurement template category'''
+"""This is the measurement template category"""
 C_CALL_BARCODES = "Barcode"
 
 
 #
 # The module class
 #
-# Your module should "inherit" from cellprofiler_core.module.Module.
+# Your module should "inherit" from cellprofiler.module.Module.
 # This means that your module will use the methods from Module unless
 # you re-implement them. You can let Module do most of the work and
 # implement only what you need.
@@ -151,19 +160,22 @@ class CallBarcodes(cellprofiler_core.module.Module):
     # "create_settings" is where you declare the user interface elements
     # (the "settings") which the user will use to customize your module.
     #
-    # You can look at other modules and in cellprofiler_core.settings for
+    # You can look at other modules and in cellprofiler.settings for
     # settings you can use.
     #
     def create_settings(self):
         self.csv_directory = cellprofiler_core.setting.text.Directory(
-            "Input data file location", allow_metadata=False, doc="""\
+            "Input data file location",
+            allow_metadata=False,
+            doc="""\
 Select the folder containing the CSV file to be loaded. {IO_FOLDER_CHOICE_HELP_TEXT}
-""".format(**{
-                "IO_FOLDER_CHOICE_HELP_TEXT": _help.IO_FOLDER_CHOICE_HELP_TEXT
-            }))
+""".format(
+                **{"IO_FOLDER_CHOICE_HELP_TEXT": _help.IO_FOLDER_CHOICE_HELP_TEXT}
+            ),
+        )
 
         def get_directory_fn():
-            '''Get the directory for the CSV file name'''
+            """Get the directory for the CSV file name"""
             return self.csv_directory.get_absolute_path()
 
         def set_directory_fn(path):
@@ -177,7 +189,8 @@ Select the folder containing the CSV file to be loaded. {IO_FOLDER_CHOICE_HELP_T
             get_directory_fn=get_directory_fn,
             set_directory_fn=set_directory_fn,
             browse_msg="Choose CSV file",
-            exts=[("Data file (*.csv)", "*.csv"), ("All files (*.*)", "*.*")])
+            exts=[("Data file (*.csv)", "*.csv"), ("All files (*.*)", "*.*")],
+        )
 
         #
         # The ObjectNameSubscriber is similar to the ImageNameSubscriber.
@@ -186,57 +199,81 @@ Select the folder containing the CSV file to be loaded. {IO_FOLDER_CHOICE_HELP_T
         #
         self.input_object_name = cellprofiler_core.setting.subscriber.LabelSubscriber(
             text="Input object name",
-            doc="These are the objects that the module operates on.")
-
+            doc="These are the objects that the module operates on.",
+        )
 
         self.ncycles = cellprofiler_core.setting.text.Integer(
             doc="""\
 Enter the number of cycles present in the data.
 """,
             text="Number of cycles",
-            value=8
+            value=8,
         )
-        self.cycle1measure=cellprofiler_core.setting.Measurement(
+        self.cycle1measure = cellprofiler_core.setting.Measurement(
             "Select one of the measures from Cycle 1 to use for calling",
-            self.input_object_name.get_value,'AreaShape_Area',
+            self.input_object_name.get_value,
+            "AreaShape_Area",
             doc="""\
-This measurement should be """)
+This measurement should be """,
+        )
 
         self.metadata_field_barcode = cellprofiler_core.setting.choice.Choice(
-            "Select the column of barcodes to match against", ["No CSV file"], choices_fn=self.get_choices,
+            "Select the column of barcodes to match against",
+            ["No CSV file"],
+            choices_fn=self.get_choices,
             doc="""\
-""")
+""",
+        )
 
         self.metadata_field_tag = cellprofiler_core.setting.choice.Choice(
-            "Select the column with gene/transcript barcode names", ["No CSV file"], choices_fn=self.get_choices,
+            "Select the column with gene/transcript barcode names",
+            ["No CSV file"],
+            choices_fn=self.get_choices,
             doc="""\
-""")
+""",
+        )
 
         self.wants_call_image = cellprofiler_core.setting.Binary(
-            "Retain an image of the barcodes color coded by call?", False, doc="""\
-Select "Yes" to retain the image of the objects color-coded
+            "Retain an image of the barcodes color coded by call?",
+            False,
+            doc="""\
+Select "*{YES}*" to retain the image of the objects color-coded
 according to which line of the CSV their barcode call matches to,
 for use later in the pipeline (for example, to be saved by a **SaveImages**
-module).""")
+module).""".format(
+                **{"YES": "Yes"}
+            ),
+        )
 
         self.outimage_calls_name = cellprofiler_core.setting.text.ImageName(
-        "Enter the called barcode image name", "None", doc="""\
+            "Enter the called barcode image name",
+            "None",
+            doc="""\
 *(Used only if the called barcode image is to be retained for later use in the pipeline)*
 
-Enter the name to be given to the called barcode image.""")
+Enter the name to be given to the called barcode image.""",
+        )
 
         self.wants_score_image = cellprofiler_core.setting.Binary(
-            "Retain an image of the barcodes color coded by score match?", False, doc="""\
-Select "Yes" to retain the image of the objects where the intensity of the spot matches
+            "Retain an image of the barcodes color coded by score match?",
+            False,
+            doc="""\
+Select "*{YES}*" to retain the image of the objects where the intensity of the spot matches
 indicates the match score between the called barcode and its closest match,
 for use later in the pipeline (for example, to be saved by a **SaveImages**
-module).""")
+module).""".format(
+                **{"YES": "Yes"}
+            ),
+        )
 
         self.outimage_score_name = cellprofiler_core.setting.text.ImageName(
-        "Enter the barcode score image name", "None", doc="""\
+            "Enter the barcode score image name",
+            "None",
+            doc="""\
 *(Used only if the barcode score image is to be retained for later use in the pipeline)*
 
-Enter the name to be given to the barcode score image.""")
+Enter the name to be given to the barcode score image.""",
+        )
 
     #
     # The "settings" method tells CellProfiler about the settings you
@@ -261,7 +298,7 @@ Enter the name to be given to the barcode score image.""")
             self.wants_call_image,
             self.outimage_calls_name,
             self.wants_score_image,
-            self.outimage_score_name
+            self.outimage_score_name,
         ]
 
     def visible_settings(self):
@@ -274,7 +311,7 @@ Enter the name to be given to the barcode score image.""")
             self.metadata_field_barcode,
             self.metadata_field_tag,
             self.wants_call_image,
-            self.wants_score_image
+            self.wants_score_image,
         ]
 
         if self.wants_call_image:
@@ -289,86 +326,109 @@ Enter the name to be given to the barcode score image.""")
         csv_path = self.csv_path
 
         if not os.path.isfile(csv_path):
-            raise cellprofiler_core.setting.ValidationError("No such CSV file: %s" % csv_path,
-                                                           self.csv_file_name)
+            raise cellprofiler_core.setting.ValidationError(
+                "No such CSV file: %s" % csv_path, self.csv_file_name
+            )
 
         try:
             self.open_csv()
         except IOError as e:
             import errno
+
             if e.errno == errno.EWOULDBLOCK:
-                raise cellprofiler_core.setting.ValidationError("Another program (Excel?) is locking the CSV file %s." %
-                                                           self.csv_path, self.csv_file_name)
+                raise cellprofiler_core.setting.ValidationError(
+                    "Another program (Excel?) is locking the CSV file %s."
+                    % self.csv_path,
+                    self.csv_file_name,
+                )
             else:
-                raise cellprofiler_core.setting.ValidationError("Could not open CSV file %s (error: %s)" %
-                                                           (self.csv_path, e), self.csv_file_name)
+                raise cellprofiler_core.setting.ValidationError(
+                    "Could not open CSV file %s (error: %s)" % (self.csv_path, e),
+                    self.csv_file_name,
+                )
 
         try:
             self.get_header()
         except Exception as e:
             raise cellprofiler_core.setting.ValidationError(
                 "The CSV file, %s, is not in the proper format."
-                " See this module's help for details on CSV format. (error: %s)" % (self.csv_path, e),
-                self.csv_file_name)
+                " See this module's help for details on CSV format. (error: %s)"
+                % (self.csv_path, e),
+                self.csv_file_name,
+            )
 
     @property
     def csv_path(self):
-        '''The path and file name of the CSV file to be loaded'''
+        """The path and file name of the CSV file to be loaded"""
         path = self.csv_directory.get_absolute_path()
         return os.path.join(path, self.csv_file_name.value)
 
     def open_csv(self, do_not_cache=False):
-        '''Open the csv file or URL, returning a file descriptor'''
-        global header_cache
+        """Open the csv file or URL, returning a file descriptor"""
 
-        if cellprofiler.preferences.is_url_path(self.csv_path):
-            if self.csv_path not in header_cache:
-                header_cache[self.csv_path] = {}
-            entry = header_cache[self.csv_path]
+        print(f"self.csv_path: {self.csv_path}")
+
+        if cellprofiler_core.preferences.is_url_path(self.csv_path):
+            if self.csv_path not in self.header_cache:
+                self.header_cache[self.csv_path] = {}
+
+            entry = self.header_cache[self.csv_path]
+
             if "URLEXCEPTION" in entry:
                 raise entry["URLEXCEPTION"]
+
             if "URLDATA" in entry:
                 fd = StringIO(entry["URLDATA"])
             else:
                 if do_not_cache:
-                    raise RuntimeError('Need to fetch URL manually.')
+                    raise RuntimeError("Need to fetch URL manually.")
+
                 try:
-                    url = cellprofiler.misc.generate_presigned_url(self.csv_path)
-                    url_fd, headers = urlretrieve(url)
+                    url = cellprofiler_core.utilities.image.generate_presigned_url(
+                        self.csv_path
+                    )
+                    url_fd = urllib.request.urlopen(url)
                 except Exception as e:
                     entry["URLEXCEPTION"] = e
+
                     raise e
+
                 fd = StringIO()
+
                 while True:
                     text = url_fd.read()
+
                     if len(text) == 0:
                         break
+
                     fd.write(text)
+
                 fd.seek(0)
+
                 entry["URLDATA"] = fd.getvalue()
+
             return fd
         else:
-            return open(self.csv_path, 'rb')
+            return open(self.csv_path, "r")
 
     def get_header(self, do_not_cache=False):
-        '''Read the header fields from the csv file
+        """Read the header fields from the csv file
 
         Open the csv file indicated by the settings and read the fields
         of its first line. These should be the measurement columns.
-        '''
-        fd = self.open_csv(do_not_cache=do_not_cache)
-        reader = csv.reader(fd)
-        header = next(reader)
-        fd.close()
-        return header
+        """
+        with open(self.csv_path, "r") as fp:
+            reader = csv.DictReader(fp)
 
-    def get_choices(self,pipeline):
-        try:
-            choices = self.get_header()
-        except:
+            return reader.fieldnames
+
+    def get_choices(self, pipeline):
+        choices = self.get_header()
+
+        if not choices:
             choices = ["No CSV file"]
-        return choices
 
+        return choices
 
     #
     # CellProfiler calls "run" on each image set in your pipeline.
@@ -379,18 +439,30 @@ Enter the name to be given to the barcode score image.""")
         # make in here
         #
         measurements = workspace.measurements
-        listofmeasurements = measurements.get_feature_names(self.input_object_name.value)
+        listofmeasurements = measurements.get_feature_names(
+            self.input_object_name.value
+        )
 
-        measurements_for_calls = self.getallbarcodemeasurements(listofmeasurements, self.ncycles.value,
-                                                                self.cycle1measure.value)
+        measurements_for_calls = self.getallbarcodemeasurements(
+            listofmeasurements, self.ncycles.value, self.cycle1measure.value
+        )
 
-        calledbarcodes = self.callonebarcode(measurements_for_calls, measurements, self.input_object_name.value,
-                                            self.ncycles.value)
+        calledbarcodes = self.callonebarcode(
+            measurements_for_calls,
+            measurements,
+            self.input_object_name.value,
+            self.ncycles.value,
+        )
 
-        workspace.measurements.add_measurement(self.input_object_name.value, '_'.join([C_CALL_BARCODES,'BarcodeCalled']),
-                                     calledbarcodes)
+        workspace.measurements.add_measurement(
+            self.input_object_name.value,
+            "_".join([C_CALL_BARCODES, "BarcodeCalled"]),
+            calledbarcodes,
+        )
 
-        barcodes = self.barcodeset(self.metadata_field_barcode.value, self.metadata_field_tag.value)
+        barcodes = self.barcodeset(
+            self.metadata_field_barcode.value, self.metadata_field_tag.value
+        )
 
         scorelist = []
         matchedbarcode = []
@@ -409,24 +481,48 @@ Enter the name to be given to the barcode score image.""")
             matchedbarcodeid.append(barcodes[eachmatch][0])
             matchedbarcodecode.append(barcodes[eachmatch][1])
             if self.wants_call_image:
-                pixel_data_call = numpy.where(labels==count,barcodes[eachmatch][0],pixel_data_call)
+                pixel_data_call = numpy.where(
+                    labels == count, barcodes[eachmatch][0], pixel_data_call
+                )
             if self.wants_score_image:
-                pixel_data_score = numpy.where(labels==count,65535*eachscore,pixel_data_score)
+                pixel_data_score = numpy.where(
+                    labels == count, 65535 * eachscore, pixel_data_score
+                )
             count += 1
-        workspace.measurements.add_measurement(self.input_object_name.value, '_'.join([C_CALL_BARCODES,'MatchedTo_Barcode']),
-                                     matchedbarcode)
-        workspace.measurements.add_measurement(self.input_object_name.value, '_'.join([C_CALL_BARCODES,'MatchedTo_ID']),
-                                     matchedbarcodeid)
-        workspace.measurements.add_measurement(self.input_object_name.value, '_'.join([C_CALL_BARCODES,'MatchedTo_GeneCode']),
-                                     matchedbarcodecode)
-        workspace.measurements.add_measurement(self.input_object_name.value, '_'.join([C_CALL_BARCODES,'MatchedTo_Score']),
-                                     scorelist)
+        workspace.measurements.add_measurement(
+            self.input_object_name.value,
+            "_".join([C_CALL_BARCODES, "MatchedTo_Barcode"]),
+            matchedbarcode,
+        )
+        workspace.measurements.add_measurement(
+            self.input_object_name.value,
+            "_".join([C_CALL_BARCODES, "MatchedTo_ID"]),
+            matchedbarcodeid,
+        )
+        workspace.measurements.add_measurement(
+            self.input_object_name.value,
+            "_".join([C_CALL_BARCODES, "MatchedTo_GeneCode"]),
+            matchedbarcodecode,
+        )
+        workspace.measurements.add_measurement(
+            self.input_object_name.value,
+            "_".join([C_CALL_BARCODES, "MatchedTo_Score"]),
+            scorelist,
+        )
         if self.wants_call_image:
-            workspace.image_set.add(self.outimage_calls_name.value,cellprofiler.image.Image(pixel_data_call.astype("uint16"),
-                                                                                      convert = False ))
+            workspace.image_set.add(
+                self.outimage_calls_name.value,
+                cellprofiler_core.image.Image(
+                    pixel_data_call.astype("uint16"), convert=False
+                ),
+            )
         if self.wants_score_image:
-            workspace.image_set.add(self.outimage_score_name.value,cellprofiler.image.Image(pixel_data_score.astype("uint16"),
-                                                                                        convert = False ))
+            workspace.image_set.add(
+                self.outimage_score_name.value,
+                cellprofiler_core.image.Image(
+                    pixel_data_score.astype("uint16"), convert=False
+                ),
+            )
         #
         # We record some statistics which we will display later.
         # We format them so that Matplotlib can display them in a table.
@@ -440,7 +536,6 @@ Enter the name to be given to the barcode score image.""")
         #
         workspace.display_data.statistics = statistics
 
-
     #
     # "display" lets you use matplotlib to display your results.
     #
@@ -452,61 +547,66 @@ Enter the name to be given to the barcode score image.""")
         figure.subplot_table(0, 0, statistics)
 
     def getallbarcodemeasurements(self, measurements, ncycles, examplemeas):
-        stem = re.split('Cycle',examplemeas)[0]
+        stem = re.split("Cycle", examplemeas)[0]
         measurementdict = {}
         for eachmeas in measurements:
             if stem in eachmeas:
-                to_parse = re.split('Cycle',eachmeas)[1]
-                find_cycle = re.search('[0-9]{1,2}',to_parse)
+                to_parse = re.split("Cycle", eachmeas)[1]
+                find_cycle = re.search("[0-9]{1,2}", to_parse)
                 parsed_cycle = int(find_cycle.group(0))
-                find_base = re.search('[A-Z]',to_parse)
+                find_base = re.search("[A-Z]", to_parse)
                 parsed_base = find_base.group(0)
                 if parsed_cycle <= ncycles:
-                    if parsed_cycle not in measurementdict.keys():
-                        measurementdict[parsed_cycle] = {eachmeas:parsed_base}
+                    if parsed_cycle not in list(measurementdict.keys()):
+                        measurementdict[parsed_cycle] = {eachmeas: parsed_base}
                     else:
-                        measurementdict[parsed_cycle].update({eachmeas:parsed_base})
+                        measurementdict[parsed_cycle].update({eachmeas: parsed_base})
         return measurementdict
 
     def callonebarcode(self, measurementdict, measurements, object_name, ncycles):
 
         master_cycles = []
 
-        for eachcycle in range(1,ncycles+1):
+        for eachcycle in range(1, ncycles + 1):
             cycles_measures_perobj = []
             cyclecode = []
             cycledict = measurementdict[eachcycle]
-            cyclemeasures = cycledict.keys()
+            cyclemeasures = list(cycledict.keys())
             for eachmeasure in cyclemeasures:
-                cycles_measures_perobj.append(measurements.get_current_measurement(object_name, eachmeasure))
+                cycles_measures_perobj.append(
+                    measurements.get_current_measurement(object_name, eachmeasure)
+                )
                 cyclecode.append(measurementdict[eachcycle][eachmeasure])
             cycle_measures_perobj = numpy.transpose(numpy.array(cycles_measures_perobj))
-            max_per_obj = numpy.argmax(cycle_measures_perobj,1)
+            max_per_obj = numpy.argmax(cycle_measures_perobj, 1)
             max_per_obj = list(max_per_obj)
             max_per_obj = [cyclecode[x] for x in max_per_obj]
             master_cycles.append(list(max_per_obj))
 
-        return list(map("".join, zip(*master_cycles)))
-
+        return list(map("".join, list(zip(*master_cycles))))
 
     def barcodeset(self, barcodecol, genecol):
         fd = self.open_csv()
         reader = csv.DictReader(fd)
         barcodeset = {}
-        count=1
+        count = 1
         for row in reader:
             if len(row[barcodecol]) != 0:
-                barcodeset[row[barcodecol]]=(count,row[genecol])
-                count+=1
+                barcodeset[row[barcodecol]] = (count, row[genecol])
+                count += 1
         fd.close()
         return barcodeset
 
-    def queryall(self,barcodeset, query):
-        barcodelist=barcodeset.keys()
-        scoredict={sum([1 for x in range(len(query)) if query[x]==y[x]])/float(len(query)):y for y in barcodelist}
-        scores=list(scoredict.keys())
+    def queryall(self, barcodeset, query):
+        barcodelist = list(barcodeset.keys())
+        scoredict = {
+            sum([1 for x in range(len(query)) if query[x] == y[x]])
+            / float(len(query)): y
+            for y in barcodelist
+        }
+        scores = list(scoredict.keys())
         scores.sort(reverse=True)
-        return (scores[0],scoredict[scores[0]])
+        return scores[0], scoredict[scores[0]]
 
     #
     # We have to tell CellProfiler about the measurements we produce.
@@ -531,11 +631,33 @@ Enter the name to be given to the barcode score image.""")
         #
         input_object_name = self.input_object_name.value
 
-        return [(input_object_name, '_'.join([C_CALL_BARCODES,'BarcodeCalled']), cellprofiler.measurement.COLTYPE_VARCHAR),
-                (input_object_name, '_'.join([C_CALL_BARCODES,'MatchedTo_Barcode']), cellprofiler.measurement.COLTYPE_VARCHAR),
-                (input_object_name, '_'.join([C_CALL_BARCODES,'MatchedTo_ID']), cellprofiler.measurement.COLTYPE_INTEGER),
-                (input_object_name, '_'.join([C_CALL_BARCODES,'MatchedTo_GeneCode']), cellprofiler.measurement.COLTYPE_VARCHAR),
-                (input_object_name, '_'.join([C_CALL_BARCODES,'MatchedTo_Score']), cellprofiler.measurement.COLTYPE_FLOAT)]
+        return [
+            (
+                input_object_name,
+                "_".join([C_CALL_BARCODES, "BarcodeCalled"]),
+                cellprofiler_core.constants.measurement.COLTYPE_VARCHAR,
+            ),
+            (
+                input_object_name,
+                "_".join([C_CALL_BARCODES, "MatchedTo_Barcode"]),
+                cellprofiler_core.constants.measurement.COLTYPE_VARCHAR,
+            ),
+            (
+                input_object_name,
+                "_".join([C_CALL_BARCODES, "MatchedTo_ID"]),
+                cellprofiler_core.constants.measurement.COLTYPE_INTEGER,
+            ),
+            (
+                input_object_name,
+                "_".join([C_CALL_BARCODES, "MatchedTo_GeneCode"]),
+                cellprofiler_core.constants.measurement.COLTYPE_VARCHAR,
+            ),
+            (
+                input_object_name,
+                "_".join([C_CALL_BARCODES, "MatchedTo_Score"]),
+                cellprofiler_core.constants.measurement.COLTYPE_FLOAT,
+            ),
+        ]
 
     #
     # "get_categories" returns a list of the measurement categories produced
@@ -552,7 +674,13 @@ Enter the name to be given to the barcode score image.""")
     # Return the feature names if the object_name and category match
     #
     def get_measurements(self, pipeline, object_name, category):
-        if (object_name == self.input_object_name and category == C_CALL_BARCODES):
-            return ['BarcodeCalled', 'MatchedTo_Barcode', 'MatchedTo_ID', 'MatchedTo_GeneCode', 'MatchedTo_Score']
+        if object_name == self.input_object_name and category == C_CALL_BARCODES:
+            return [
+                "BarcodeCalled",
+                "MatchedTo_Barcode",
+                "MatchedTo_ID",
+                "MatchedTo_GeneCode",
+                "MatchedTo_Score",
+            ]
 
         return []
