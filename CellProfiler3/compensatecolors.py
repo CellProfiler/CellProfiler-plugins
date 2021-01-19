@@ -214,7 +214,7 @@ applied before rescaling or any other enhancements (except tophat filtering if u
 
         self.LoG_radius = cellprofiler.setting.Integer(
             'What size radius should be used for the LoG filter?',
-            value = 3,
+            value = 1,
             minval = 1, 
             maxval = 100,
             doc = "Enter a sigma in pixels; this sigma will be used for LoG filtering."
@@ -377,7 +377,7 @@ Select the objects to perform compensation within."""
                 eachimage = skimage.morphology.white_tophat(eachimage, selem)
 
             if self.do_LoG_filter.value:
-                eachimage = scipy.ndimage.gaussian_laplace(eachimage, int(self.LoG_radius.value))
+                eachimage = log_ndi(eachimage, int(self.LoG_radius.value))
 
             eachimage = eachimage / group_scaling[eachgroup.class_num.value]
             if self.do_rescale_input.value == 'Yes':
@@ -539,3 +539,13 @@ def match_histograms(image, reference):
     matched = _match_cumulative_cdf(image, reference)
 
     return matched
+
+def log_ndi(data, sigma):
+    """
+    """
+    data = skimage.img_as_uint(data)
+    f = scipy.ndimage.gaussian_laplace
+    arr_ = -1 * f(data.astype(float), sigma)
+    arr_ = numpy.clip(arr_, 0, 65535) / 65535
+    
+    return skimage.img_as_float(arr_)
