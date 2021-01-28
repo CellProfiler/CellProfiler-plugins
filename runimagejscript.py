@@ -1,5 +1,5 @@
 import itertools
-import os
+from os import path
 
 from cellprofiler_core.image import Image
 from cellprofiler.modules import _help
@@ -89,8 +89,8 @@ Select the folder containing the script.
             ),
         )
 
-        def set_directory_fn_script(path):
-            dir_choice, custom_path = self.script_directory.get_parts_from_path(path)
+        def set_directory_fn_script(script_path):
+            dir_choice, custom_path = self.script_directory.get_parts_from_path(script_path)
             self.script_directory.join_parts(dir_choice, custom_path)
 
         self.script_file = ScriptFilename(
@@ -106,7 +106,7 @@ Parse parameters from the currently selected script and add the appropriate sett
 
 Note: this must be done each time you change the script, before running the CellProfiler pipeline!
 """
-                                                )
+                                                 )
         self.script_parameter_list = []
         self.script_parameter_count = HiddenCount(self.script_parameter_list)
 
@@ -131,9 +131,12 @@ Note: this must be done each time you change the script, before running the Cell
         Use PyImageJ to read header text from Fiji and extract input parameters.
         Probably return of list of these parameter names
         """
-        script_filepath = os.path.join(self.script_directory.get_absolute_path(), self.script_file.value)
-        # TODO: check that script_filepath is a valid directory
-        q = mp.Queue();
+        script_filepath = path.join(self.script_directory.get_absolute_path(), self.script_file.value)
+        if not path.exists(script_filepath):
+            # nothing to do
+            return
+
+        q = mp.Queue()
         p = Process(target=parse_params, args=(script_filepath, q,))
         p.start()
         p.join()
@@ -146,7 +149,7 @@ Note: this must be done each time you change the script, before running the Cell
                 group = SettingsGroup()
                 param_name = q.get()
                 param_type = q.get()
-                #TODO use param_type to determine what kind of param to add instead of Text
+                # TODO use param_type to determine what kind of param to add instead of Text
                 group.append("value", Text(param_name, param_type))
                 self.script_parameter_list.append(group)
         pass
