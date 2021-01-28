@@ -24,6 +24,24 @@ import random
 import skimage.io
 
 
+class ScriptFilename(Filename):
+    """
+    A helper subclass of Filename that auto-generates script parameter settings when the script changes
+
+    optional arguments -
+       value_change_fn is a function that gets called when the file value changes
+    """
+
+    def __init__(self, text, value, *args, **kwargs):
+        kwargs = kwargs.copy()
+        self.value_change_fn = kwargs.pop("value_change_fn", None)
+        super().__init__(text, value, *args, **kwargs)
+
+    def set_value(self, value):
+        super().set_value(value)
+        self.value_change_fn()
+
+
 def parse_params(script_path, queue):
     """Uses ImageJ to parse script parameters and return their names and types via the provided queue.
 
@@ -51,6 +69,9 @@ def parse_params(script_path, queue):
 
 
 class RunImageJScript(Module):
+    """
+    Module to run ImageJ scripts via pyimagej
+    """
     module_name = "RunImageJScript"
     variable_revision_number = 1
     category = "Advanced"
@@ -72,11 +93,12 @@ Select the folder containing the script.
             dir_choice, custom_path = self.script_directory.get_parts_from_path(path)
             self.script_directory.join_parts(dir_choice, custom_path)
 
-        self.script_file = Filename(
+        self.script_file = ScriptFilename(
             "ImageJ Script", "script.py", doc="Select a script file with in any ImageJ-supported scripting language.",
             get_directory_fn=self.script_directory.get_absolute_path,
             set_directory_fn=set_directory_fn_script,
-            browse_msg="Choose ImageJ script file"
+            browse_msg="Choose ImageJ script file",
+            value_change_fn=self.get_parameters_from_script
         )
         self.get_parameters_button = DoSomething("", 'Get parameters from script', self.get_parameters_from_script,
                                                  doc="""\
