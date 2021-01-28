@@ -309,8 +309,8 @@ Select the objects to perform compensation within."""
                     temp_im_dict[eachgroup.class_num.value] += list(eachimage)
             for eachclass in temp_im_dict.keys():
                 group_scaling[eachclass] = numpy.percentile(temp_im_dict[eachclass], self.scalar_percentile.value)
-            min_intensity = numpy.min(group_scaling.values())
-            for key, value in group_scaling.iteritems():
+            min_intensity = numpy.min(list(group_scaling.values())
+            for key, value in iter(group_scaling.items())):
                 group_scaling[key] = value / min_intensity
         
         else:
