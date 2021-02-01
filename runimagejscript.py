@@ -1,4 +1,3 @@
-import itertools
 from os import path
 
 from cellprofiler_core.image import Image
@@ -8,14 +7,15 @@ from cellprofiler_core.setting.text import Filename, ImageName, Text, Directory
 from cellprofiler_core.constants.module import (
     IO_FOLDER_CHOICE_HELP_TEXT,
 )
-import multiprocessing as mp
-from multiprocessing import Process
+from cellprofiler_core.setting import ValidationError
 from cellprofiler_core.setting.do_something import DoSomething, RemoveSettingButton
 from cellprofiler_core.setting._settings_group import SettingsGroup
 from cellprofiler_core.setting import Divider, HiddenCount
 from cellprofiler_core.setting.subscriber import ImageSubscriber
 from cellprofiler_core.preferences import get_default_output_directory
 
+import multiprocessing as mp
+from multiprocessing import Process
 import atexit
 import imagej
 import jpype
@@ -27,11 +27,12 @@ import skimage.io
 """
 Constants for communicating with pyimagej
 """
-pyimagej_cmd_script_params = "COMMAND_SCRIPT_PARAMS" # Parse the following script file's parameters
-pyimagej_cmd_exit = "COMMAND_EXIT" # Shut down the pyimagej daemon
-pyimagej_status_running = "STATUS_RUNNING" # Returned when a command starts running
-pyimagej_status_cmd_unknown = "STATUS_COMMAND_UNKNOWN" # Returned when an unknown command is passed to pyimagej
-pyimagej_status_cmd_done = "STATUS_DONE" # Returned when a command is complete
+pyimagej_cmd_script_params = "COMMAND_SCRIPT_PARAMS"  # Parse the following script file's parameters
+pyimagej_cmd_exit = "COMMAND_EXIT"  # Shut down the pyimagej daemon
+pyimagej_status_running = "STATUS_RUNNING"  # Returned when a command starts running
+pyimagej_status_cmd_unknown = "STATUS_COMMAND_UNKNOWN"  # Returned when an unknown command is passed to pyimagej
+pyimagej_status_cmd_done = "STATUS_DONE"  # Returned when a command is complete
+
 
 class ScriptFilename(Filename):
     """
@@ -49,6 +50,7 @@ class ScriptFilename(Filename):
     def set_value(self, value):
         super().set_value(value)
         self.value_change_fn()
+
 
 def start_imagej_process(input_queue, output_queue):
     f"""Python script to run when starting a new ImageJ process.
@@ -105,6 +107,7 @@ def start_imagej_process(input_queue, output_queue):
     jpype.shutdownJVM()
     pass
 
+
 class RunImageJScript(Module):
     """
     Module to run ImageJ scripts via pyimagej
@@ -115,9 +118,10 @@ class RunImageJScript(Module):
 
     def __init__(self):
         super().__init__()
-        self.imagej_process=None
-        self.to_imagej=None
-        self.from_imagej=None
+        self.imagej_process = None
+        self.to_imagej = None
+        self.from_imagej = None
+        self.parsed_params = False
 
     def create_settings(self):
         self.script_directory = Directory(
@@ -153,6 +157,7 @@ Note: this must be done each time you change the script, before running the Cell
                                                  )
         self.script_parameter_list = []
         self.script_parameter_count = HiddenCount(self.script_parameter_list)
+        pass
 
     def settings(self):
         result = [self.script_directory, self.script_file, self.get_parameters_button]
@@ -228,6 +233,14 @@ Note: this must be done each time you change the script, before running the Cell
                 # TODO use param_type to determine what kind of param to add instead of Text
                 group.append("value", Text(param_name, param_type))
                 self.script_parameter_list.append(group)
+            self.parsed_params = True
+        pass
+
+    def validate_module(self, pipeline):
+        if not self.parsed_params:
+            raise ValidationError(
+                "Please select a valid ImageJ script and use the \"Get parameters from script\" button."
+            )
         pass
 
     def run(self, workspace):
