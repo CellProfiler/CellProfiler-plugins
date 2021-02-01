@@ -136,12 +136,13 @@ Select the folder containing the script.
             dir_choice, custom_path = self.script_directory.get_parts_from_path(script_path)
             self.script_directory.join_parts(dir_choice, custom_path)
 
-        self.script_file = Filename(
+        # TODO to auto-parse script params, change the value_change_fn to get_parameters_from_script
+        self.script_file = ScriptFilename(
             "ImageJ Script", "script.py", doc="Select a script file with in any ImageJ-supported scripting language.",
             get_directory_fn=self.script_directory.get_absolute_path,
             set_directory_fn=set_directory_fn_script,
             browse_msg="Choose ImageJ script file",
-            #TODO value_change_fn=self.get_parameters_from_script
+            value_change_fn=self.clear_script_parameters
         )
         self.get_parameters_button = DoSomething("", 'Get parameters from script', self.get_parameters_from_script,
                                                  doc="""\
@@ -182,30 +183,39 @@ Note: this must be done each time you change the script, before running the Cell
             self.imagej_process = Process(target=start_imagej_process, name="PyImageJ Daemon",
                                           args=(self.to_imagej, self.from_imagej,))
             self.imagej_process.start()
-            atexit.register(self.close_pyimagej) # TODO is there a more CP-ish way to do this?
+            atexit.register(self.close_pyimagej)  # TODO is there a more CP-ish way to do this?
+        pass
+
+    def clear_script_parameters(self):
+        self.script_parameter_list.clear()
+        group = SettingsGroup()
+        group.append("value", Divider(line=True))
+        self.script_parameter_list.append(group)
+        self.parsed_params = False
+        pass
 
     def get_parameters_from_script(self):
         """
-        Use PyImageJ to read header text from Fiji and extract input parameters.
-        Probably return of list of these parameter names
+        Use PyImageJ to read header text from an ImageJ script and extract inputs/outputs, which are then converted to
+        CellProfiler settings for this module
         """
         script_filepath = path.join(self.script_directory.get_absolute_path(), self.script_file.value)
         if not path.exists(script_filepath):
             # nothing to do
             return
 
+        self.clear_script_parameters()
+
         self.init_pyimagej()
 
+        # Tell pyimagej to parse the script parameters
         self.to_imagej.put(pyimagej_cmd_script_params)
         self.to_imagej.put(script_filepath)
 
         ij_return = self.from_imagej.get()
 
+        # Process pyimagej's output
         if ij_return != pyimagej_status_cmd_unknown:
-            self.script_parameter_list.clear()
-            group = SettingsGroup()
-            group.append("value", Divider(line=True))
-            self.script_parameter_list.append(group)
             while True:
                 group = SettingsGroup()
                 param_name = self.from_imagej.get()
