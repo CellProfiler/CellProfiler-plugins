@@ -16,6 +16,7 @@ from cellprofiler_core.setting import Divider, HiddenCount
 from cellprofiler_core.setting.subscriber import ImageSubscriber
 from cellprofiler_core.preferences import get_default_output_directory
 
+import atexit
 import imagej
 import jpype
 import jpype.imports
@@ -23,6 +24,14 @@ from jpype.imports import *
 import random
 import skimage.io
 
+"""
+Constants for communicating with pyimagej
+"""
+pyimagej_cmd_script_params = "COMMAND_SCRIPT_PARAMS" # Parse the following script file's parameters
+pyimagej_cmd_exit = "COMMAND_EXIT" # Shut down the pyimagej daemon
+pyimagej_status_running = "STATUS_RUNNING" # Returned when a command starts running
+pyimagej_status_cmd_unknown = "STATUS_COMMAND_UNKNOWN" # Returned when an unknown command is passed to pyimagej
+pyimagej_status_cmd_done = "STATUS_DONE" # Returned when a command is complete
 
 class ScriptFilename(Filename):
     """
@@ -41,32 +50,60 @@ class ScriptFilename(Filename):
         super().set_value(value)
         self.value_change_fn()
 
+def start_imagej_process(input_queue, output_queue):
+    f"""Python script to run when starting a new ImageJ process.
+    
+    Note: communication is achieved by adding parameters to the from_cp queue and polling the to_cp queue: "inputs" must
+    be added to the input queue after the command, while "outputs" are added to the output queue after the script starts
+    
+    Supported commands
+    ----------
+    {pyimagej_cmd_script_params} : parse the parameters from an imagej script. 
+        inputs: script_filename
+        outputs: parameter name/value pairs
+    {pyimagej_cmd_exit} : shut down the pyimagej daemon
+        inputs: none
+        outputs:none
+    
+    Return values
+    ----------
+    {pyimagej_status_running} : the requested command has started successfully
+    {pyimagej_status_cmd_unknown} : unrecognized command, no further output is coming
 
-def parse_params(script_path, queue):
-    """Uses ImageJ to parse script parameters and return their names and types via the provided queue.
-
-    Note that both name and type are returned in python string form, as Jpype Java class wrappers are not available on
-    the CellProfiler side.
-
-     Parameters
-     ----------
-     script_path : str, required
-         Path to the ImageJ-style script file whose parameters will be read
-     queue : multiprocessing.Queue, required
-         A queue for cross-process communication. This will be populated with parameter {name, type} strings
-     """
+    Parameters
+    ----------
+    input_queue : multiprocessing.Queue, required
+        This Queue will be polled for input commands to run through ImageJ
+    output_queue : multiprocessing.Queue, required
+        This Queue will be filled with outputs to return to CellProfiler
+    """
     ij = imagej.init()
     from java.io import File
     script_service = ij.script()
-    script_file = File(script_path)
-    script_info = script_service.getScript(script_file)
-    for script_in in script_info.inputs():
-        queue.put(str(script_in.getName()))
-        queue.put(str(script_in.getType().toString()))
+
+    # Main daemon loop, polling the input queue
+    while True:
+        cmd = input_queue.get()
+        # The first input is always the command
+        if cmd == pyimagej_cmd_script_params:
+            # Indicate acceptance
+            output_queue.put(pyimagej_status_running)
+            script_path = input_queue.get()
+            script_file = File(script_path)
+            script_info = script_service.getScript(script_file)
+            for script_in in script_info.inputs():
+                output_queue.put(str(script_in.getName()))
+                output_queue.put(str(script_in.getType().toString()))
+            output_queue.put(pyimagej_status_cmd_done)
+        elif cmd == pyimagej_cmd_exit:
+            break
+        else:
+            output_queue.put(pyimagej_status_cmd_unknown)
+
+    # Shut down the daemon
     ij.getContext().dispose()
     jpype.shutdownJVM()
     pass
-
 
 class RunImageJScript(Module):
     """
@@ -75,6 +112,12 @@ class RunImageJScript(Module):
     module_name = "RunImageJScript"
     variable_revision_number = 1
     category = "Advanced"
+
+    def __init__(self):
+        super().__init__()
+        self.imagej_process=None
+        self.to_imagej=None
+        self.from_imagej=None
 
     def create_settings(self):
         self.script_directory = Directory(
@@ -93,12 +136,12 @@ Select the folder containing the script.
             dir_choice, custom_path = self.script_directory.get_parts_from_path(script_path)
             self.script_directory.join_parts(dir_choice, custom_path)
 
-        self.script_file = ScriptFilename(
+        self.script_file = Filename(
             "ImageJ Script", "script.py", doc="Select a script file with in any ImageJ-supported scripting language.",
             get_directory_fn=self.script_directory.get_absolute_path,
             set_directory_fn=set_directory_fn_script,
             browse_msg="Choose ImageJ script file",
-            value_change_fn=self.get_parameters_from_script
+            #TODO value_change_fn=self.get_parameters_from_script
         )
         self.get_parameters_button = DoSomething("", 'Get parameters from script', self.get_parameters_from_script,
                                                  doc="""\
@@ -126,6 +169,21 @@ Note: this must be done each time you change the script, before running the Cell
         # TODO: Loading CP project should show the previous extracted variables when project was saved
         pass
 
+    def close_pyimagej(self):
+        if self.imagej_process is not None:
+            self.to_imagej.put(pyimagej_cmd_exit)
+        pass
+
+    def init_pyimagej(self):
+        if self.imagej_process is None:
+            self.to_imagej = mp.Queue()
+            self.from_imagej = mp.Queue()
+            # TODO if needed we could set daemon=True
+            self.imagej_process = Process(target=start_imagej_process, name="PyImageJ Daemon",
+                                          args=(self.to_imagej, self.from_imagej,))
+            self.imagej_process.start()
+            atexit.register(self.close_pyimagej) # TODO is there a more CP-ish way to do this?
+
     def get_parameters_from_script(self):
         """
         Use PyImageJ to read header text from Fiji and extract input parameters.
@@ -136,19 +194,27 @@ Note: this must be done each time you change the script, before running the Cell
             # nothing to do
             return
 
-        q = mp.Queue()
-        p = Process(target=parse_params, args=(script_filepath, q,))
-        p.start()
-        p.join()
-        if not q.empty():
+        self.init_pyimagej()
+
+        self.to_imagej.put(pyimagej_cmd_script_params)
+        self.to_imagej.put(script_filepath)
+
+        ij_return = self.from_imagej.get()
+
+        if ij_return != pyimagej_status_cmd_unknown:
             self.script_parameter_list.clear()
             group = SettingsGroup()
             group.append("value", Divider(line=True))
             self.script_parameter_list.append(group)
-            while not q.empty():
+            while True:
                 group = SettingsGroup()
-                param_name = q.get()
-                param_type = q.get()
+                param_name = self.from_imagej.get()
+
+                # Check if the script is done
+                if param_name == pyimagej_status_cmd_done:
+                    break
+
+                param_type = self.from_imagej.get()
                 # TODO use param_type to determine what kind of param to add instead of Text
                 group.append("value", Text(param_name, param_type))
                 self.script_parameter_list.append(group)
