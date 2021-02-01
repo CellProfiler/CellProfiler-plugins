@@ -215,7 +215,7 @@ applied before rescaling or any other enhancements (except tophat filtering if u
 
         self.LoG_radius = cellprofiler_core.setting.text.Integer(
             'What size radius should be used for the LoG filter?',
-            value = 3,
+            value = 1,
             minval = 1, 
             maxval = 100,
             doc = "Enter a sigma in pixels; this sigma will be used for LoG filtering."
@@ -384,8 +384,8 @@ Select the objects to perform compensation within."""
                     temp_im_dict[eachgroup.class_num.value] += list(eachimage)
             for eachclass in temp_im_dict.keys():
                 group_scaling[eachclass] = numpy.percentile(temp_im_dict[eachclass], self.scalar_percentile.value)
-            min_intensity = numpy.min(group_scaling.values())
-            for key, value in group_scaling.iteritems():
+            min_intensity = numpy.min(list(group_scaling.values()))
+            for key, value in iter(group_scaling.items()):
                 group_scaling[key] = value / min_intensity
         
         else:
@@ -407,7 +407,7 @@ Select the objects to perform compensation within."""
                 eachimage = skimage.morphology.white_tophat(eachimage, selem)
 
             if self.do_LoG_filter.value:
-                eachimage = scipy.ndimage.gaussian_laplace(eachimage, int(self.LoG_radius.value))
+                eachimage = log_ndi(eachimage, int(self.LoG_radius.value))
 
             if self.do_DoG_filter.value:
                 eachimage = skimage.filters.difference_of_gaussians(eachimage, int(self.DoG_low_radius.value), int(self.DoG_high_radius.value))
@@ -515,3 +515,12 @@ Select the objects to perform compensation within."""
         return M
 
 
+    def log_ndi(data, sigma):
+        """
+        """
+        data = skimage.img_as_uint(data)
+        f = scipy.ndimage.gaussian_laplace
+        arr_ = -1 * f(data.astype(float), sigma)
+        arr_ = numpy.clip(arr_, 0, 65535) / 65535
+        
+        return skimage.img_as_float(arr_)
