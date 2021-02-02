@@ -3,7 +3,7 @@ from os import path
 from cellprofiler_core.image import Image
 from cellprofiler.modules import _help
 from cellprofiler_core.module import Module
-from cellprofiler_core.setting.text import Filename, ImageName, Text, Directory
+from cellprofiler_core.setting.text import Filename, ImageName, Text, Directory, Alphanumeric, Integer, Float
 from cellprofiler_core.constants.module import (
     IO_FOLDER_CHOICE_HELP_TEXT,
 )
@@ -32,6 +32,7 @@ pyimagej_cmd_exit = "COMMAND_EXIT"  # Shut down the pyimagej daemon
 pyimagej_status_running = "STATUS_RUNNING"  # Returned when a command starts running
 pyimagej_status_cmd_unknown = "STATUS_COMMAND_UNKNOWN"  # Returned when an unknown command is passed to pyimagej
 pyimagej_status_cmd_done = "STATUS_DONE"  # Returned when a command is complete
+pyimagej_script_outputs = "BEGIN_SCRIPT_OUTPUT" # Returned after script inputs are parsed, before outputs
 
 
 class ScriptFilename(Filename):
@@ -50,6 +51,40 @@ class ScriptFilename(Filename):
     def set_value(self, value):
         super().set_value(value)
         self.value_change_fn()
+
+
+def make_equivalent_setting(param_name, param_type):
+    """
+    Helper method to convert ImageJ/Java class parameter types to CellProfiler settings
+
+    Parameters
+    ----------
+    param_name : str, required
+        The name of the parameter
+    param_type : str, required
+        The Java class name describing the parameter type
+
+    Returns
+    ---------
+    A new Setting of a type appropriate for param_type, named with param_name. Or None if no valid conversion exists.
+    """
+    type_string = param_type.split()[1]
+    if type_string == "java.lang.String":
+        return Alphanumeric(param_name)
+    elif type_string == "java.lang.Integer" or type_string == "java.lang.Long" or type_string == "java.lang.Short" or \
+            type_string == "int" or type_string == "long" or type_string == "short":
+        return Integer(param_name)
+    elif type_string == "java.lang.Float" or type_string == "java.lang.Double" or type_string == "float" or \
+            type_string == "double":
+        return Float(param_name)
+    elif type_string == "java.io.File":
+        return Filename(param_name)
+    elif type_string == "java.io.Directory":
+        return Directory(param_name)
+    elif type_string == "net.imagej.Dataset" or type_string == "net.imagej.ImgPlus":
+        return ImageSubscriber(param_name)
+
+    return None
 
 
 def start_imagej_process(input_queue, output_queue):
@@ -71,6 +106,8 @@ def start_imagej_process(input_queue, output_queue):
     ----------
     {pyimagej_status_running} : the requested command has started successfully
     {pyimagej_status_cmd_unknown} : unrecognized command, no further output is coming
+    {pyimagej_script_outputs} : Script-parsing specific - 
+                                        input parsing is complete, remaining return values are script outputs
 
     Parameters
     ----------
@@ -96,6 +133,10 @@ def start_imagej_process(input_queue, output_queue):
             for script_in in script_info.inputs():
                 output_queue.put(str(script_in.getName()))
                 output_queue.put(str(script_in.getType().toString()))
+            output_queue.put(pyimagej_script_outputs)
+            for script_out in script_info.outputs():
+                output_queue.put(str(script_out.getName()))
+                output_queue.put(str(script_out.getType().toString()))
             output_queue.put(pyimagej_status_cmd_done)
         elif cmd == pyimagej_cmd_exit:
             break
@@ -122,6 +163,8 @@ class RunImageJScript(Module):
         self.to_imagej = None
         self.from_imagej = None
         self.parsed_params = False
+        self.script_inputs = {}
+        self.script_outputs = {}
 
     def create_settings(self):
         self.script_directory = Directory(
@@ -191,11 +234,21 @@ Note: this must be done each time you change the script, before running the Cell
             atexit.register(self.close_pyimagej)  # TODO is there a more CP-ish way to do this?
         pass
 
-    def clear_script_parameters(self):
-        self.script_parameter_list.clear()
+    def add_divider(self):
+        """
+        Add a divider to the settings pane
+        """
         group = SettingsGroup()
         group.append("value", Divider(line=True))
         self.script_parameter_list.append(group)
+
+    def clear_script_parameters(self):
+        """
+        Remove any existing settings added by scripts
+        """
+        self.script_parameter_list.clear()
+        self.script_inputs = {}
+        self.script_outputs = {}
         self.parsed_params = False
         pass
 
@@ -221,6 +274,8 @@ Note: this must be done each time you change the script, before running the Cell
 
         # Process pyimagej's output
         if ij_return != pyimagej_status_cmd_unknown:
+            param_dict = self.script_inputs
+            added_divider = False
             while True:
                 group = SettingsGroup()
                 param_name = self.from_imagej.get()
@@ -229,10 +284,22 @@ Note: this must be done each time you change the script, before running the Cell
                 if param_name == pyimagej_status_cmd_done:
                     break
 
-                param_type = self.from_imagej.get()
-                # TODO use param_type to determine what kind of param to add instead of Text
-                group.append("value", Text(param_name, param_type))
-                self.script_parameter_list.append(group)
+                # Check if input parsing is complete
+                if param_name == pyimagej_script_outputs:
+                    param_dict = self.script_outputs
+                    group.append("value", Divider(line=True))
+                    self.script_parameter_list.append(group)
+                    added_divider = False
+                    continue
+
+                next_setting = make_equivalent_setting(param_name, self.from_imagej.get())
+                param_dict[param_name] = next_setting
+                if next_setting is not None:
+                    group.append("value", next_setting)
+                    if not added_divider:
+                        self.add_divider()
+                        added_divider = True
+                    self.script_parameter_list.append(group)
             self.parsed_params = True
         pass
 
