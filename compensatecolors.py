@@ -407,7 +407,7 @@ Select the objects to perform compensation within."""
                 eachimage = skimage.morphology.white_tophat(eachimage, selem)
 
             if self.do_LoG_filter.value:
-                eachimage = log_ndi(eachimage, int(self.LoG_radius.value))
+                eachimage = self.log_ndi(eachimage, int(self.LoG_radius.value))
 
             if self.do_DoG_filter.value:
                 eachimage = skimage.filters.difference_of_gaussians(eachimage, int(self.DoG_low_radius.value), int(self.DoG_high_radius.value))
@@ -515,7 +515,7 @@ Select the objects to perform compensation within."""
         return M
 
 
-    def log_ndi(data, sigma):
+    def log_ndi(self, data, sigma):
         """
         """
         data = skimage.img_as_uint(data)
