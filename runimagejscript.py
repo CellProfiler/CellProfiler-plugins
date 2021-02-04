@@ -27,13 +27,18 @@ import skimage.io
 """
 Constants for communicating with pyimagej
 """
-pyimagej_cmd_script_params = "COMMAND_SCRIPT_PARAMS"  # Parse the following script file's parameters
-pyimagej_cmd_script_run = "COMMAND_SCRIPT_RUN"  # Run an indicated script
+pyimagej_key_command = "KEY_COMMAND"  # Matching value indicates what command to execute
+pyimagej_key_input = "KEY_INPUT"  # Matching value is command-specific input object
+pyimagej_key_output = "KEY_OUTPUT"  # Matching value is command-specific output object
+pyimagej_key_error = "KEY_OUTPUT"  # Matching value is command-specific output object
+pyimagej_cmd_script_parse = "COMMAND_SCRIPT_PARAMS"  # Parse a script file's parameters
+pyimagej_script_parse_inputs = "SCRIPT_PARSE_INPUTS"  # Script input dictionary key
+pyimagej_script_parse_outputs = "SCRIPT_PARSE_OUTPUTS"  # Script output dictionary key
+pyimagej_cmd_script_run = "COMMAND_SCRIPT_RUN"  # Run a script
+pyimagej_script_run_file_key = "SCRIPT_RUN_FILE_KEY"  # The script filename key
+pyimagej_script_run_input_key = "SCRIPT_RUN_INPUT_KEY"  # The script input dictionary key
 pyimagej_cmd_exit = "COMMAND_EXIT"  # Shut down the pyimagej daemon
-pyimagej_status_running = "STATUS_RUNNING"  # Returned when a command starts running
 pyimagej_status_cmd_unknown = "STATUS_COMMAND_UNKNOWN"  # Returned when an unknown command is passed to pyimagej
-pyimagej_status_cmd_done = "STATUS_DONE"  # Returned when a command is complete
-pyimagej_script_outputs = "BEGIN_SCRIPT_OUTPUT" # Returned after script inputs are parsed, before outputs
 
 
 class ScriptFilename(Filename):
@@ -124,27 +129,32 @@ def convert_java_type_to_setting(param_name, param_type):
 def start_imagej_process(input_queue, output_queue):
     f"""Python script to run when starting a new ImageJ process.
     
-    Note: communication is achieved by adding parameters to the from_cp queue and polling the to_cp queue: "inputs" must
-    be added to the input queue after the command, while "outputs" are added to the output queue after the script starts
+    All commands are initiated by adding a dictionary with a {pyimagej_key_command} entry to the {input_queue}. This
+    indicating which supported command should be executed. Some commands may take additional input, which is specified
+    in the dictionary with {pyimagej_key_input}.
+
+    Outputs are returned by adding a dictionary to the {output_queue} with the {pyimagej_key_output} key, or
+    {pyimagej_key_error} if an error occurred during script execution.
     
     Supported commands
     ----------
-    {pyimagej_cmd_script_params} : parse the parameters from an imagej script. 
+    {pyimagej_cmd_script_parse} : parse the parameters from an imagej script. 
         inputs: script filename
-        outputs: parameter name/value pairs
+        outputs: dictionary with mappings
+            {pyimagej_script_parse_inputs} -> dictionary of input field name/value pairs
+            {pyimagej_script_parse_outputs} -> dictionary of output field name/value pairs
     {pyimagej_cmd_script_run} : takes a set of named inputs from CellProfiler and runs the given imagej script
-        inputs: script filename, input parameter name/value dictionary
-        outputs: output field name/value dictionary
-    {pyimagej_cmd_exit} : shut down the pyimagej daemon
+        inputs: dictionary with mappings
+            {pyimagej_script_run_file_key} -> script filename
+            {pyimagej_script_run_input_key} -> input parameter name/value dictionary
+        outputs: dictionary containing output field name/value pairs
+    {pyimagej_cmd_exit} : shut down the pyimagej daemon.
         inputs: none
-        outputs:none
+        outputs: none
     
     Return values
     ----------
-    {pyimagej_status_running} : the requested command has started successfully
     {pyimagej_status_cmd_unknown} : unrecognized command, no further output is coming
-    {pyimagej_script_outputs} : Script-parsing specific - 
-                                        input parsing is complete, remaining return values are script outputs
 
     Parameters
     ----------
@@ -159,27 +169,24 @@ def start_imagej_process(input_queue, output_queue):
 
     # Main daemon loop, polling the input queue
     while True:
-        cmd = input_queue.get()
-        # The first input is always the command
-        if cmd == pyimagej_cmd_script_params:
-            # Indicate acceptance
-            output_queue.put(pyimagej_status_running)
-            script_path = input_queue.get()
+        command_dictionary = input_queue.get()
+        cmd = command_dictionary[pyimagej_key_command]
+        if cmd == pyimagej_cmd_script_parse:
+            script_path = command_dictionary[pyimagej_key_input]
             script_file = File(script_path)
             script_info = script_service.getScript(script_file)
+            script_inputs = {}
+            script_outputs = {}
             for script_in in script_info.inputs():
-                output_queue.put(str(script_in.getName()))
-                output_queue.put(str(script_in.getType().toString()))
-            output_queue.put(pyimagej_script_outputs)
+                script_inputs[str(script_in.getName())] = str(script_in.getType().toString())
             for script_out in script_info.outputs():
-                output_queue.put(str(script_out.getName()))
-                output_queue.put(str(script_out.getType().toString()))
-            output_queue.put(pyimagej_status_cmd_done)
+                script_outputs[str(script_out.getName())] = str(script_out.getType().toString())
+            output_queue.put({pyimagej_script_parse_inputs: script_inputs,
+                              pyimagej_script_parse_outputs: script_outputs})
         elif cmd == pyimagej_cmd_script_run:
-            output_queue.put(pyimagej_status_running)
-            script_path = input_queue.get()
+            script_path = (command_dictionary[pyimagej_key_input])[pyimagej_script_run_file_key]
             script_file = File(script_path)
-            input_map = input_queue.get()
+            input_map = (command_dictionary[pyimagej_key_input])[pyimagej_script_run_input_key]
             # FIXME probably need to convert input python types
             script_out_map = script_service.run(script_file, True, input_map).get().getOutputs()
             output_dict = {}
@@ -189,11 +196,11 @@ def start_imagej_process(input_queue, output_queue):
                 if value is not None:
                     output_dict[key] = value
 
-            output_queue.put(output_dict)
+            output_queue.put({pyimagej_key_output: output_dict})
         elif cmd == pyimagej_cmd_exit:
             break
         else:
-            output_queue.put(pyimagej_status_cmd_unknown)
+            output_queue.put({pyimagej_key_error: pyimagej_status_cmd_unknown})
 
     # Shut down the daemon
     ij.getContext().dispose()
@@ -272,7 +279,7 @@ Note: this must be done each time you change the script, before running the Cell
 
     def close_pyimagej(self):
         if self.imagej_process is not None:
-            self.to_imagej.put(pyimagej_cmd_exit)
+            self.to_imagej.put({pyimagej_key_command: pyimagej_cmd_exit})
         pass
 
     def init_pyimagej(self):
@@ -319,37 +326,28 @@ Note: this must be done each time you change the script, before running the Cell
         self.init_pyimagej()
 
         # Tell pyimagej to parse the script parameters
-        self.to_imagej.put(pyimagej_cmd_script_params)
-        self.to_imagej.put(script_filepath)
+        self.to_imagej.put({pyimagej_key_command: pyimagej_cmd_script_parse, pyimagej_key_input: script_filepath})
 
         ij_return = self.from_imagej.get()
 
         # Process pyimagej's output
         if ij_return != pyimagej_status_cmd_unknown:
-            param_dict = self.script_input_settings
-            added_divider = False
-            while True:
-                group = SettingsGroup()
-                param_name = self.from_imagej.get()
+            input_params = ij_return[pyimagej_script_parse_inputs]
+            output_params = ij_return[pyimagej_script_parse_outputs]
 
-                # Check if the script is done
-                if param_name == pyimagej_status_cmd_done:
-                    break
+            for param_dict, settings_dict in ((input_params, self.script_input_settings),
+                                              (output_params, self.script_output_settings)):
+                for param_name in param_dict:
+                    param_type = param_dict[param_name]
+                    next_setting = convert_java_type_to_setting(param_name, param_type)
+                    if next_setting is not None:
+                        settings_dict[param_name] = next_setting
+                        group = SettingsGroup()
+                        group.append("value", next_setting)
+                        self.script_parameter_list.append(group)
 
-                # Check if input parsing is complete
-                if param_name == pyimagej_script_outputs:
-                    param_dict = self.script_output_settings
-                    added_divider = False
-                    continue
+                self.add_divider()
 
-                next_setting = convert_java_type_to_setting(param_name, self.from_imagej.get())
-                if next_setting is not None:
-                    param_dict[param_name] = next_setting
-                    group.append("value", next_setting)
-                    if not added_divider:
-                        self.add_divider()
-                        added_divider = True
-                    self.script_parameter_list.append(group)
             self.parsed_params = True
         pass
 
@@ -369,16 +367,16 @@ Note: this must be done each time you change the script, before running the Cell
             script_inputs[name] = self.script_input_settings[name].get_value()
 
         # Start the script
-        self.to_imagej.put(pyimagej_cmd_script_run)
-        self.to_imagej.put(script_filepath)
-        self.to_imagej.put(script_inputs)
+        self.to_imagej.put({pyimagej_key_command: pyimagej_cmd_script_run, pyimagej_key_input:
+                            {pyimagej_script_run_file_key: script_filepath,
+                             pyimagej_script_run_input_key: script_inputs}
+                            })
 
         # Retrieve script output
         ij_return = self.from_imagej.get()
         if ij_return != pyimagej_status_cmd_unknown:
-            print("output received")
+            print("command received")
             # TODO update output settings
-
         pass
 
     def display(self, workspace, figure):
