@@ -338,6 +338,9 @@ Note: this must be done each time you change the script, before running the Cell
         Helper method to launch get_parameters_from_script on a thread so that it isn't run on the GUI thread, since
         it may be slow (when initializing pyimagej).
         """
+        # Reset previously parsed parameters
+        self.clear_script_parameters()
+
         global stop_progress_thread
         stop_progress_thread = False
 
@@ -354,6 +357,16 @@ Note: this must be done each time you change the script, before running the Cell
             if stop_progress_thread:
                 progress_gauge.Show(False)
                 break
+
+        if self.script_input_settings:
+            self.add_divider()
+            for setting_name in self.script_input_settings:
+                next_setting = self.script_input_settings[setting_name]
+                group = SettingsGroup()
+                group.append("value", next_setting)
+                self.script_parameter_list.append(group)
+
+        self.parsed_params = True
         pass
 
     def get_parameters_from_script(self):
@@ -366,9 +379,6 @@ Note: this must be done each time you change the script, before running the Cell
             # nothing to do
             return
 
-        # Reset previously parsed parameters
-        self.clear_script_parameters()
-
         # Start pyimagej if needed
         self.init_pyimagej()
 
@@ -377,25 +387,19 @@ Note: this must be done each time you change the script, before running the Cell
 
         ij_return = self.from_imagej.get()
 
-        # Process pyimagej's output
+        # Process pyimagej's output, converting script parameters to settings
         if ij_return != pyimagej_status_cmd_unknown:
             input_params = ij_return[pyimagej_script_parse_inputs]
             output_params = ij_return[pyimagej_script_parse_outputs]
 
             for param_dict, settings_dict in ((input_params, self.script_input_settings),
                                               (output_params, self.script_output_settings)):
-                if param_dict:
-                    self.add_divider()
                 for param_name in param_dict:
                     param_type = param_dict[param_name]
                     next_setting = convert_java_type_to_setting(param_name, param_type)
                     if next_setting is not None:
                         settings_dict[param_name] = next_setting
-                        group = SettingsGroup()
-                        group.append("value", next_setting)
-                        self.script_parameter_list.append(group)
 
-            self.parsed_params = True
             global stop_progress_thread
             stop_progress_thread = True
         pass
