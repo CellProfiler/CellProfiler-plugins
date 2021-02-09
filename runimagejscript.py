@@ -14,8 +14,12 @@ from cellprofiler_core.setting import Divider, HiddenCount
 from cellprofiler_core.setting.subscriber import ImageSubscriber
 from cellprofiler_core.preferences import get_default_output_directory
 
+from wx import Gauge
+from wx import Window
+from threading import Thread
 import multiprocessing as mp
 from multiprocessing import Process
+import time
 import atexit
 import imagej
 import jpype
@@ -39,6 +43,7 @@ pyimagej_script_run_file_key = "SCRIPT_RUN_FILE_KEY"  # The script filename key
 pyimagej_script_run_input_key = "SCRIPT_RUN_INPUT_KEY"  # The script input dictionary key
 pyimagej_cmd_exit = "COMMAND_EXIT"  # Shut down the pyimagej daemon
 pyimagej_status_cmd_unknown = "STATUS_COMMAND_UNKNOWN"  # Returned when an unknown command is passed to pyimagej
+pyimagej_status_startup_complete = "STATUS_STARTUP_COMPLETE"  # Returned after initial startup before daemon loop
 
 
 class ScriptFilename(Filename):
@@ -48,6 +53,7 @@ class ScriptFilename(Filename):
     optional arguments -
        value_change_fn is a function that gets called when the file value changes
     """
+
     def __init__(self, text, value, *args, **kwargs):
         kwargs = kwargs.copy()
         self.value_change_fn = kwargs.pop("value_change_fn", None)
@@ -56,6 +62,16 @@ class ScriptFilename(Filename):
     def set_value(self, value):
         super().set_value(value)
         self.value_change_fn()
+
+
+class PyimagejError(EnvironmentError):
+    """
+    An exception indicating that something went wrong in PyimageJ
+    """
+
+    def __init__(self, message):
+        super(EnvironmentError, self).__init__(message)
+        self.message = message
 
 
 def convert_java_to_python_type(return_value):
@@ -167,6 +183,9 @@ def start_imagej_process(input_queue, output_queue):
     from java.io import File
     script_service = ij.script()
 
+    # Signify output is complete
+    output_queue.put(pyimagej_status_startup_complete)
+
     # Main daemon loop, polling the input queue
     while True:
         command_dictionary = input_queue.get()
@@ -250,7 +269,8 @@ Select the folder containing the script.
             browse_msg="Choose ImageJ script file",
             value_change_fn=self.clear_script_parameters
         )
-        self.get_parameters_button = DoSomething("", 'Get parameters from script', self.get_parameters_from_script,
+        self.get_parameters_button = DoSomething("", 'Get parameters from script',
+                                                 self.get_parameters_helper,
                                                  doc="""\
 Parse parameters from the currently selected script and add the appropriate settings to this CellProfiler module.
 
@@ -289,8 +309,12 @@ Note: this must be done each time you change the script, before running the Cell
             # TODO if needed we could set daemon=True
             self.imagej_process = Process(target=start_imagej_process, name="PyImageJ Daemon",
                                           args=(self.to_imagej, self.from_imagej,))
-            self.imagej_process.start()
             atexit.register(self.close_pyimagej)  # TODO is there a more CP-ish way to do this?
+            self.imagej_process.start()
+            if self.from_imagej.get() != pyimagej_status_startup_complete:
+                raise PyimagejError(
+                    "PyImageJ failed to start up successfully."
+                )
         pass
 
     def add_divider(self):
@@ -311,6 +335,29 @@ Note: this must be done each time you change the script, before running the Cell
         self.parsed_params = False
         pass
 
+    def get_parameters_helper(self):
+        """
+        Helper method to launch get_parameters_from_script on a thread so that it isn't run on the GUI thread, since
+        it may be slow (when initializing pyimagej).
+        """
+        global stop_progress_thread
+        stop_progress_thread = False
+
+        progress_gauge = Gauge(Window.FindFocus(), -1, size=(100, -1))
+        progress_gauge.Show(True)
+
+        parse_param_thread = Thread(target=self.get_parameters_from_script, name="Parse Parameters Thread", daemon=True)
+        parse_param_thread.start()
+
+        while True:
+            # Wait for get_parameters_from_script to finish
+            progress_gauge.Pulse()
+            time.sleep(0.025)
+            if stop_progress_thread:
+                progress_gauge.Show(False)
+                break
+        pass
+
     def get_parameters_from_script(self):
         """
         Use PyImageJ to read header text from an ImageJ script and extract inputs/outputs, which are then converted to
@@ -321,8 +368,10 @@ Note: this must be done each time you change the script, before running the Cell
             # nothing to do
             return
 
+        # Reset previously parsed parameters
         self.clear_script_parameters()
 
+        # Start pyimagej if needed
         self.init_pyimagej()
 
         # Tell pyimagej to parse the script parameters
@@ -337,6 +386,8 @@ Note: this must be done each time you change the script, before running the Cell
 
             for param_dict, settings_dict in ((input_params, self.script_input_settings),
                                               (output_params, self.script_output_settings)):
+                if param_dict:
+                    self.add_divider()
                 for param_name in param_dict:
                     param_type = param_dict[param_name]
                     next_setting = convert_java_type_to_setting(param_name, param_type)
@@ -346,9 +397,9 @@ Note: this must be done each time you change the script, before running the Cell
                         group.append("value", next_setting)
                         self.script_parameter_list.append(group)
 
-                self.add_divider()
-
             self.parsed_params = True
+            global stop_progress_thread
+            stop_progress_thread = True
         pass
 
     def validate_module(self, pipeline):
@@ -368,8 +419,8 @@ Note: this must be done each time you change the script, before running the Cell
 
         # Start the script
         self.to_imagej.put({pyimagej_key_command: pyimagej_cmd_script_run, pyimagej_key_input:
-                            {pyimagej_script_run_file_key: script_filepath,
-                             pyimagej_script_run_input_key: script_inputs}
+            {pyimagej_script_run_file_key: script_filepath,
+             pyimagej_script_run_input_key: script_inputs}
                             })
 
         # Retrieve script output
