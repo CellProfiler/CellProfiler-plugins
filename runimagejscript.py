@@ -126,16 +126,14 @@ def convert_java_type_to_setting(param_name, param_type):
     """
     type_string = param_type.split()[1]
     if type_string == "java.lang.String" or type_string == "java.lang.Character":
-        return Alphanumeric(param_name)
+        return Alphanumeric(param_name, "")
     elif type_string == "java.lang.Integer" or type_string == "java.lang.Long" or type_string == "java.lang.Short" \
             or type_string == "java.lang.Boolean" or type_string == "java.lang.Byte":
         return Integer(param_name)
     elif type_string == "java.lang.Float" or type_string == "java.lang.Double":
         return Float(param_name)
     elif type_string == "java.io.File":
-        return Filename(param_name)
-    elif type_string == "java.io.Directory":
-        return Directory(param_name)
+        return Filename(param_name, "")
     elif type_string == "net.imagej.Dataset" or type_string == "net.imagej.ImgPlus":
         return ImageSubscriber(param_name)
 
