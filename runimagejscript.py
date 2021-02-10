@@ -207,8 +207,25 @@ def convert_java_type_to_setting(param_name, param_type):
     return None
 
 
+def preprocess_script_inputs(ij, input_map):
+    """Helper method to convert pythonic inputs to something that can be handled by ImageJ
+
+    In particular this is necessary for image inputs which won't be auto-converted by Jpype
+
+    Parameters
+    ----------
+    ij:
+        ImageJ entry point (from imagej.init())
+    input_map:
+        map of input names to values
+    """
+    for key in input_map:
+        if isinstance(input_map[key], Image):
+            input_map[key] = ij.py.to_dataset(input_map[key].get_image())
+    pass
+
 def start_imagej_process(input_queue, output_queue):
-    f"""Python script to run when starting a new ImageJ process.
+    """Python script to run when starting a new ImageJ process.
     
     All commands are initiated by adding a dictionary with a {pyimagej_key_command} entry to the {input_queue}. This
     indicating which supported command should be executed. Some commands may take additional input, which is specified
@@ -271,7 +288,7 @@ def start_imagej_process(input_queue, output_queue):
             script_path = (command_dictionary[pyimagej_key_input])[pyimagej_script_run_file_key]
             script_file = File(script_path)
             input_map = (command_dictionary[pyimagej_key_input])[pyimagej_script_run_input_key]
-            # FIXME probably need to convert input python types
+            preprocess_script_inputs(ij, input_map)
             script_out_map = script_service.run(script_file, True, input_map).get().getOutputs()
             output_dict = {}
             for entry in script_out_map.entrySet():
@@ -481,10 +498,19 @@ Note: this must be done each time you change the script, before running the Cell
     def run(self, workspace):
         script_filepath = path.join(self.script_directory.get_absolute_path(), self.script_file.value)
 
+        image_set_list = workspace.image_set_list
+        d = self.get_dictionary(image_set_list)
         # convert the CP settings to script parameters for pyimagej
         script_inputs = {}
         for name in self.script_input_settings:
-            script_inputs[name] = self.script_input_settings[name].get_value()
+            setting = self.script_input_settings[name]
+            if isinstance(setting, ImageSubscriber):
+                # Images need to be pulled from the workspace
+                orig_image = workspace.image_set.get_image(setting.get_value())
+                script_inputs[name] = orig_image
+            else:
+                # Other settings can be read directly
+                script_inputs[name] = setting.get_value()
 
         # Start the script
         self.to_imagej.put({pyimagej_key_command: pyimagej_cmd_script_run, pyimagej_key_input:
