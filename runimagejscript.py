@@ -28,6 +28,30 @@ from jpype.imports import *
 import random
 import skimage.io
 
+__doc__ = """\
+Run ImageJ Script
+=================
+
+The **Run ImageJ Script** module allows you to run any supported ImageJ script as part
+of your workflow.
+
+First, select a script file. Then click the \"Get parameters from script\" button to detect required inputs for your
+script. Each input will have its own setting created, allowing you to pass data from CellProfiler to ImageJ.
+
+After filling in any required inputs you can run the script normally.
+
+Note
+^^^^^^^
+
+Only numeric, text and image input types are currently supported.
+
+See also
+^^^^^^^^
+
+ImageJ Scripting: https://imagej.net/Scripting 
+ 
+"""
+
 """
 Constants for communicating with pyimagej
 """
