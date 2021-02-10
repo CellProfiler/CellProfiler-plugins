@@ -46,6 +46,38 @@ pyimagej_status_cmd_unknown = "STATUS_COMMAND_UNKNOWN"  # Returned when an unkno
 pyimagej_status_startup_complete = "STATUS_STARTUP_COMPLETE"  # Returned after initial startup before daemon loop
 
 
+class Character(Alphanumeric):
+    """
+    A helper Setting subclass of Alphanumeric that limits string entry to size one
+    """
+    def __init__(self, text, value, *args, **kwargs):
+        super().__init__(text, value, *args, **kwargs)
+
+    def test_valid(self, pipeline):
+        super().test_valid(pipeline)
+        if len(self.value) > 1:
+            raise ValidationError("Only single characters can be used.", self)
+
+
+class Boolean(Integer):
+    """
+    A helper Setting subclass of Integer that converts 0 to False and any other number to True
+    """
+
+    def __init__(self, text, value, *args, **kwargs):
+        super().__init__(text, value, doc="""\
+Enter '0' for \"False\" and any other value for \"True\"
+""",
+                         *args, **kwargs)
+
+    def get_value(self, reraise=False):
+        v = super().get_value(reraise)
+        if v == 0:
+            return False
+
+        return True
+
+
 class ScriptFilename(Filename):
     """
     A helper subclass of Filename that auto-generates script parameter settings when the script changes
@@ -125,13 +157,24 @@ def convert_java_type_to_setting(param_name, param_type):
     A new Setting of a type appropriate for param_type, named with param_name. Or None if no valid conversion exists.
     """
     type_string = param_type.split()[1]
-    if type_string == "java.lang.String" or type_string == "java.lang.Character":
+    if type_string == "java.lang.String":
         return Alphanumeric(param_name, "")
-    elif type_string == "java.lang.Integer" or type_string == "java.lang.Long" or type_string == "java.lang.Short" \
-            or type_string == "java.lang.Boolean" or type_string == "java.lang.Byte":
-        return Integer(param_name)
-    elif type_string == "java.lang.Float" or type_string == "java.lang.Double":
-        return Float(param_name)
+    if type_string == "java.lang.Character":
+        return Character(param_name, "")
+    elif type_string == "java.lang.Integer":
+        return Integer(param_name, 0, minval=-2**31, maxval=((2**31)-1))
+    elif type_string == "java.lang.Long":
+        return Integer(param_name, 0, minval=-2**63, maxval=((2**63)-1))
+    elif type_string == "java.lang.Short":
+        return Integer(param_name, 0, minval=-32768, maxval=32767)
+    elif type_string == "java.lang.Byte":
+        return Integer(param_name, 0, minval=-128, maxval=127)
+    elif type_string == "java.lang.Boolean":
+        return Boolean(param_name, 0)
+    elif type_string == "java.lang.Float":
+        return Float(param_name, minval=-2**31, maxval=((2**31)-1))
+    elif type_string == "java.lang.Double":
+        return Float(param_name, minval=-2**63, maxval=((2**63)-1))
     elif type_string == "java.io.File":
         return Filename(param_name, "")
     elif type_string == "net.imagej.Dataset" or type_string == "net.imagej.ImgPlus":
