@@ -495,7 +495,7 @@ Note: this must be done each time you change the script, before running the Cell
         # Retrieve script output
         ij_return = self.from_imagej.get()
         if ij_return != pyimagej_status_cmd_unknown:
-            print("command received")
+            print("command unknown")
             # TODO update output settings
         pass
 
