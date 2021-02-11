@@ -327,6 +327,18 @@ class RunImageJScript(Module):
         self.script_output_settings = {}  # Map of output parameter names to CellProfiler settings objects
 
     def create_settings(self):
+
+        module_explanation = [
+            "The", self.module_name, "module allows you to run any supported ImageJ script as part of your workflow.\n\n",
+            "First, select a script file. Then click the \"Get parameters from script\" button to detect required inputs for your script"
+            "Each input will have its own setting created, allowing you to pass data from CellProfiler to ImageJ. "
+            "After filling in any required inputs you can run the script normally. \n\n"
+            "Note: only numeric, text and image input types are currently supported. \n\n"
+            "See also ImageJ Scripting: https://imagej.net/Scripting."
+
+        ]
+        self.set_notes([" ".join(module_explanation)])
+
         self.script_directory = Directory(
             "Script directory",
             allow_metadata=False,
