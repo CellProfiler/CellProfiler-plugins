@@ -441,9 +441,12 @@ Note: this must be done each time you change the script, before running the Cell
         Use PyImageJ to read header text from an ImageJ script and extract inputs/outputs, which are then converted to
         CellProfiler settings for this module
         """
+        global stop_progress_thread
         script_filepath = path.join(self.script_directory.get_absolute_path(), self.script_file.value)
+
         if not path.exists(script_filepath):
             # nothing to do
+            stop_progress_thread = True
             return
 
         # Start pyimagej if needed
@@ -467,7 +470,6 @@ Note: this must be done each time you change the script, before running the Cell
                     if next_setting is not None:
                         settings_dict[param_name] = next_setting
 
-            global stop_progress_thread
             stop_progress_thread = True
         pass
 
