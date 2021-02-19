@@ -3,7 +3,8 @@ from os import path
 from cellprofiler_core.image import Image
 from cellprofiler.modules import _help
 from cellprofiler_core.module import Module
-from cellprofiler_core.setting.text import Filename, ImageName, Text, Directory, Alphanumeric, Integer, Float
+from cellprofiler_core.setting.text import Filename, Text, Directory, Alphanumeric, Integer, Float
+from cellprofiler_core.setting.text.alphanumeric.name.image_name import ImageName
 from cellprofiler_core.constants.module import (
     IO_FOLDER_CHOICE_HELP_TEXT,
 )
@@ -13,6 +14,9 @@ from cellprofiler_core.setting._settings_group import SettingsGroup
 from cellprofiler_core.setting import Divider, HiddenCount
 from cellprofiler_core.setting.subscriber import ImageSubscriber
 from cellprofiler_core.preferences import get_default_output_directory
+
+from _character import Character
+from _boolean import Boolean
 
 from wx import Gauge
 from wx import Window
@@ -70,41 +74,9 @@ pyimagej_status_cmd_unknown = "STATUS_COMMAND_UNKNOWN"  # Returned when an unkno
 pyimagej_status_startup_complete = "STATUS_STARTUP_COMPLETE"  # Returned after initial startup before daemon loop
 
 
-class Character(Alphanumeric):
-    """
-    A helper Setting subclass of Alphanumeric that limits string entry to size one
-    """
-    def __init__(self, text, value, *args, **kwargs):
-        super().__init__(text, value, *args, **kwargs)
-
-    def test_valid(self, pipeline):
-        super().test_valid(pipeline)
-        if len(self.value) > 1:
-            raise ValidationError("Only single characters can be used.", self)
-
-
-class Boolean(Integer):
-    """
-    A helper Setting subclass of Integer that converts 0 to False and any other number to True
-    """
-
-    def __init__(self, text, value, *args, **kwargs):
-        super().__init__(text, value, doc="""\
-Enter '0' for \"False\" and any other value for \"True\"
-""",
-                         *args, **kwargs)
-
-    def get_value(self, reraise=False):
-        v = super().get_value(reraise)
-        if v == 0:
-            return False
-
-        return True
-
-
 class ScriptFilename(Filename):
     """
-    A helper subclass of Filename that auto-generates script parameter settings when the script changes
+    A helper subclass of Filename with a callback when the script file changes
 
     optional arguments -
        value_change_fn is a function that gets called when the file value changes
@@ -355,7 +327,6 @@ Select the folder containing the script.
             dir_choice, custom_path = self.script_directory.get_parts_from_path(script_path)
             self.script_directory.join_parts(dir_choice, custom_path)
 
-        # TODO to auto-parse script params, change the value_change_fn to get_parameters_from_script
         self.script_file = ScriptFilename(
             "ImageJ Script", "script.py", doc="Select a script file with in any ImageJ-supported scripting language.",
             get_directory_fn=self.script_directory.get_absolute_path,
@@ -509,7 +480,6 @@ Note: this must be done each time you change the script, before running the Cell
 
     def run(self, workspace):
         script_filepath = path.join(self.script_directory.get_absolute_path(), self.script_file.value)
-
         image_set_list = workspace.image_set_list
         d = self.get_dictionary(image_set_list)
         # convert the CP settings to script parameters for pyimagej
