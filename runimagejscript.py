@@ -366,21 +366,25 @@ Note: this must be done each time you change the script, before running the Cell
 
     def settings(self):
         result = [self.script_parameter_count, self.script_directory, self.script_file, self.get_parameters_button]
+        if len(self.script_parameter_list) > 0:
+            result += [Divider(line=True)]
         for script_parameter in self.script_parameter_list:
             result += [script_parameter.value]
+            result += [script_parameter.remover]
         for param in self.parameter_names_and_types:
             result += [param.name, param.type]
         return result
 
     def visible_settings(self):
         visible_settings = [self.script_directory, self.script_file, self.get_parameters_button]
+        if len(self.script_parameter_list) > 0:
+            visible_settings += [Divider(line=True)]
         for script_parameter in self.script_parameter_list:
             visible_settings += [script_parameter.value]
+            visible_settings += [script_parameter.remover]
         return visible_settings
 
     def prepare_settings(self, setting_values):
-        self.add_divider()
-
         settings_count = int(setting_values[0])
 
         parameter_names_and_types = setting_values[- (settings_count - 1 ) * 2:]
@@ -388,11 +392,15 @@ Note: this must be done each time you change the script, before running the Cell
         for i in range(int(len(parameter_names_and_types) / 2)):
             self.add_param_name_and_type(parameter_names_and_types[i * 2], parameter_names_and_types[i * 2 + 1])
 
+        if settings_count > 0:
+            self.add_divider()
+
         # Add settings previously extracted from script
         i = 0
         while len(self.script_parameter_list) < settings_count:
             group = SettingsGroup()
             group.append("value", convert_java_type_to_setting(self.parameter_names_and_types[i].name.value, self.parameter_names_and_types[i].type.value))
+            group.append("remover", RemoveSettingButton("", "Remove this variable", self.script_parameter_list, group))
             self.script_parameter_list.append(group)
             i += 1
 
@@ -446,6 +454,7 @@ Note: this must be done each time you change the script, before running the Cell
         global stop_progress_thread
         stop_progress_thread = False
 
+        print(Window.FindFocus())
         progress_gauge = Gauge(Window.FindFocus(), -1, size=(100, -1))
         progress_gauge.Show(True)
 
@@ -461,11 +470,11 @@ Note: this must be done each time you change the script, before running the Cell
                 break
 
         if self.script_input_settings:
-            self.add_divider()
             for setting_name in self.script_input_settings:
                 next_setting = self.script_input_settings[setting_name]
                 group = SettingsGroup()
                 group.append("value", next_setting)
+                group.append("remover", RemoveSettingButton("", "Remove this variable", self.script_parameter_list, group))
                 self.script_parameter_list.append(group)
 
         self.parsed_params = True
