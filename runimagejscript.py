@@ -344,12 +344,32 @@ Note: this must be done each time you change the script, before running the Cell
                                                  )
         self.script_parameter_list = []
         self.script_parameter_count = HiddenCount(self.script_parameter_list)
-        pass
+        self.parameter_names_and_types = []
+
+    def add_param_name_and_type(self, param_name, param_type):
+        group = SettingsGroup()
+        group.append(
+            "name",
+            Text(
+                'Parameter name',
+                param_name
+            )
+        )
+        group.append(
+            "type",
+            Text(
+                "Parameter type",
+                param_type),
+        )
+
+        self.parameter_names_and_types.append(group)
 
     def settings(self):
-        result = [self.script_directory, self.script_file, self.get_parameters_button]
+        result = [self.script_parameter_count, self.script_directory, self.script_file, self.get_parameters_button]
         for script_parameter in self.script_parameter_list:
             result += [script_parameter.value]
+        for param in self.parameter_names_and_types:
+            result += [param.name, param.type]
         return result
 
     def visible_settings(self):
@@ -359,8 +379,23 @@ Note: this must be done each time you change the script, before running the Cell
         return visible_settings
 
     def prepare_settings(self, setting_values):
-        # TODO: Loading CP project should show the previous extracted variables when project was saved
-        pass
+        self.add_divider()
+
+        settings_count = int(setting_values[0])
+
+        parameter_names_and_types = setting_values[- (settings_count - 1 ) * 2:]
+        # Add hidden setting that keeps track of name and type
+        for i in range(int(len(parameter_names_and_types) / 2)):
+            self.add_param_name_and_type(parameter_names_and_types[i * 2], parameter_names_and_types[i * 2 + 1])
+
+        # Add settings previously extracted from script
+        i = 0
+        while len(self.script_parameter_list) < settings_count:
+            group = SettingsGroup()
+            group.append("value", convert_java_type_to_setting(self.parameter_names_and_types[i].name.value, self.parameter_names_and_types[i].type.value))
+            self.script_parameter_list.append(group)
+            i += 1
+
 
     def close_pyimagej(self):
         if self.imagej_process is not None:
@@ -394,7 +429,7 @@ Note: this must be done each time you change the script, before running the Cell
         """
         Remove any existing settings added by scripts
         """
-        self.script_parameter_list.clear()
+        # self.script_parameter_list = [] // temporarily disabling this for debugging prepare_settings()
         self.script_input_settings = {}
         self.script_output_settings = {}
         self.parsed_params = False
@@ -468,6 +503,7 @@ Note: this must be done each time you change the script, before running the Cell
                     param_type = param_dict[param_name]
                     next_setting = convert_java_type_to_setting(param_name, param_type)
                     if next_setting is not None:
+                        self.add_param_name_and_type(param_name, param_type)
                         settings_dict[param_name] = next_setting
 
             stop_progress_thread = True
