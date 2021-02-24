@@ -347,6 +347,10 @@ Note: this must be done each time you change the script, before running the Cell
         self.parameter_names_and_types = []
 
     def add_param_name_and_type(self, param_name, param_type):
+        """
+        Each extracted name and type is saved into a (hidden) setting. This is useful information to have when saving
+        and loading pipelines back into CellProfiler.
+        """
         group = SettingsGroup()
         group.append(
             "name",
@@ -368,11 +372,12 @@ Note: this must be done each time you change the script, before running the Cell
         result = [self.script_parameter_count, self.script_directory, self.script_file, self.get_parameters_button]
         if len(self.script_parameter_list) > 0:
             result += [Divider(line=True)]
-        for script_parameter in self.script_parameter_list:
-            result += [script_parameter.value]
+        for script_parameter, parameter_info in zip(self.script_parameter_list, self.parameter_names_and_types):
+            result += [script_parameter.setting]
             result += [script_parameter.remover]
-        for param in self.parameter_names_and_types:
-            result += [param.name, param.type]
+            result += [parameter_info.name]
+            result += [parameter_info.type]
+
         return result
 
     def visible_settings(self):
@@ -380,26 +385,25 @@ Note: this must be done each time you change the script, before running the Cell
         if len(self.script_parameter_list) > 0:
             visible_settings += [Divider(line=True)]
         for script_parameter in self.script_parameter_list:
-            visible_settings += [script_parameter.value]
+            visible_settings += [script_parameter.setting]
             visible_settings += [script_parameter.remover]
+
         return visible_settings
 
     def prepare_settings(self, setting_values):
         settings_count = int(setting_values[0])
 
-        parameter_names_and_types = setting_values[- (settings_count - 1 ) * 2:]
-        # Add hidden setting that keeps track of name and type
-        for i in range(int(len(parameter_names_and_types) / 2)):
-            self.add_param_name_and_type(parameter_names_and_types[i * 2], parameter_names_and_types[i * 2 + 1])
+        # Looking at the last 4N elements will give the us (value, remover, name, type) for the N settings
+        # We care about the name and type information, since this goes in one of our settings
+        settings_info = setting_values[-(settings_count) * 4:]
+        for i in range(0, len(settings_info), 4):
+            self.add_param_name_and_type(settings_info[i + 2], settings_info[i + 3])
 
-        if settings_count > 0:
-            self.add_divider()
-
-        # Add settings previously extracted from script
         i = 0
+        # Create the settings that correspond to the script parameters, using the names and types extracted above
         while len(self.script_parameter_list) < settings_count:
             group = SettingsGroup()
-            group.append("value", convert_java_type_to_setting(self.parameter_names_and_types[i].name.value, self.parameter_names_and_types[i].type.value))
+            group.append("setting", convert_java_type_to_setting(self.parameter_names_and_types[i].name.value, self.parameter_names_and_types[i].type.value))
             group.append("remover", RemoveSettingButton("", "Remove this variable", self.script_parameter_list, group))
             self.script_parameter_list.append(group)
             i += 1
@@ -473,7 +477,7 @@ Note: this must be done each time you change the script, before running the Cell
             for setting_name in self.script_input_settings:
                 next_setting = self.script_input_settings[setting_name]
                 group = SettingsGroup()
-                group.append("value", next_setting)
+                group.append("setting", next_setting)
                 group.append("remover", RemoveSettingButton("", "Remove this variable", self.script_parameter_list, group))
                 self.script_parameter_list.append(group)
 
