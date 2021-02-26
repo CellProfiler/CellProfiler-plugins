@@ -73,24 +73,6 @@ pyimagej_status_cmd_unknown = "STATUS_COMMAND_UNKNOWN"  # Returned when an unkno
 pyimagej_status_startup_complete = "STATUS_STARTUP_COMPLETE"  # Returned after initial startup before daemon loop
 
 
-class ScriptFilename(Filename):
-    """
-    A helper subclass of Filename with a callback when the script file changes
-
-    optional arguments -
-       value_change_fn is a function that gets called when the file value changes
-    """
-
-    def __init__(self, text, value, *args, **kwargs):
-        kwargs = kwargs.copy()
-        self.value_change_fn = kwargs.pop("value_change_fn", None)
-        super().__init__(text, value, *args, **kwargs)
-
-    def set_value(self, value):
-        super().set_value(value)
-        self.value_change_fn()
-
-
 class PyimagejError(EnvironmentError):
     """
     An exception indicating that something went wrong in PyimageJ
@@ -324,13 +306,13 @@ Select the folder containing the script.
         def set_directory_fn_script(script_path):
             dir_choice, custom_path = self.script_directory.get_parts_from_path(script_path)
             self.script_directory.join_parts(dir_choice, custom_path)
+            self.clear_script_parameters()
 
-        self.script_file = ScriptFilename(
+        self.script_file = Filename(
             "ImageJ Script", "script.py", doc="Select a script file with in any ImageJ-supported scripting language.",
             get_directory_fn=self.script_directory.get_absolute_path,
             set_directory_fn=set_directory_fn_script,
             browse_msg="Choose ImageJ script file",
-            value_change_fn=self.clear_script_parameters
         )
         self.get_parameters_button = DoSomething("", 'Get parameters from script',
                                                  self.get_parameters_helper,
@@ -439,7 +421,7 @@ Note: this must be done each time you change the script, before running the Cell
         """
         Remove any existing settings added by scripts
         """
-        # self.script_parameter_list = [] // temporarily disabling this for debugging prepare_settings()
+        self.script_parameter_list = []
         self.script_input_settings = {}
         self.script_output_settings = {}
         self.parsed_params = False
