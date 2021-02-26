@@ -177,6 +177,7 @@ def preprocess_script_inputs(ij, input_map):
             input_map[key] = ij.py.to_dataset(input_map[key].get_image())
     pass
 
+
 def start_imagej_process(input_queue, output_queue):
     """Python script to run when starting a new ImageJ process.
     
@@ -388,7 +389,6 @@ Note: this must be done each time you change the script, before running the Cell
             self.script_parameter_list.append(group)
             i += 1
 
-
     def close_pyimagej(self):
         if self.imagej_process is not None:
             self.to_imagej.put({pyimagej_key_command: pyimagej_cmd_exit})
@@ -438,7 +438,6 @@ Note: this must be done each time you change the script, before running the Cell
         global stop_progress_thread
         stop_progress_thread = False
 
-        print(Window.FindFocus())
         progress_gauge = Gauge(Window.FindFocus(), -1, size=(100, -1))
         progress_gauge.Show(True)
 
