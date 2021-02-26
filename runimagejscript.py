@@ -23,12 +23,11 @@ from wx import Window
 from threading import Thread
 import multiprocessing as mp
 from multiprocessing import Process
+from pathlib import Path
 import time
 import atexit
 import imagej
 import jpype
-import jpype.imports
-from jpype.imports import *
 import random
 import skimage.io
 
@@ -234,7 +233,6 @@ def start_imagej_process(input_queue, output_queue):
         This Queue will be filled with outputs to return to CellProfiler
     """
     ij = imagej.init()
-    from java.io import File
     script_service = ij.script()
 
     # Signify output is complete
@@ -246,7 +244,7 @@ def start_imagej_process(input_queue, output_queue):
         cmd = command_dictionary[pyimagej_key_command]
         if cmd == pyimagej_cmd_script_parse:
             script_path = command_dictionary[pyimagej_key_input]
-            script_file = File(script_path)
+            script_file = Path(script_path)
             script_info = script_service.getScript(script_file)
             script_inputs = {}
             script_outputs = {}
@@ -258,7 +256,7 @@ def start_imagej_process(input_queue, output_queue):
                               pyimagej_script_parse_outputs: script_outputs})
         elif cmd == pyimagej_cmd_script_run:
             script_path = (command_dictionary[pyimagej_key_input])[pyimagej_script_run_file_key]
-            script_file = File(script_path)
+            script_file = Path(script_path)
             input_map = (command_dictionary[pyimagej_key_input])[pyimagej_script_run_input_key]
             preprocess_script_inputs(ij, input_map)
             script_out_map = script_service.run(script_file, True, input_map).get().getOutputs()
