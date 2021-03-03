@@ -376,7 +376,7 @@ Note: this must be done each time you change the script, before running the Cell
 
         # Looking at the last 4N elements will give the us (value, remover, name, type) for the N settings
         # We care about the name and type information, since this goes in one of our settings
-        settings_info = setting_values[-(settings_count) * 4:]
+        settings_info = setting_values[-settings_count * 4:]
         for i in range(0, len(settings_info), 4):
             self.add_param_name_and_type(settings_info[i + 2], settings_info[i + 3])
 
@@ -408,14 +408,6 @@ Note: this must be done each time you change the script, before running the Cell
                     "PyImageJ failed to start up successfully."
                 )
         pass
-
-    def add_divider(self):
-        """
-        Add a divider to the settings pane
-        """
-        group = SettingsGroup()
-        group.append("value", Divider(line=True))
-        self.script_parameter_list.append(group)
 
     def clear_script_parameters(self):
         """
@@ -453,16 +445,21 @@ Note: this must be done each time you change the script, before running the Cell
                 progress_gauge.Show(False)
                 break
 
-        if self.script_input_settings:
-            for setting_name in self.script_input_settings:
-                next_setting = self.script_input_settings[setting_name]
+        # Add the settings to the UI
+        self.add_settings(self.script_input_settings)
+        self.add_settings(self.script_output_settings)
+
+        self.parsed_params = True
+        pass
+
+    def add_settings(self, script_setting_list):
+        if script_setting_list:
+            for setting_name in script_setting_list:
+                next_setting = script_setting_list[setting_name]
                 group = SettingsGroup()
                 group.append("setting", next_setting)
                 group.append("remover", RemoveSettingButton("", "Remove this variable", self.script_parameter_list, group))
                 self.script_parameter_list.append(group)
-
-        self.parsed_params = True
-        pass
 
     def get_parameters_from_script(self):
         """
