@@ -421,9 +421,9 @@ Note: this must be done each time you change the script, before running the Cell
         """
         Remove any existing settings added by scripts
         """
-        self.script_parameter_list = []
-        self.script_input_settings = {}
-        self.script_output_settings = {}
+        self.script_parameter_list.clear()
+        self.script_input_settings.clear()
+        self.script_output_settings.clear()
         self.parsed_params = False
         pass
 
