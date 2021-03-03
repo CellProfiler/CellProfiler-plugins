@@ -424,6 +424,7 @@ Note: this must be done each time you change the script, before running the Cell
         self.script_parameter_list.clear()
         self.script_input_settings.clear()
         self.script_output_settings.clear()
+        self.parameter_names_and_types.clear()
         self.parsed_params = False
         pass
 
