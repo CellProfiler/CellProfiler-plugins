@@ -71,6 +71,8 @@ pyimagej_script_run_input_key = "SCRIPT_RUN_INPUT_KEY"  # The script input dicti
 pyimagej_cmd_exit = "COMMAND_EXIT"  # Shut down the pyimagej daemon
 pyimagej_status_cmd_unknown = "STATUS_COMMAND_UNKNOWN"  # Returned when an unknown command is passed to pyimagej
 pyimagej_status_startup_complete = "STATUS_STARTUP_COMPLETE"  # Returned after initial startup before daemon loop
+input_class = "INPUT"
+output_class = "OUTPUT"
 
 
 class PyimagejError(EnvironmentError):
@@ -327,10 +329,10 @@ Note: this must be done each time you change the script, before running the Cell
         self.script_parameter_count = HiddenCount(self.script_parameter_list)
         self.parameter_names_and_types = []
 
-    def add_param_name_and_type(self, param_name, param_type):
+    def add_param_name_and_type(self, param_name, param_type, param_class):
         """
-        Each extracted name and type is saved into a (hidden) setting. This is useful information to have when saving
-        and loading pipelines back into CellProfiler.
+        Each extracted name, type and input/output class is saved into a (hidden) setting. This is useful information to
+        have when saving and loading pipelines back into CellProfiler.
         """
         group = SettingsGroup()
         group.append(
@@ -346,6 +348,12 @@ Note: this must be done each time you change the script, before running the Cell
                 "Parameter type",
                 param_type),
         )
+        group.append(
+            "io_class",
+            Text(
+                "Parameter classification",
+                param_class),
+        )
 
         self.parameter_names_and_types.append(group)
 
@@ -358,6 +366,7 @@ Note: this must be done each time you change the script, before running the Cell
             result += [script_parameter.remover]
             result += [parameter_info.name]
             result += [parameter_info.type]
+            result += [parameter_info.io_class]
 
         return result
 
@@ -374,19 +383,29 @@ Note: this must be done each time you change the script, before running the Cell
     def prepare_settings(self, setting_values):
         settings_count = int(setting_values[0])
 
-        # Looking at the last 4N elements will give the us (value, remover, name, type) for the N settings
+        if settings_count > 0:
+            # Params were parsed previously and saved
+            self.parsed_params = True
+
+        # Looking at the last 5N elements will give the us (value, remover, name, type, io_class) for the N settings
         # We care about the name and type information, since this goes in one of our settings
-        settings_info = setting_values[-settings_count * 4:]
-        for i in range(0, len(settings_info), 4):
-            self.add_param_name_and_type(settings_info[i + 2], settings_info[i + 3])
+        settings_info = setting_values[-settings_count * 5:]
+        for i in range(0, len(settings_info), 5):
+            self.add_param_name_and_type(settings_info[i + 2], settings_info[i + 3], settings_info[i + 4])
 
         i = 0
         # Create the settings that correspond to the script parameters, using the names and types extracted above
         while len(self.script_parameter_list) < settings_count:
             group = SettingsGroup()
-            group.append("setting", convert_java_type_to_setting(self.parameter_names_and_types[i].name.value, self.parameter_names_and_types[i].type.value))
+            name = self.parameter_names_and_types[i].name.value
+            setting = convert_java_type_to_setting(name, self.parameter_names_and_types[i].type.value)
+            group.append("setting", setting)
             group.append("remover", RemoveSettingButton("", "Remove this variable", self.script_parameter_list, group))
             self.script_parameter_list.append(group)
+            if input_class == self.parameter_names_and_types[i].io_class.value:
+                self.script_input_settings[name] = setting
+            elif output_class == self.parameter_names_and_types[i].io_class.value:
+                self.script_output_settings[name] = setting
             i += 1
 
     def close_pyimagej(self):
@@ -487,13 +506,13 @@ Note: this must be done each time you change the script, before running the Cell
             input_params = ij_return[pyimagej_script_parse_inputs]
             output_params = ij_return[pyimagej_script_parse_outputs]
 
-            for param_dict, settings_dict in ((input_params, self.script_input_settings),
-                                              (output_params, self.script_output_settings)):
+            for param_dict, settings_dict, io_class in ((input_params, self.script_input_settings, input_class),
+                                                        (output_params, self.script_output_settings, output_class)):
                 for param_name in param_dict:
                     param_type = param_dict[param_name]
                     next_setting = convert_java_type_to_setting(param_name, param_type)
                     if next_setting is not None:
-                        self.add_param_name_and_type(param_name, param_type)
+                        self.add_param_name_and_type(param_name, param_type, io_class)
                         settings_dict[param_name] = next_setting
 
             stop_progress_thread = True
@@ -507,6 +526,8 @@ Note: this must be done each time you change the script, before running the Cell
         pass
 
     def run(self, workspace):
+        self.init_pyimagej()
+
         script_filepath = path.join(self.script_directory.get_absolute_path(), self.script_file.value)
         image_set_list = workspace.image_set_list
         d = self.get_dictionary(image_set_list)
