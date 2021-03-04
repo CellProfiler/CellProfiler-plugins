@@ -288,11 +288,8 @@ class RunImageJScript(Module):
         self.to_imagej = None  # Queue to pass data to pyimagej
         self.from_imagej = None  # queue to receive data from pyimagej
         self.parsed_params = False  # Used for validation
-        self.script_input_settings = {}  # Map of input parameter names to CellProfiler settings objects
-        self.script_output_settings = {}  # Map of output parameter names to CellProfiler settings objects
 
     def create_settings(self):
-
         module_explanation = [
             "The", self.module_name, "module allows you to run any supported ImageJ script as part of your workflow.\n\n",
             "First, select a script file. Then click the \"Get parameters from script\" button to detect required inputs for your script"
@@ -336,95 +333,22 @@ Note: this must be done each time you change the script, before running the Cell
 """
                                                  )
         self.script_parameter_list = []
+        self.script_input_settings = {}  # Map of input parameter names to CellProfiler settings objects
+        self.script_output_settings = {}  # Map of output parameter names to CellProfiler settings objects
         self.script_parameter_count = HiddenCount(self.script_parameter_list)
-        self.parameter_names_and_types = []
-
-    def add_param_name_and_type(self, param_name, param_type, param_class):
-        """
-        Each extracted name, type and input/output class is saved into a (hidden) setting. This is useful information to
-        have when saving and loading pipelines back into CellProfiler.
-        """
-        group = SettingsGroup()
-        group.append(
-            "name",
-            Text(
-                'Parameter name',
-                param_name
-            )
-        )
-        group.append(
-            "type",
-            Text(
-                "Parameter type",
-                param_type),
-        )
-        group.append(
-            "io_class",
-            Text(
-                "Parameter classification",
-                param_class),
-        )
-
-        self.parameter_names_and_types.append(group)
-
-    def settings(self):
-        result = [self.script_parameter_count, self.script_directory, self.script_file, self.get_parameters_button]
-        if len(self.script_parameter_list) > 0:
-            result += [Divider(line=True)]
-        for script_parameter, parameter_info in zip(self.script_parameter_list, self.parameter_names_and_types):
-            result += [script_parameter.setting]
-            result += [script_parameter.remover]
-            result += [parameter_info.name]
-            result += [parameter_info.type]
-            result += [parameter_info.io_class]
-
-        return result
-
-    def visible_settings(self):
-        visible_settings = [self.script_directory, self.script_file, self.get_parameters_button]
-        if len(self.script_parameter_list) > 0:
-            visible_settings += [Divider(line=True)]
-        for script_parameter in self.script_parameter_list:
-            visible_settings += [script_parameter.setting]
-            visible_settings += [script_parameter.remover]
-
-        return visible_settings
-
-    def prepare_settings(self, setting_values):
-        settings_count = int(setting_values[0])
-
-        if settings_count > 0:
-            # Params were parsed previously and saved
-            self.parsed_params = True
-
-        # Looking at the last 5N elements will give the us (value, remover, name, type, io_class) for the N settings
-        # We care about the name and type information, since this goes in one of our settings
-        settings_info = setting_values[-settings_count * 5:]
-        for i in range(0, len(settings_info), 5):
-            self.add_param_name_and_type(settings_info[i + 2], settings_info[i + 3], settings_info[i + 4])
-
-        i = 0
-        # Create the settings that correspond to the script parameters, using the names and types extracted above
-        while len(self.script_parameter_list) < settings_count:
-            group = SettingsGroup()
-            name = self.parameter_names_and_types[i].name.value
-            io_class = self.parameter_names_and_types[i].io_class.value
-            setting = convert_java_type_to_setting(name, self.parameter_names_and_types[i].type.value, io_class)
-            group.append("setting", setting)
-            group.append("remover", RemoveSettingButton("", "Remove this variable", self.script_parameter_list, group))
-            self.script_parameter_list.append(group)
-            if input_class == io_class:
-                self.script_input_settings[name] = setting
-            elif output_class == io_class:
-                self.script_output_settings[name] = setting
-            i += 1
 
     def close_pyimagej(self):
+        """
+        Close the pyimagej daemon thread
+        """
         if self.imagej_process is not None:
             self.to_imagej.put({pyimagej_key_command: pyimagej_cmd_exit})
         pass
 
     def init_pyimagej(self):
+        """
+        Start the pyimagej daemon thread if it isn't already running.
+        """
         if self.imagej_process is None:
             self.to_imagej = mp.Queue()
             self.from_imagej = mp.Queue()
@@ -446,7 +370,6 @@ Note: this must be done each time you change the script, before running the Cell
         self.script_parameter_list.clear()
         self.script_input_settings.clear()
         self.script_output_settings.clear()
-        self.parameter_names_and_types.clear()
         self.parsed_params = False
         pass
 
@@ -475,21 +398,8 @@ Note: this must be done each time you change the script, before running the Cell
                 progress_gauge.Show(False)
                 break
 
-        # Add the settings to the UI
-        self.add_settings(self.script_input_settings)
-        self.add_settings(self.script_output_settings)
-
         self.parsed_params = True
         pass
-
-    def add_settings(self, script_setting_list):
-        if script_setting_list:
-            for setting_name in script_setting_list:
-                next_setting = script_setting_list[setting_name]
-                group = SettingsGroup()
-                group.append("setting", next_setting)
-                group.append("remover", RemoveSettingButton("", "Remove this variable", self.script_parameter_list, group))
-                self.script_parameter_list.append(group)
 
     def get_parameters_from_script(self):
         """
@@ -523,11 +433,106 @@ Note: this must be done each time you change the script, before running the Cell
                     param_type = param_dict[param_name]
                     next_setting = convert_java_type_to_setting(param_name, param_type, io_class)
                     if next_setting is not None:
-                        self.add_param_name_and_type(param_name, param_type, io_class)
                         settings_dict[param_name] = next_setting
+                        group = SettingsGroup()
+                        group.append("setting", next_setting)
+                        group.append("remover", RemoveSettingButton("", "Remove this variable",
+                                                                    self.script_parameter_list, group))
+                        self.add_param_info_settings(group, param_name, param_type, io_class)
+                        # Each setting gets a group containing:
+                        # 0 - the setting
+                        # 1 - its remover
+                        # 2 - (hidden) parameter name
+                        # 3 - (hidden) parameter type
+                        # 4 - (hidden) parameter i/o class
+                        self.script_parameter_list.append(group)
 
             stop_progress_thread = True
         pass
+
+    def add_param_info_settings(self, group, param_name, param_type, param_class):
+        """
+        Each extracted name, type and input/output class is saved into a (hidden) setting. This is useful information to
+        have when saving and loading pipelines back into CellProfiler.
+
+        Parameters
+        ----------
+        group : SettingsGroup, required
+            The SettingsGroup for this parameter, to hold the hidden info settings
+        param_name : str, required
+            The name of the parameter
+        param_type : str, required
+            The Java class name describing the parameter type
+        param_class: str, required
+            One of {input_class} or {output_class}, based on the parameter use
+        """
+        group.append(
+            "name",
+            Text(
+                'Parameter name',
+                param_name
+            )
+        )
+        group.append(
+            "type",
+            Text(
+                "Parameter type",
+                param_type),
+        )
+        group.append(
+            "io_class",
+            Text(
+                "Parameter classification",
+                param_class),
+        )
+
+    def settings(self):
+        result = [self.script_parameter_count, self.script_directory, self.script_file, self.get_parameters_button]
+        if len(self.script_parameter_list) > 0:
+            result += [Divider(line=True)]
+        for script_parameter_group in self.script_parameter_list:
+            result += [script_parameter_group.setting]
+            result += [script_parameter_group.remover]
+            result += [script_parameter_group.name]
+            result += [script_parameter_group.type]
+            result += [script_parameter_group.io_class]
+
+        return result
+
+    def visible_settings(self):
+        visible_settings = [self.script_directory, self.script_file, self.get_parameters_button]
+        if len(self.script_parameter_list) > 0:
+            visible_settings += [Divider(line=True)]
+        for script_parameter in self.script_parameter_list:
+            visible_settings += [script_parameter.setting]
+            visible_settings += [script_parameter.remover]
+
+        return visible_settings
+
+    def prepare_settings(self, setting_values):
+        settings_count = int(setting_values[0])
+
+        if settings_count > 0:
+            # Params were parsed previously and saved
+            self.parsed_params = True
+
+        # Looking at the last 5N elements will give the us (value, remover, name, type, io_class) for the N settings
+        # We care about the name and type information, since this goes in one of our settings
+        settings_info = setting_values[-settings_count * 5:]
+        for i in range(0, len(settings_info), 5):
+            group = SettingsGroup()
+            param_name = settings_info[i + 2]
+            param_type = settings_info[i + 3]
+            io_class = settings_info[i + 4]
+            setting = convert_java_type_to_setting(param_name, param_type, io_class)
+            group.append("setting", setting)
+            group.append("remover", RemoveSettingButton("", "Remove this variable", self.script_parameter_list, group))
+            self.add_param_info_settings(group, param_name, param_type, io_class)
+            self.script_parameter_list.append(group)
+            if input_class == io_class:
+                self.script_input_settings[param_name] = setting
+            elif output_class == io_class:
+                self.script_output_settings[param_name] = setting
 
     def validate_module(self, pipeline):
         if not self.parsed_params:
