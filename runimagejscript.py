@@ -120,7 +120,7 @@ def convert_java_to_python_type(return_value):
     return None
 
 
-def convert_java_type_to_setting(param_name, param_type):
+def convert_java_type_to_setting(param_name, param_type, param_class):
     """
     Helper method to convert ImageJ/Java class parameter types to CellProfiler settings
 
@@ -130,34 +130,44 @@ def convert_java_type_to_setting(param_name, param_type):
         The name of the parameter
     param_type : str, required
         The Java class name describing the parameter type
+    param_class: str, required
+        One of {input_class} or {output_class}, based on the parameter use
 
     Returns
     ---------
     A new Setting of a type appropriate for param_type, named with param_name. Or None if no valid conversion exists.
     """
     type_string = param_type.split()[1]
-    if type_string == "java.lang.String":
-        return Alphanumeric(param_name, "")
-    if type_string == "java.lang.Character":
-        return Character(param_name, "")
-    elif type_string == "java.lang.Integer":
-        return Integer(param_name, 0, minval=-2**31, maxval=((2**31)-1))
-    elif type_string == "java.lang.Long":
-        return Integer(param_name, 0, minval=-2**63, maxval=((2**63)-1))
-    elif type_string == "java.lang.Short":
-        return Integer(param_name, 0, minval=-32768, maxval=32767)
-    elif type_string == "java.lang.Byte":
-        return Integer(param_name, 0, minval=-128, maxval=127)
-    elif type_string == "java.lang.Boolean":
-        return Boolean(param_name, 0)
-    elif type_string == "java.lang.Float":
-        return Float(param_name, minval=-2**31, maxval=((2**31)-1))
-    elif type_string == "java.lang.Double":
-        return Float(param_name, minval=-2**63, maxval=((2**63)-1))
-    elif type_string == "java.io.File":
-        return Filename(param_name, "")
-    elif type_string == "net.imagej.Dataset" or type_string == "net.imagej.ImgPlus":
-        return ImageSubscriber(param_name)
+    if input_class == param_class:
+        param_label = param_name
+        if type_string == "java.lang.String":
+            return Alphanumeric(param_label, "")
+        if type_string == "java.lang.Character":
+            return Character(param_label, "")
+        elif type_string == "java.lang.Integer":
+            return Integer(param_label, 0, minval=-2**31, maxval=((2**31)-1))
+        elif type_string == "java.lang.Long":
+            return Integer(param_label, 0, minval=-2**63, maxval=((2**63)-1))
+        elif type_string == "java.lang.Short":
+            return Integer(param_label, 0, minval=-32768, maxval=32767)
+        elif type_string == "java.lang.Byte":
+            return Integer(param_label, 0, minval=-128, maxval=127)
+        elif type_string == "java.lang.Boolean":
+            return Boolean(param_label, 0)
+        elif type_string == "java.lang.Float":
+            return Float(param_label, minval=-2**31, maxval=((2**31)-1))
+        elif type_string == "java.lang.Double":
+            return Float(param_label, minval=-2**63, maxval=((2**63)-1))
+        elif type_string == "java.io.File":
+            return Filename(param_label, "")
+        elif type_string == "net.imagej.Dataset" or type_string == "net.imagej.ImgPlus":
+            return ImageSubscriber(param_label)
+    elif output_class == param_class:
+        return Text("[OUTPUT, " + type_string + "] " + param_name, param_name, doc=
+"""
+You may use this setting to rename the indicated output variable, if desired.
+"""
+                    )
 
     return None
 
@@ -398,13 +408,14 @@ Note: this must be done each time you change the script, before running the Cell
         while len(self.script_parameter_list) < settings_count:
             group = SettingsGroup()
             name = self.parameter_names_and_types[i].name.value
-            setting = convert_java_type_to_setting(name, self.parameter_names_and_types[i].type.value)
+            io_class = self.parameter_names_and_types[i].io_class.value
+            setting = convert_java_type_to_setting(name, self.parameter_names_and_types[i].type.value, io_class)
             group.append("setting", setting)
             group.append("remover", RemoveSettingButton("", "Remove this variable", self.script_parameter_list, group))
             self.script_parameter_list.append(group)
-            if input_class == self.parameter_names_and_types[i].io_class.value:
+            if input_class == io_class:
                 self.script_input_settings[name] = setting
-            elif output_class == self.parameter_names_and_types[i].io_class.value:
+            elif output_class == io_class:
                 self.script_output_settings[name] = setting
             i += 1
 
@@ -510,7 +521,7 @@ Note: this must be done each time you change the script, before running the Cell
                                                         (output_params, self.script_output_settings, output_class)):
                 for param_name in param_dict:
                     param_type = param_dict[param_name]
-                    next_setting = convert_java_type_to_setting(param_name, param_type)
+                    next_setting = convert_java_type_to_setting(param_name, param_type, io_class)
                     if next_setting is not None:
                         self.add_param_name_and_type(param_name, param_type, io_class)
                         settings_dict[param_name] = next_setting
