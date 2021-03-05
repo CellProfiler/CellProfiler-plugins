@@ -85,12 +85,51 @@ class PyimagejError(EnvironmentError):
         self.message = message
 
 
-def convert_java_to_python_type(return_value):
+def add_param_info_settings(group, param_name, param_type, param_class):
+    """
+    Each extracted name, type and input/output class is saved into a (hidden) setting. This is useful information to
+    have when saving and loading pipelines back into CellProfiler.
+
+    Parameters
+    ----------
+    group : SettingsGroup, required
+        The SettingsGroup for this parameter, to hold the hidden info settings
+    param_name : str, required
+        The name of the parameter
+    param_type : str, required
+        The Java class name describing the parameter type
+    param_class: str, required
+        One of {input_class} or {output_class}, based on the parameter use
+    """
+    group.append(
+        "name",
+        Text(
+            'Parameter name',
+            param_name
+        )
+    )
+    group.append(
+        "type",
+        Text(
+            "Parameter type",
+            param_type),
+    )
+    group.append(
+        "io_class",
+        Text(
+            "Parameter classification",
+            param_class),
+    )
+
+
+def convert_java_to_python_type(ij, return_value):
     """
     Helper method to convert ImageJ/Java values to python values that can be passed between via queues (pickled)
 
     Parameters
     ----------
+    ij : imagej.init(), required
+        ImageJ entry point
     return_value : supported Java type, required
         A value to convert from Java to python
 
@@ -179,7 +218,7 @@ def preprocess_script_inputs(ij, input_map):
 
     Parameters
     ----------
-    ij:
+    ij : imagej.init(), required
         ImageJ entry point (from imagej.init())
     input_map:
         map of input names to values
@@ -438,7 +477,7 @@ Note: this must be done each time you change the script, before running the Cell
                         group.append("setting", next_setting)
                         group.append("remover", RemoveSettingButton("", "Remove this variable",
                                                                     self.script_parameter_list, group))
-                        self.add_param_info_settings(group, param_name, param_type, io_class)
+                        add_param_info_settings(group, param_name, param_type, io_class)
                         # Each setting gets a group containing:
                         # 0 - the setting
                         # 1 - its remover
@@ -450,41 +489,6 @@ Note: this must be done each time you change the script, before running the Cell
             stop_progress_thread = True
         pass
 
-    def add_param_info_settings(self, group, param_name, param_type, param_class):
-        """
-        Each extracted name, type and input/output class is saved into a (hidden) setting. This is useful information to
-        have when saving and loading pipelines back into CellProfiler.
-
-        Parameters
-        ----------
-        group : SettingsGroup, required
-            The SettingsGroup for this parameter, to hold the hidden info settings
-        param_name : str, required
-            The name of the parameter
-        param_type : str, required
-            The Java class name describing the parameter type
-        param_class: str, required
-            One of {input_class} or {output_class}, based on the parameter use
-        """
-        group.append(
-            "name",
-            Text(
-                'Parameter name',
-                param_name
-            )
-        )
-        group.append(
-            "type",
-            Text(
-                "Parameter type",
-                param_type),
-        )
-        group.append(
-            "io_class",
-            Text(
-                "Parameter classification",
-                param_class),
-        )
 
     def settings(self):
         result = [self.script_parameter_count, self.script_directory, self.script_file, self.get_parameters_button]
@@ -527,7 +531,7 @@ Note: this must be done each time you change the script, before running the Cell
             setting = convert_java_type_to_setting(param_name, param_type, io_class)
             group.append("setting", setting)
             group.append("remover", RemoveSettingButton("", "Remove this variable", self.script_parameter_list, group))
-            self.add_param_info_settings(group, param_name, param_type, io_class)
+            add_param_info_settings(group, param_name, param_type, io_class)
             self.script_parameter_list.append(group)
             if input_class == io_class:
                 self.script_input_settings[param_name] = setting
