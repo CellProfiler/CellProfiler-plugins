@@ -205,7 +205,7 @@ def convert_java_type_to_setting(param_name, param_type, param_class):
         elif type_string == "net.imagej.Dataset" or type_string == "net.imagej.ImgPlus":
             return ImageSubscriber(param_label)
     elif output_class == param_class:
-        return Text("[OUTPUT, " + type_string + "] " + param_name, param_name, doc=
+        return ImageName("[OUTPUT, " + type_string + "] " + param_name, param_name, doc=
         """
         You may use this setting to rename the indicated output variable, if desired.
         """
@@ -552,8 +552,6 @@ Note: this must be done each time you change the script, before running the Cell
         self.init_pyimagej()
 
         script_filepath = path.join(self.script_directory.get_absolute_path(), self.script_file.value)
-        image_set_list = workspace.image_set_list
-        d = self.get_dictionary(image_set_list)
         # convert the CP settings to script parameters for pyimagej
         script_inputs = {}
         for name in self.script_input_settings:
@@ -575,8 +573,11 @@ Note: this must be done each time you change the script, before running the Cell
         # Retrieve script output
         ij_return = self.from_imagej.get()
         if ij_return != pyimagej_status_cmd_unknown:
-            print("command unknown")
-            # TODO update output settings
+            script_outputs = ij_return[pyimagej_key_output]
+            for name in self.script_output_settings:
+                output_key = self.script_output_settings[name].get_value()
+                output_value = script_outputs[name]
+                workspace.image_set.add(output_key, Image(image=output_value, convert=False))
         pass
 
     def display(self, workspace, figure):
