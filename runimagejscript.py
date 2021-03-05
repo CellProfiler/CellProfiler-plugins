@@ -187,9 +187,9 @@ def convert_java_type_to_setting(param_name, param_type, param_class):
         if type_string == "java.lang.Character":
             return Character(param_label, "")
         elif type_string == "java.lang.Integer":
-            return Integer(param_label, 0, minval=-2**31, maxval=((2**31)-1))
+            return Integer(param_label, 0, minval=-2 ** 31, maxval=((2 ** 31) - 1))
         elif type_string == "java.lang.Long":
-            return Integer(param_label, 0, minval=-2**63, maxval=((2**63)-1))
+            return Integer(param_label, 0, minval=-2 ** 63, maxval=((2 ** 63) - 1))
         elif type_string == "java.lang.Short":
             return Integer(param_label, 0, minval=-32768, maxval=32767)
         elif type_string == "java.lang.Byte":
@@ -197,18 +197,18 @@ def convert_java_type_to_setting(param_name, param_type, param_class):
         elif type_string == "java.lang.Boolean":
             return Boolean(param_label, 0)
         elif type_string == "java.lang.Float":
-            return Float(param_label, minval=-2**31, maxval=((2**31)-1))
+            return Float(param_label, minval=-2 ** 31, maxval=((2 ** 31) - 1))
         elif type_string == "java.lang.Double":
-            return Float(param_label, minval=-2**63, maxval=((2**63)-1))
+            return Float(param_label, minval=-2 ** 63, maxval=((2 ** 63) - 1))
         elif type_string == "java.io.File":
             return Filename(param_label, "")
         elif type_string == "net.imagej.Dataset" or type_string == "net.imagej.ImgPlus":
             return ImageSubscriber(param_label)
     elif output_class == param_class:
         return Text("[OUTPUT, " + type_string + "] " + param_name, param_name, doc=
-"""
-You may use this setting to rename the indicated output variable, if desired.
-"""
+        """
+        You may use this setting to rename the indicated output variable, if desired.
+        """
                     )
 
     return None
@@ -333,7 +333,8 @@ class RunImageJScript(Module):
 
     def create_settings(self):
         module_explanation = [
-            "The", self.module_name, "module allows you to run any supported ImageJ script as part of your workflow.\n\n",
+            "The", self.module_name,
+            "module allows you to run any supported ImageJ script as part of your workflow.\n\n",
             "First, select a script file. Then click the \"Get parameters from script\" button to detect required inputs for your script"
             "Each input will have its own setting created, allowing you to pass data from CellProfiler to ImageJ. "
             "After filling in any required inputs you can run the script normally. \n\n"
@@ -492,7 +493,6 @@ Note: this must be done each time you change the script, before running the Cell
             stop_progress_thread = True
         pass
 
-
     def settings(self):
         result = [self.script_parameter_count, self.script_directory, self.script_file, self.get_parameters_button]
         if len(self.script_parameter_list) > 0:
@@ -568,8 +568,8 @@ Note: this must be done each time you change the script, before running the Cell
 
         # Start the script
         self.to_imagej.put({pyimagej_key_command: pyimagej_cmd_script_run, pyimagej_key_input:
-            {pyimagej_script_run_file_key: script_filepath,
-             pyimagej_script_run_input_key: script_inputs}
+                            {pyimagej_script_run_file_key: script_filepath,
+                             pyimagej_script_run_input_key: script_inputs}
                             })
 
         # Retrieve script output
