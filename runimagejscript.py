@@ -48,6 +48,8 @@ Note
 
 Only numeric, text and image input types are currently supported.
 
+Returned images must be of type net.imagej.Dataset or net.imagej.ImgPlus
+
 See also
 ^^^^^^^^
 
@@ -137,6 +139,8 @@ def convert_java_to_python_type(ij, return_value):
     ---------
     An instance of a python type that can safely cross queues with the given value, or None if no valid type exists.
     """
+    if return_value is None:
+        return None
     type_string = str(return_value.getClass().toString()).split()[1]
     if type_string == "java.lang.String" or type_string == "java.lang.Character":
         return str(return_value)
@@ -152,8 +156,7 @@ def convert_java_to_python_type(ij, return_value):
     elif type_string == "java.lang.Byte":
         return bytes(return_value)
     elif type_string == "net.imagej.Dataset" or type_string == "net.imagej.ImgPlus":
-        # FIXME use pyimagej convert
-        return ImageSubscriber(return_value)
+        return ij.py.from_java(return_value)
 
     # Not a supported type
     return None
@@ -297,7 +300,7 @@ def start_imagej_process(input_queue, output_queue):
             output_dict = {}
             for entry in script_out_map.entrySet():
                 key = str(entry.getKey())
-                value = convert_java_to_python_type(entry.getValue())
+                value = convert_java_to_python_type(ij, entry.getValue())
                 if value is not None:
                     output_dict[key] = value
 
