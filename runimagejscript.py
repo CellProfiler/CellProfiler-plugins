@@ -43,12 +43,12 @@ script. Each input will have its own setting created, allowing you to pass data 
 
 After filling in any required inputs you can run the script normally.
 
-Note
+Notes
 ^^^^^^^
 
-Only numeric, text and image input types are currently supported.
-
-Returned images must be of type net.imagej.Dataset or net.imagej.ImgPlus
+1. Only numeric, text and image input types are currently supported.
+2. Outputs must be explicitly declared in the script via @OUTPUT
+3. Only outputs of type net.imagej.Dataset or net.imagej.ImgPlus are currently supported
 
 See also
 ^^^^^^^^
@@ -205,11 +205,12 @@ def convert_java_type_to_setting(param_name, param_type, param_class):
         elif type_string == "net.imagej.Dataset" or type_string == "net.imagej.ImgPlus":
             return ImageSubscriber(param_label)
     elif output_class == param_class:
-        return ImageName("[OUTPUT, " + type_string + "] " + param_name, param_name, doc=
-        """
-        You may use this setting to rename the indicated output variable, if desired.
-        """
-                    )
+        if type_string == "net.imagej.Dataset" or type_string == "net.imagej.ImgPlus":
+            return ImageName("[OUTPUT, " + type_string + "] " + param_name, param_name, doc=
+            """
+            You may use this setting to rename the indicated output variable, if desired.
+            """
+                             )
 
     return None
 
@@ -566,8 +567,8 @@ Note: this must be done each time you change the script, before running the Cell
 
         # Start the script
         self.to_imagej.put({pyimagej_key_command: pyimagej_cmd_script_run, pyimagej_key_input:
-                            {pyimagej_script_run_file_key: script_filepath,
-                             pyimagej_script_run_input_key: script_inputs}
+            {pyimagej_script_run_file_key: script_filepath,
+             pyimagej_script_run_input_key: script_inputs}
                             })
 
         # Retrieve script output
