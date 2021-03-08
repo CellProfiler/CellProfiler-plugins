@@ -552,6 +552,12 @@ Note: this must be done each time you change the script, before running the Cell
     def run(self, workspace):
         self.init_pyimagej()
 
+        if self.show_window:
+            workspace.display_data.script_input_pixels = {}
+            workspace.display_data.script_input_dimensions = {}
+            workspace.display_data.script_output_pixels = {}
+            workspace.display_data.script_output_dimensions = {}
+
         script_filepath = path.join(self.script_directory.get_absolute_path(), self.script_file.value)
         # convert the CP settings to script parameters for pyimagej
         script_inputs = {}
@@ -559,8 +565,10 @@ Note: this must be done each time you change the script, before running the Cell
             setting = self.script_input_settings[name]
             if isinstance(setting, ImageSubscriber):
                 # Images need to be pulled from the workspace
-                orig_image = workspace.image_set.get_image(setting.get_value())
-                script_inputs[name] = orig_image
+                script_inputs[name] = workspace.image_set.get_image(setting.get_value())
+                if self.show_window:
+                    workspace.display_data.script_input_pixels[name] = script_inputs[name].pixel_data
+                    workspace.display_data.script_input_dimensions[name] = script_inputs[name].dimensions
             else:
                 # Other settings can be read directly
                 script_inputs[name] = setting.get_value()
@@ -578,8 +586,35 @@ Note: this must be done each time you change the script, before running the Cell
             for name in self.script_output_settings:
                 output_key = self.script_output_settings[name].get_value()
                 output_value = script_outputs[name]
-                workspace.image_set.add(output_key, Image(image=output_value, convert=False))
+                output_image = Image(image=output_value, convert=False)
+                workspace.image_set.add(output_key, output_image)
+                if self.show_window:
+                    workspace.display_data.script_output_pixels[name] = output_image.pixel_data
+                    workspace.display_data.dimensions = output_image.dimensions
         pass
 
     def display(self, workspace, figure):
+        # TODO how do we handle differences in dimensionality between input/output images?
+        figure.set_subplots((2, max(len(workspace.display_data.script_input_pixels),
+                                    len(workspace.display_data.script_output_pixels))), dimensions=2)
+
+        i = 0
+        for name in workspace.display_data.script_input_pixels:
+            figure.subplot_imshow_grayscale(
+                0,
+                i,
+                workspace.display_data.script_input_pixels[name],
+                title="Input image: {}".format(name),
+            )
+            i += 1
+
+        i = 0
+        for name in workspace.display_data.script_output_pixels:
+            figure.subplot_imshow_grayscale(
+                1,
+                i,
+                workspace.display_data.script_output_pixels[name],
+                title="Output image: {}".format(name),
+            )
+            i += 1
         pass
