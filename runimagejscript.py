@@ -453,7 +453,7 @@ Note: this must be done each time you change the script, before running the Cell
         global stop_progress_thread
         script_filepath = path.join(self.script_directory.get_absolute_path(), self.script_file.value)
 
-        if not path.exists(script_filepath):
+        if not self.script_file.value or not path.exists(script_filepath):
             # nothing to do
             stop_progress_thread = True
             return
