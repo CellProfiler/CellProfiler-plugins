@@ -543,9 +543,20 @@ Note: this must be done each time you change the script, before running the Cell
                 self.script_output_settings[param_name] = setting
 
     def validate_module(self, pipeline):
-        if not self.parsed_params:
+
+        no_script_msg = "Please select a valid ImageJ script and use the \"Get parameters from script\" button."
+
+        if not self.parsed_params or not self.script_directory or not self.script_file.value:
             raise ValidationError(
-                "Please select a valid ImageJ script and use the \"Get parameters from script\" button."
+                no_script_msg,
+                self.script_file
+            )
+
+        script_filepath = path.join(self.script_directory.get_absolute_path(), self.script_file.value)
+        if not path.exists(script_filepath):
+            raise ValidationError(
+                "The script you have selected is not a valid path. " + no_script_msg,
+                self.script_file
             )
         pass
 
