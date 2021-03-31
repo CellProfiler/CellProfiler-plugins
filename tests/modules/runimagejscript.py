@@ -2,6 +2,9 @@ import numpy
 
 import cellprofiler_core.image
 import cellprofiler_core.measurement
+
+import cellprofiler_core.setting.subscriber
+import cellprofiler_core.setting.text.alphanumeric.name
 from cellprofiler_core.constants.measurement import GROUP_INDEX, GROUP_NUMBER, COLTYPE_INTEGER
 
 
@@ -19,42 +22,33 @@ CROPPING = "cropping"
 OUTPUT_IMAGE = "output_image"
 
 
-def make_workspace():
+def make_empty_module():
     """Return a workspace with the given image and the runimagejscript module"""
-    image_set_list = cellprofiler_core.image.ImageSetList()
-    image_set = image_set_list.get_image_set(0)
-
     module = cellprofiler.modules.runimagejscript.RunImageJScript()
     module.set_module_num(1)
 
-    #FIXME: here set the module attributes: script directory and file
-
-    object_set = cellprofiler_core.object.ObjectSet()
-
-    pipeline = cellprofiler_core.pipeline.Pipeline()
-
-    def callback(caller, event):
-        assert not isinstance(event, cellprofiler_core.pipeline.event.RunException)
-
-    pipeline.add_listener(callback)
-    pipeline.add_module(module)
-
-    m = cellprofiler_core.measurement.Measurements()
-
-    workspace = cellprofiler_core.workspace.Workspace(
-        pipeline, module, image_set, object_set, m, image_set_list
-    )
-
-    return workspace, module
+    return module
 
 def test_start_image_j():
-    workspace, module = make_workspace()
+    module = make_empty_module()
     module.init_pyimagej()
     module.close_pyimagej()
-    pass
+
 
 def test_parse_parameters():
-    pass
+    module = make_empty_module()
+
+    script_filepath = "./../resources/modules/runimagejscript/dummyscript.py"
+    module.get_parameters_from_script(script_filepath)
+
+    assert len(module.script_parameter_list) > 0
+
+    assert module.script_parameter_list[0].name.value == "image"
+    assert module.script_parameter_list[1].name.value == "copy"
+
+    assert isinstance(module.script_parameter_list[0].setting, cellprofiler_core.setting.subscriber.ImageSubscriber)
+    assert isinstance(module.script_parameter_list[1].setting, cellprofiler_core.setting.text.alphanumeric.name.image_name._image_name.ImageName)
+
 
 def test_invalid_script():
     pass
