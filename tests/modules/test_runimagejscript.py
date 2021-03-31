@@ -1,7 +1,5 @@
 import numpy
 
-from os import path
-
 import cellprofiler_core.image
 import cellprofiler_core.measurement
 
@@ -72,14 +70,9 @@ def test_parse_parameters():
     assert isinstance(module.script_parameter_list[0].setting, cellprofiler_core.setting.subscriber.ImageSubscriber)
     assert isinstance(module.script_parameter_list[1].setting, cellprofiler_core.setting.text.alphanumeric.name.image_name._image_name.ImageName)
 
-
-def test_invalid_script():
-    pass
-
-def test_do_nothing_to_image():
+def test_copy_image():
     x, y = numpy.mgrid[0:10, 0:10]
     input_image = (x / 100.0 + y / 10.0).astype(numpy.float32)
-    expected_image = input_image[2:8, 1:]
 
     module, workspace = make_workspace()
 
@@ -88,8 +81,17 @@ def test_do_nothing_to_image():
     module.script_file = Filename(
         "ImageJ Script", "./../resources/modules/runimagejscript/dummyscript.py")
     module.get_parameters_from_script()
-    pass
 
+    workspace.image_set.add("None", cellprofiler_core.image.Image(input_image))
+
+    module.run(workspace)
+
+    output_image = workspace.image_set.get_image("copy")
+
+    assert numpy.all(output_image.pixel_data == input_image)
+
+def test_invalid_script():
+    pass
 
 def test_do_something_to_image():
     pass
