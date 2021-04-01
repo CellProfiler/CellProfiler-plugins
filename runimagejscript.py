@@ -271,7 +271,11 @@ def start_imagej_process(executable_path, input_queue, output_queue):
         This Queue will be filled with outputs to return to CellProfiler
     """
 
-    ij = imagej.init(executable_path)
+    if path.exists(executable_path):
+        ij = imagej.init(executable_path)
+    else:
+        ij = imagej.init("sc.fiji:fiji:2.0.0-pre-10")
+
     script_service = ij.script()
 
     # Signify output is complete
@@ -404,6 +408,19 @@ Note: this must be done each time you change the script, before running the Cell
         self.script_output_settings = {}  # Map of output parameter names to CellProfiler settings objects
         self.script_parameter_count = HiddenCount(self.script_parameter_list)
 
+    def get_executable_path(self):
+        """
+        Parse FIJI executable paths from the chosen directory and filename
+        """
+        default_output_directory = get_default_output_directory()
+        if self.executable_file.value[-4:] == ".app":
+            executable_path = path.join(default_output_directory, self.executable_directory.value.split("|")[1],
+                                             self.executable_file.value)
+        else:
+            executable_path = path.join(default_output_directory, self.executable_directory.value.split("|")[1],
+                                             self.executable_file.value)
+        return executable_path
+
     def close_pyimagej(self):
         """
         Close the pyimagej daemon thread
@@ -416,13 +433,7 @@ Note: this must be done each time you change the script, before running the Cell
         """
         Start the pyimagej daemon thread if it isn't already running.
         """
-        default_output_directory = get_default_output_directory()
-        if self.executable_file.value[-4:] == ".app":
-            executable_path = path.join(default_output_directory, self.executable_directory.value.split("|")[1],
-                                      self.executable_file.value)
-        else:
-            executable_path = path.join(default_output_directory, self.executable_directory.value.split("|")[1],
-                                      self.executable_file.value)
+        executable_path = self.get_executable_path()
 
         if self.imagej_process is None:
             self.to_imagej = mp.Queue()
@@ -590,6 +601,15 @@ Note: this must be done each time you change the script, before running the Cell
                 self.script_file
             )
         pass
+
+    def validate_module_warnings(self, pipeline):
+        """Warn user if the specified FIJI executable directory is not found, and warn that a copy of FIJI will be downloaded"""
+        executable_path = self.get_executable_path()
+        if not path.exists(executable_path):
+            raise ValidationError("Please specify a valid path to a locally installed Fiji executable. "
+                                  "If the path is not valid, a copy of FIJI will be installed on your machine.",
+                                  self.executable_file)
+
 
     def run(self, workspace):
         self.init_pyimagej()
