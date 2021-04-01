@@ -233,7 +233,7 @@ def preprocess_script_inputs(ij, input_map):
     pass
 
 
-def start_imagej_process(input_queue, output_queue):
+def start_imagej_process(executable_path, input_queue, output_queue):
     """Python script to run when starting a new ImageJ process.
     
     All commands are initiated by adding a dictionary with a {pyimagej_key_command} entry to the {input_queue}. This
@@ -270,7 +270,8 @@ def start_imagej_process(input_queue, output_queue):
     output_queue : multiprocessing.Queue, required
         This Queue will be filled with outputs to return to CellProfiler
     """
-    ij = imagej.init()
+
+    ij = imagej.init(executable_path)
     script_service = ij.script()
 
     # Signify output is complete
@@ -345,6 +346,28 @@ class RunImageJScript(Module):
         ]
         self.set_notes([" ".join(module_explanation)])
 
+        self.executable_directory = Directory(
+            "Executable directory", allow_metadata=False, doc="""\
+        Select the folder containing the executable. MacOS users should select the directory where Fiji.app lives. Windows users 
+        should select the directory containing ImageJ-win64.exe (usually corresponding to the Fiji.app folder).
+
+        {IO_FOLDER_CHOICE_HELP_TEXT}
+        """.format(**{
+                "IO_FOLDER_CHOICE_HELP_TEXT": _help.IO_FOLDER_CHOICE_HELP_TEXT
+            }))
+
+        def set_directory_fn_executable(path):
+            dir_choice, custom_path = self.executable_directory.get_parts_from_path(path)
+            self.executable_directory.join_parts(dir_choice, custom_path)
+
+        self.executable_file = Filename(
+            "Executable", "ImageJ.exe", doc="Select your executable. MacOS users should select the Fiji.app "
+                                            "application. Windows user should select the ImageJ-win64.exe executable",
+            get_directory_fn=self.executable_directory.get_absolute_path,
+            set_directory_fn=set_directory_fn_executable,
+            browse_msg="Choose executable file"
+        )
+
         self.script_directory = Directory(
             "Script directory",
             allow_metadata=False,
@@ -393,12 +416,20 @@ Note: this must be done each time you change the script, before running the Cell
         """
         Start the pyimagej daemon thread if it isn't already running.
         """
+        default_output_directory = get_default_output_directory()
+        if self.executable_file.value[-4:] == ".app":
+            executable_path = path.join(default_output_directory, self.executable_directory.value.split("|")[1],
+                                      self.executable_file.value)
+        else:
+            executable_path = path.join(default_output_directory, self.executable_directory.value.split("|")[1],
+                                      self.executable_file.value)
+
         if self.imagej_process is None:
             self.to_imagej = mp.Queue()
             self.from_imagej = mp.Queue()
             # TODO if needed we could set daemon=True
             self.imagej_process = Process(target=start_imagej_process, name="PyImageJ Daemon",
-                                          args=(self.to_imagej, self.from_imagej,))
+                                          args=(executable_path, self.to_imagej, self.from_imagej,))
             atexit.register(self.close_pyimagej)  # TODO is there a more CP-ish way to do this?
             self.imagej_process.start()
             if self.from_imagej.get() != pyimagej_status_startup_complete:
@@ -495,7 +526,7 @@ Note: this must be done each time you change the script, before running the Cell
         pass
 
     def settings(self):
-        result = [self.script_parameter_count, self.script_directory, self.script_file, self.get_parameters_button]
+        result = [self.script_parameter_count, self.executable_directory, self.executable_file, self.script_directory, self.script_file, self.get_parameters_button]
         if len(self.script_parameter_list) > 0:
             result += [Divider(line=True)]
         for script_parameter_group in self.script_parameter_list:
@@ -508,7 +539,7 @@ Note: this must be done each time you change the script, before running the Cell
         return result
 
     def visible_settings(self):
-        visible_settings = [self.script_directory, self.script_file, self.get_parameters_button]
+        visible_settings = [self.executable_directory, self.executable_file, self.script_directory, self.script_file, self.get_parameters_button]
         if len(self.script_parameter_list) > 0:
             visible_settings += [Divider(line=True)]
         for script_parameter in self.script_parameter_list:
