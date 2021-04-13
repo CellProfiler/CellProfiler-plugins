@@ -562,9 +562,12 @@ Note: this must be done each time you change the script, before running the Cell
     def prepare_settings(self, setting_values):
         settings_count = int(setting_values[0])
 
-        if settings_count > 0:
-            # Params were parsed previously and saved
-            self.parsed_params = True
+        if settings_count == 0:
+            # No params were saved
+            return
+
+        # Params were parsed previously and saved
+        self.parsed_params = True
 
         # Looking at the last 5N elements will give the us (value, remover, name, type, io_class) for the N settings
         # We care about the name and type information, since this goes in one of our settings
