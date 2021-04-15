@@ -43,6 +43,10 @@ script. Each input will have its own setting created, allowing you to pass data 
 
 After filling in any required inputs you can run the script normally.
 
+Optionally, you can select a local existing ImageJ installation to be used to run your script, or specify an initialization
+string (per https://github.com/imagej/pyimagej/blob/master/doc/Initialization.md). If no input is provided, or the 
+input is invalid, the latest version will be downloaded if necessary and used.
+
 Notes
 ^^^^^^^
 
