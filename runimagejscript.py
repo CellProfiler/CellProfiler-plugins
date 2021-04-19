@@ -1,8 +1,9 @@
 from os import path
 
 from cellprofiler_core.image import Image
-from cellprofiler.modules import _help
 from cellprofiler_core.module import Module
+from cellprofiler_core.preferences import ABSOLUTE_FOLDER_NAME
+from cellprofiler_core.setting.choice import Choice
 from cellprofiler_core.setting.text import Filename, Text, Directory, Alphanumeric, Integer, Float
 from cellprofiler_core.setting.text.alphanumeric.name.image_name import ImageName
 from cellprofiler_core.constants.module import (
@@ -13,7 +14,6 @@ from cellprofiler_core.setting.do_something import DoSomething, RemoveSettingBut
 from cellprofiler_core.setting._settings_group import SettingsGroup
 from cellprofiler_core.setting import Divider, HiddenCount
 from cellprofiler_core.setting.subscriber import ImageSubscriber
-from cellprofiler_core.preferences import get_default_output_directory
 
 from _character import Character
 from _boolean import Boolean
@@ -24,6 +24,7 @@ from threading import Thread
 import multiprocessing as mp
 from multiprocessing import Process
 from pathlib import Path
+from sys import platform
 import time
 import atexit
 import imagej
@@ -77,8 +78,12 @@ pyimagej_script_run_input_key = "SCRIPT_RUN_INPUT_KEY"  # The script input dicti
 pyimagej_cmd_exit = "COMMAND_EXIT"  # Shut down the pyimagej daemon
 pyimagej_status_cmd_unknown = "STATUS_COMMAND_UNKNOWN"  # Returned when an unknown command is passed to pyimagej
 pyimagej_status_startup_complete = "STATUS_STARTUP_COMPLETE"  # Returned after initial startup before daemon loop
+pyimagej_status_startup_failed = "STATUS_STARTUP_FAILED"  # Returned when imagej.init fails
 input_class = "INPUT"
 output_class = "OUTPUT"
+init_local = "Local"
+init_endpoint = "Endpoint"
+init_latest = "Latest"
 
 
 class PyimagejError(EnvironmentError):
@@ -237,7 +242,7 @@ def preprocess_script_inputs(ij, input_map):
     pass
 
 
-def start_imagej_process(executable_path, input_queue, output_queue):
+def start_imagej_process(input_queue, output_queue, init_string):
     """Python script to run when starting a new ImageJ process.
     
     All commands are initiated by adding a dictionary with a {pyimagej_key_command} entry to the {input_queue}. This
@@ -273,12 +278,24 @@ def start_imagej_process(executable_path, input_queue, output_queue):
         This Queue will be polled for input commands to run through ImageJ
     output_queue : multiprocessing.Queue, required
         This Queue will be filled with outputs to return to CellProfiler
+    init_string : str, optional
+        This can be a path to a local ImageJ installation, or an initialization string per imagej.init(),
+        e.g. sc.fiji:fiji:2.1.0
     """
 
-    if path.exists(executable_path):
-        ij = imagej.init(executable_path)
-    else:
-        ij = imagej.init("sc.fiji:fiji:2.0.0-pre-10")
+    ij = False
+
+    try:
+        if init_string:
+            # Attempt to initialize with the given string
+            ij = imagej.init(init_string)
+        else:
+            ij = imagej.init()
+    except jpype.JException as ex:
+        # Initialization failed
+        output_queue.put(pyimagej_status_startup_failed)
+        jpype.shutdownJVM()
+        return
 
     script_service = ij.script()
 
@@ -340,40 +357,77 @@ class RunImageJScript(Module):
         self.to_imagej = None  # Queue to pass data to pyimagej
         self.from_imagej = None  # queue to receive data from pyimagej
         self.parsed_params = False  # Used for validation
+        self.initialization_failed = False  # Used for validation
 
     def create_settings(self):
         module_explanation = [
             "The", self.module_name,
-            "module allows you to run any supported ImageJ script as part of your workflow.\n\n",
-            "First, select a script file. Then click the \"Get parameters from script\" button to detect required inputs for your script"
+            "module allows you to run any supported ImageJ script as part of your workflow.\n\n"
+            "1. Select your desired initialization method and specify the app directory or endpoint(s) if needed\n"
+            "2. Select a script file to be executed by this module\n"
+            "3. Click the \"Get parameters from script\" button to detect required inputs for your script\n"
             "Each input will have its own setting created, allowing you to pass data from CellProfiler to ImageJ. "
-            "After filling in any required inputs you can run the script normally. \n\n"
-            "Note: only numeric, text and image input types are currently supported. \n\n"
+            "After filling in any required inputs you can run the module normally.\n\n"
+            "Note: ImageJ will only be initialized once per CellProfiler session.\n"
+            "Note: only numeric, text and image input types are currently supported.\n\n"
             "See also ImageJ Scripting: https://imagej.net/Scripting."
 
         ]
         self.set_notes([" ".join(module_explanation)])
 
-        self.executable_directory = Directory(
-            "Executable directory", allow_metadata=False, doc="""\
-        Select the folder containing the executable. MacOS users should select the directory where Fiji.app lives. Windows users 
-        should select the directory containing ImageJ-win64.exe (usually corresponding to the Fiji.app folder).
+        self.init_choice = Choice(
+            "Initialization type", [init_local, init_endpoint, init_latest],
+            tooltips={init_local: "Use a local ImageJ/Fiji installation", init_endpoint: "Specify a particular endpoint",
+                      init_latest: "Use the latest Fiji, downloading if needed."},
+            doc="""\
+Note that initialization will only occur once per CellProfiler session! After initialization, these options will be
+locked for the remainder of the session.
 
-        {IO_FOLDER_CHOICE_HELP_TEXT}
-        """.format(**{
-                "IO_FOLDER_CHOICE_HELP_TEXT": _help.IO_FOLDER_CHOICE_HELP_TEXT
-            }))
+Select the mechanism for initializing ImageJ:
+ * {init_local}: Use a local Fiji or ImageJ installation
+ * {init_endpoint}: Precisely specify the version of one or more components
+ * {init_latest}: Use the latest Fiji version
 
-        def set_directory_fn_executable(path):
-            dir_choice, custom_path = self.executable_directory.get_parts_from_path(path)
-            self.executable_directory.join_parts(dir_choice, custom_path)
+Note that any option besides {init_local} may result in a download of the requested components.
+            """.format(
+                init_local=init_local,
+                init_endpoint=init_endpoint,
+                init_latest=init_latest,
+            ),
+        )
 
-        self.executable_file = Filename(
-            "Executable", "ImageJ.exe", doc="Select your executable. MacOS users should select the Fiji.app "
-                                            "application. Windows user should select the ImageJ-win64.exe executable",
-            get_directory_fn=self.executable_directory.get_absolute_path,
-            set_directory_fn=set_directory_fn_executable,
-            browse_msg="Choose executable file"
+        self.endpoint_string = Text(
+            "Initialization endpoint", "sc.fiji:fiji:2.1.0", doc="""\
+Specify an initialization string as described in https://github.com/imagej/pyimagej/blob/master/doc/Initialization.md
+            """,
+        )
+
+        self.initialized_method = Text("Initialization type", value="Do not use", doc="""\
+Indicates the method that was used to initialized ImageJ in this CellProfiler session. 
+        """,
+        )
+
+        self.app_directory = Directory(
+            "ImageJ directory", allow_metadata=False, doc="""\
+Select the folder containing the desired ImageJ/Fiji application.
+
+{fcht}
+""".format(
+                fcht=IO_FOLDER_CHOICE_HELP_TEXT
+            ),
+        )
+        if platform != 'darwin':
+            self.app_directory.join_parts(ABSOLUTE_FOLDER_NAME, "Fiji.app")
+
+        def set_directory_fn_app(path):
+            dir_choice, custom_path = self.app_directory.get_parts_from_path(path)
+            self.app_directory.join_parts(dir_choice, custom_path)
+
+        self.app_file = Filename(
+            "Local App", "Fiji.app", doc="Select the desired app, such as Fiji.app",
+            get_directory_fn=self.app_directory.get_absolute_path,
+            set_directory_fn=set_directory_fn_app,
+            browse_msg="Choose local application"
         )
 
         self.script_directory = Directory(
@@ -394,7 +448,7 @@ Select the folder containing the script.
             self.clear_script_parameters()
 
         self.script_file = Filename(
-            "ImageJ Script", "script.py", doc="Select a script file with in any ImageJ-supported scripting language.",
+            "ImageJ Script", "script.py", doc="Select a script file written in any ImageJ-supported scripting language.",
             get_directory_fn=self.script_directory.get_absolute_path,
             set_directory_fn=set_directory_fn_script,
             browse_msg="Choose ImageJ script file",
@@ -412,18 +466,23 @@ Note: this must be done each time you change the script, before running the Cell
         self.script_output_settings = {}  # Map of output parameter names to CellProfiler settings objects
         self.script_parameter_count = HiddenCount(self.script_parameter_list)
 
-    def get_executable_path(self):
+    def get_init_string(self):
         """
-        Parse FIJI executable paths from the chosen directory and filename
+        Determine if a particular initialization method has been specified. This could be a path to a local installation
+        or a version string.
         """
-        default_output_directory = get_default_output_directory()
-        if self.executable_file.value[-4:] == ".app":
-            executable_path = path.join(default_output_directory, self.executable_directory.value.split("|")[1],
-                                             self.executable_file.value)
-        else:
-            executable_path = path.join(default_output_directory, self.executable_directory.value.split("|")[1],
-                                             self.executable_file.value)
-        return executable_path
+        choice = self.init_choice.get_value()
+        if choice == init_latest:
+            return None
+
+        if choice == init_local:
+            init_string = self.app_directory.get_absolute_path()
+            if platform == 'darwin':
+                init_string = path.join(init_string, self.app_file.value)
+        elif choice == init_endpoint:
+            init_string = self.endpoint_string.get_value()
+
+        return init_string
 
     def close_pyimagej(self):
         """
@@ -437,20 +496,26 @@ Note: this must be done each time you change the script, before running the Cell
         """
         Start the pyimagej daemon thread if it isn't already running.
         """
-        executable_path = self.get_executable_path()
+        self.initialization_failed = False
+        init_string = self.get_init_string()
 
         if self.imagej_process is None:
             self.to_imagej = mp.Queue()
             self.from_imagej = mp.Queue()
             # TODO if needed we could set daemon=True
             self.imagej_process = Process(target=start_imagej_process, name="PyImageJ Daemon",
-                                          args=(executable_path, self.to_imagej, self.from_imagej,))
-            atexit.register(self.close_pyimagej)  # TODO is there a more CP-ish way to do this?
+                                          args=(self.to_imagej, self.from_imagej, init_string,))
             self.imagej_process.start()
-            if self.from_imagej.get() != pyimagej_status_startup_complete:
-                raise PyimagejError(
-                    "PyImageJ failed to start up successfully."
-                )
+            result = self.from_imagej.get()
+            if result == pyimagej_status_startup_failed:
+                self.imagej_process = None
+                self.initialization_failed = True
+            else:
+                atexit.register(self.close_pyimagej)  # TODO is there a more CP-ish way to do this?
+                initialized = self.init_choice.get_value()
+                if initialized != init_latest:
+                    initialized += ": " + init_string
+                self.initialized_method.set_value(initialized)
         pass
 
     def clear_script_parameters(self):
@@ -461,6 +526,7 @@ Note: this must be done each time you change the script, before running the Cell
         self.script_input_settings.clear()
         self.script_output_settings.clear()
         self.parsed_params = False
+        self.initialization_failed = False
         pass
 
     def get_parameters_helper(self):
@@ -488,7 +554,8 @@ Note: this must be done each time you change the script, before running the Cell
                 progress_gauge.Show(False)
                 break
 
-        self.parsed_params = True
+        if not self.initialization_failed:
+            self.parsed_params = True
         pass
 
     def get_parameters_from_script(self):
@@ -506,6 +573,9 @@ Note: this must be done each time you change the script, before running the Cell
 
         # Start pyimagej if needed
         self.init_pyimagej()
+        if not self.imagej_process:
+            stop_progress_thread = True
+            return
 
         # Tell pyimagej to parse the script parameters
         self.to_imagej.put({pyimagej_key_command: pyimagej_cmd_script_parse, pyimagej_key_input: script_filepath})
@@ -541,7 +611,7 @@ Note: this must be done each time you change the script, before running the Cell
         pass
 
     def settings(self):
-        result = [self.script_parameter_count, self.executable_directory, self.executable_file, self.script_directory, self.script_file, self.get_parameters_button]
+        result = [self.script_parameter_count, self.init_choice, self.app_directory, self.app_file, self.endpoint_string, self.initialized_method, self.script_directory, self.script_file, self.get_parameters_button]
         if len(self.script_parameter_list) > 0:
             result += [Divider(line=True)]
         for script_parameter_group in self.script_parameter_list:
@@ -554,7 +624,28 @@ Note: this must be done each time you change the script, before running the Cell
         return result
 
     def visible_settings(self):
-        visible_settings = [self.executable_directory, self.executable_file, self.script_directory, self.script_file, self.get_parameters_button]
+        visible_settings = []
+
+        # Update the visible settings based on the selected initialization method
+        # If ImageJ is already initialized we just want to report how it was initialized
+        # Otherwise we show: a string entry for "endpoint", a directory chooser for "local" (and file chooser if on mac),
+        # and nothing if "latest"
+        if not self.imagej_process:
+            visible_settings += [self.init_choice]
+            input_type = self.init_choice.get_value()
+            # ImageJ is not initialized yet
+            if input_type == init_endpoint:
+                visible_settings += [self.endpoint_string]
+            elif input_type == init_local:
+                visible_settings += [self.app_directory]
+                if platform == 'darwin':
+                    visible_settings += [self.app_file]
+        else:
+            # ImageJ is initialized
+            visible_settings += [self.initialized_method]
+
+        visible_settings += [Divider(line=True)]
+        visible_settings += [self.script_directory, self.script_file, self.get_parameters_button]
         if len(self.script_parameter_list) > 0:
             visible_settings += [Divider(line=True)]
         for script_parameter in self.script_parameter_list:
@@ -592,6 +683,11 @@ Note: this must be done each time you change the script, before running the Cell
                 self.script_output_settings[param_name] = setting
 
     def validate_module(self, pipeline):
+        if self.initialization_failed:
+            raise ValidationError(
+                "Error starting ImageJ. Please check your initialization settings and try again.",
+                self.init_choice
+            )
 
         no_script_msg = "Please select a valid ImageJ script and use the \"Get parameters from script\" button."
 
@@ -607,15 +703,28 @@ Note: this must be done each time you change the script, before running the Cell
                 "The script you have selected is not a valid path. " + no_script_msg,
                 self.script_file
             )
+
+        if self.init_choice.get_value() == init_local:
+            app_path = self.get_init_string()
+            if not path.exists(app_path):
+                raise ValidationError(
+                    "The local application you have selected is not a valid path.",
+                    self.app_directory
+            )
         pass
 
     def validate_module_warnings(self, pipeline):
         """Warn user if the specified FIJI executable directory is not found, and warn that a copy of FIJI will be downloaded"""
-        executable_path = self.get_executable_path()
-        if not path.exists(executable_path):
-            raise ValidationError("Please specify a valid path to a locally installed Fiji executable. "
-                                  "If the path is not valid, a copy of FIJI will be installed on your machine.",
-                                  self.executable_file)
+        warn_msg = "Please note: any initialization method except \"Local\", a new Fiji may be downloaded"
+        " to your machine if cached dependencies not found."
+        init_type = self.init_choice.get_value()
+        if init_type != init_local:
+            # The component we attach the error to depends on if initialization has happened or not
+            if not self.imagej_process:
+                raise ValidationError(warn_msg, self.init_choice)
+            else:
+                raise ValidationError(warn_msg + " If re-initialization is required, please restart CellProfiler.",
+                                      self.initialized_method)
 
 
     def run(self, workspace):
