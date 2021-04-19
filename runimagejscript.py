@@ -65,25 +65,32 @@ ImageJ Scripting: https://imagej.net/Scripting
 """
 Constants for communicating with pyimagej
 """
-pyimagej_key_command = "KEY_COMMAND"  # Matching value indicates what command to execute
-pyimagej_key_input = "KEY_INPUT"  # Matching value is command-specific input object
-pyimagej_key_output = "KEY_OUTPUT"  # Matching value is command-specific output object
-pyimagej_key_error = "KEY_OUTPUT"  # Matching value is command-specific output object
-pyimagej_cmd_script_parse = "COMMAND_SCRIPT_PARAMS"  # Parse a script file's parameters
-pyimagej_script_parse_inputs = "SCRIPT_PARSE_INPUTS"  # Script input dictionary key
-pyimagej_script_parse_outputs = "SCRIPT_PARSE_OUTPUTS"  # Script output dictionary key
-pyimagej_cmd_script_run = "COMMAND_SCRIPT_RUN"  # Run a script
-pyimagej_script_run_file_key = "SCRIPT_RUN_FILE_KEY"  # The script filename key
-pyimagej_script_run_input_key = "SCRIPT_RUN_INPUT_KEY"  # The script input dictionary key
-pyimagej_cmd_exit = "COMMAND_EXIT"  # Shut down the pyimagej daemon
-pyimagej_status_cmd_unknown = "STATUS_COMMAND_UNKNOWN"  # Returned when an unknown command is passed to pyimagej
-pyimagej_status_startup_complete = "STATUS_STARTUP_COMPLETE"  # Returned after initial startup before daemon loop
-pyimagej_status_startup_failed = "STATUS_STARTUP_FAILED"  # Returned when imagej.init fails
-input_class = "INPUT"
-output_class = "OUTPUT"
-init_local = "Local"
-init_endpoint = "Endpoint"
-init_latest = "Latest"
+PYIMAGEJ_KEY_COMMAND = "KEY_COMMAND"  # Matching value indicates what command to execute
+PYIMAGEJ_KEY_INPUT = "KEY_INPUT"  # Matching value is command-specific input object
+PYIMAGEJ_KEY_OUTPUT = "KEY_OUTPUT"  # Matching value is command-specific output object
+PYIMAGEJ_KEY_ERROR = "KEY_OUTPUT"  # Matching value is command-specific output object
+PYIMAGEJ_CMD_SCRIPT_PARSE = "COMMAND_SCRIPT_PARAMS"  # Parse a script file's parameters
+PYIMAGEJ_SCRIPT_PARSE_INPUTS = "SCRIPT_PARSE_INPUTS"  # Script input dictionary key
+PYIMAGEJ_SCRIPT_PARSE_OUTPUTS = "SCRIPT_PARSE_OUTPUTS"  # Script output dictionary key
+PYIMAGEJ_CMD_SCRIPT_RUN = "COMMAND_SCRIPT_RUN"  # Run a script
+PYIMAGEJ_SCRIPT_RUN_FILE_KEY = "SCRIPT_RUN_FILE_KEY"  # The script filename key
+PYIMAGEJ_SCRIPT_RUN_INPUT_KEY = "SCRIPT_RUN_INPUT_KEY"  # The script input dictionary key
+PYIMAGEJ_CMD_EXIT = "COMMAND_EXIT"  # Shut down the pyimagej daemon
+PYIMAGEJ_STATUS_CMD_UNKNOWN = "STATUS_COMMAND_UNKNOWN"  # Returned when an unknown command is passed to pyimagej
+PYIMGAEJ_STATUS_STARTUP_COMPLETE = "STATUS_STARTUP_COMPLETE"  # Returned after initial startup before daemon loop
+PYIMAGEJ_STATUS_STARTUP_FAILED = "STATUS_STARTUP_FAILED"  # Returned when imagej.init fails
+INPUT_CLASS = "INPUT"
+OUTPUT_CLASS = "OUTPUT"
+INIT_LOCAL = "Local"
+INIT_ENDPOINT = "Endpoint"
+INIT_LATEST = "Latest"
+
+global stop_progress_thread, imagej_process, to_imagej, from_imagej, init_display_string
+stop_progress_thread = False # Used to control the display of progress graphics
+imagej_process = None  # A subprocess running pyimagej
+to_imagej = None  # Queue to pass data to pyimagej
+from_imagej = None  # queue to receive data from pyimagej
+init_display_string = None # Indicator string for how imagej was initialized
 
 
 class PyimagejError(EnvironmentError):
@@ -189,7 +196,7 @@ def convert_java_type_to_setting(param_name, param_type, param_class):
     A new Setting of a type appropriate for param_type, named with param_name. Or None if no valid conversion exists.
     """
     type_string = param_type.split()[1]
-    if input_class == param_class:
+    if INPUT_CLASS == param_class:
         param_label = param_name
         if type_string == "java.lang.String":
             return Alphanumeric(param_label, "")
@@ -213,7 +220,7 @@ def convert_java_type_to_setting(param_name, param_type, param_class):
             return Filename(param_label, "")
         elif type_string == "net.imagej.Dataset" or type_string == "net.imagej.ImgPlus":
             return ImageSubscriber(param_label)
-    elif output_class == param_class:
+    elif OUTPUT_CLASS == param_class:
         if type_string == "net.imagej.Dataset" or type_string == "net.imagej.ImgPlus":
             return ImageName("[OUTPUT, " + type_string + "] " + param_name, param_name, doc=
             """
@@ -293,21 +300,21 @@ def start_imagej_process(input_queue, output_queue, init_string):
             ij = imagej.init()
     except jpype.JException as ex:
         # Initialization failed
-        output_queue.put(pyimagej_status_startup_failed)
+        output_queue.put(PYIMAGEJ_STATUS_STARTUP_FAILED)
         jpype.shutdownJVM()
         return
 
     script_service = ij.script()
 
     # Signify output is complete
-    output_queue.put(pyimagej_status_startup_complete)
+    output_queue.put(PYIMGAEJ_STATUS_STARTUP_COMPLETE)
 
     # Main daemon loop, polling the input queue
     while True:
         command_dictionary = input_queue.get()
-        cmd = command_dictionary[pyimagej_key_command]
-        if cmd == pyimagej_cmd_script_parse:
-            script_path = command_dictionary[pyimagej_key_input]
+        cmd = command_dictionary[PYIMAGEJ_KEY_COMMAND]
+        if cmd == PYIMAGEJ_CMD_SCRIPT_PARSE:
+            script_path = command_dictionary[PYIMAGEJ_KEY_INPUT]
             script_file = Path(script_path)
             script_info = script_service.getScript(script_file)
             script_inputs = {}
@@ -316,12 +323,12 @@ def start_imagej_process(input_queue, output_queue, init_string):
                 script_inputs[str(script_in.getName())] = str(script_in.getType().toString())
             for script_out in script_info.outputs():
                 script_outputs[str(script_out.getName())] = str(script_out.getType().toString())
-            output_queue.put({pyimagej_script_parse_inputs: script_inputs,
-                              pyimagej_script_parse_outputs: script_outputs})
-        elif cmd == pyimagej_cmd_script_run:
-            script_path = (command_dictionary[pyimagej_key_input])[pyimagej_script_run_file_key]
+            output_queue.put({PYIMAGEJ_SCRIPT_PARSE_INPUTS: script_inputs,
+                              PYIMAGEJ_SCRIPT_PARSE_OUTPUTS: script_outputs})
+        elif cmd == PYIMAGEJ_CMD_SCRIPT_RUN:
+            script_path = (command_dictionary[PYIMAGEJ_KEY_INPUT])[PYIMAGEJ_SCRIPT_RUN_FILE_KEY]
             script_file = Path(script_path)
-            input_map = (command_dictionary[pyimagej_key_input])[pyimagej_script_run_input_key]
+            input_map = (command_dictionary[PYIMAGEJ_KEY_INPUT])[PYIMAGEJ_SCRIPT_RUN_INPUT_KEY]
             preprocess_script_inputs(ij, input_map)
             script_out_map = script_service.run(script_file, True, input_map).get().getOutputs()
             output_dict = {}
@@ -331,11 +338,11 @@ def start_imagej_process(input_queue, output_queue, init_string):
                 if value is not None:
                     output_dict[key] = value
 
-            output_queue.put({pyimagej_key_output: output_dict})
-        elif cmd == pyimagej_cmd_exit:
+            output_queue.put({PYIMAGEJ_KEY_OUTPUT: output_dict})
+        elif cmd == PYIMAGEJ_CMD_EXIT:
             break
         else:
-            output_queue.put({pyimagej_key_error: pyimagej_status_cmd_unknown})
+            output_queue.put({PYIMAGEJ_KEY_ERROR: PYIMAGEJ_STATUS_CMD_UNKNOWN})
 
     # Shut down the daemon
     ij.getContext().dispose()
@@ -353,9 +360,6 @@ class RunImageJScript(Module):
 
     def __init__(self):
         super().__init__()
-        self.imagej_process = None  # A subprocess running pyimagej
-        self.to_imagej = None  # Queue to pass data to pyimagej
-        self.from_imagej = None  # queue to receive data from pyimagej
         self.parsed_params = False  # Used for validation
         self.initialization_failed = False  # Used for validation
 
@@ -376,9 +380,9 @@ class RunImageJScript(Module):
         self.set_notes([" ".join(module_explanation)])
 
         self.init_choice = Choice(
-            "Initialization type", [init_local, init_endpoint, init_latest],
-            tooltips={init_local: "Use a local ImageJ/Fiji installation", init_endpoint: "Specify a particular endpoint",
-                      init_latest: "Use the latest Fiji, downloading if needed."},
+            "Initialization type", [INIT_LOCAL, INIT_ENDPOINT, INIT_LATEST],
+            tooltips={INIT_LOCAL: "Use a local ImageJ/Fiji installation", INIT_ENDPOINT: "Specify a particular endpoint",
+                      INIT_LATEST: "Use the latest Fiji, downloading if needed."},
             doc="""\
 Note that initialization will only occur once per CellProfiler session! After initialization, these options will be
 locked for the remainder of the session.
@@ -390,9 +394,9 @@ Select the mechanism for initializing ImageJ:
 
 Note that any option besides {init_local} may result in a download of the requested components.
             """.format(
-                init_local=init_local,
-                init_endpoint=init_endpoint,
-                init_latest=init_latest,
+                init_local=INIT_LOCAL,
+                init_endpoint=INIT_ENDPOINT,
+                init_latest=INIT_LATEST,
             ),
         )
 
@@ -404,8 +408,12 @@ Specify an initialization string as described in https://github.com/imagej/pyima
 
         self.initialized_method = Text("Initialization type", value="Do not use", doc="""\
 Indicates the method that was used to initialized ImageJ in this CellProfiler session. 
-        """,
+            """,
         )
+        global init_display_string
+        if init_display_string:
+            # ImageJ thread is already running
+            self.initialized_method.set_value(init_display_string)
 
         self.app_directory = Directory(
             "ImageJ directory", allow_metadata=False, doc="""\
@@ -472,14 +480,14 @@ Note: this must be done each time you change the script, before running the Cell
         or a version string.
         """
         choice = self.init_choice.get_value()
-        if choice == init_latest:
+        if choice == INIT_LATEST:
             return None
 
-        if choice == init_local:
+        if choice == INIT_LOCAL:
             init_string = self.app_directory.get_absolute_path()
             if platform == 'darwin':
                 init_string = path.join(init_string, self.app_file.value)
-        elif choice == init_endpoint:
+        elif choice == INIT_ENDPOINT:
             init_string = self.endpoint_string.get_value()
 
         return init_string
@@ -488,8 +496,9 @@ Note: this must be done each time you change the script, before running the Cell
         """
         Close the pyimagej daemon thread
         """
-        if self.imagej_process is not None:
-            self.to_imagej.put({pyimagej_key_command: pyimagej_cmd_exit})
+        global imagej_process, to_imagej
+        if imagej_process is not None:
+            to_imagej.put({PYIMAGEJ_KEY_COMMAND: PYIMAGEJ_CMD_EXIT})
         pass
 
     def init_pyimagej(self):
@@ -499,23 +508,24 @@ Note: this must be done each time you change the script, before running the Cell
         self.initialization_failed = False
         init_string = self.get_init_string()
 
-        if self.imagej_process is None:
-            self.to_imagej = mp.Queue()
-            self.from_imagej = mp.Queue()
+        global imagej_process, to_imagej, from_imagej, init_display_string
+        if imagej_process is None:
+            to_imagej = mp.Queue()
+            from_imagej = mp.Queue()
             # TODO if needed we could set daemon=True
-            self.imagej_process = Process(target=start_imagej_process, name="PyImageJ Daemon",
-                                          args=(self.to_imagej, self.from_imagej, init_string,))
-            self.imagej_process.start()
-            result = self.from_imagej.get()
-            if result == pyimagej_status_startup_failed:
-                self.imagej_process = None
+            imagej_process = Process(target=start_imagej_process, name="PyImageJ Daemon",
+                                          args=(to_imagej, from_imagej, init_string,))
+            imagej_process.start()
+            result = from_imagej.get()
+            if result == PYIMAGEJ_STATUS_STARTUP_FAILED:
+                imagej_process = None
                 self.initialization_failed = True
             else:
                 atexit.register(self.close_pyimagej)  # TODO is there a more CP-ish way to do this?
-                initialized = self.init_choice.get_value()
-                if initialized != init_latest:
-                    initialized += ": " + init_string
-                self.initialized_method.set_value(initialized)
+                init_display_string = self.init_choice.get_value()
+                if init_display_string != INIT_LATEST:
+                    init_display_string += ": " + init_string
+                self.initialized_method.set_value(init_display_string)
         pass
 
     def clear_script_parameters(self):
@@ -563,7 +573,7 @@ Note: this must be done each time you change the script, before running the Cell
         Use PyImageJ to read header text from an ImageJ script and extract inputs/outputs, which are then converted to
         CellProfiler settings for this module
         """
-        global stop_progress_thread
+        global stop_progress_thread, imagej_process, to_imagej, from_imagej
         script_filepath = path.join(self.script_directory.get_absolute_path(), self.script_file.value)
 
         if not self.script_file.value or not path.exists(script_filepath):
@@ -573,22 +583,22 @@ Note: this must be done each time you change the script, before running the Cell
 
         # Start pyimagej if needed
         self.init_pyimagej()
-        if not self.imagej_process:
+        if not imagej_process:
             stop_progress_thread = True
             return
 
         # Tell pyimagej to parse the script parameters
-        self.to_imagej.put({pyimagej_key_command: pyimagej_cmd_script_parse, pyimagej_key_input: script_filepath})
+        to_imagej.put({PYIMAGEJ_KEY_COMMAND: PYIMAGEJ_CMD_SCRIPT_PARSE, PYIMAGEJ_KEY_INPUT: script_filepath})
 
-        ij_return = self.from_imagej.get()
+        ij_return = from_imagej.get()
 
         # Process pyimagej's output, converting script parameters to settings
-        if ij_return != pyimagej_status_cmd_unknown:
-            input_params = ij_return[pyimagej_script_parse_inputs]
-            output_params = ij_return[pyimagej_script_parse_outputs]
+        if ij_return != PYIMAGEJ_STATUS_CMD_UNKNOWN:
+            input_params = ij_return[PYIMAGEJ_SCRIPT_PARSE_INPUTS]
+            output_params = ij_return[PYIMAGEJ_SCRIPT_PARSE_OUTPUTS]
 
-            for param_dict, settings_dict, io_class in ((input_params, self.script_input_settings, input_class),
-                                                        (output_params, self.script_output_settings, output_class)):
+            for param_dict, settings_dict, io_class in ((input_params, self.script_input_settings, INPUT_CLASS),
+                                                        (output_params, self.script_output_settings, OUTPUT_CLASS)):
                 for param_name in param_dict:
                     param_type = param_dict[param_name]
                     next_setting = convert_java_type_to_setting(param_name, param_type, io_class)
@@ -611,7 +621,7 @@ Note: this must be done each time you change the script, before running the Cell
         pass
 
     def settings(self):
-        result = [self.script_parameter_count, self.init_choice, self.app_directory, self.app_file, self.endpoint_string, self.initialized_method, self.script_directory, self.script_file, self.get_parameters_button]
+        result = [self.script_parameter_count, self.init_choice, self.app_directory, self.app_file, self.endpoint_string, self.script_directory, self.script_file, self.get_parameters_button]
         if len(self.script_parameter_list) > 0:
             result += [Divider(line=True)]
         for script_parameter_group in self.script_parameter_list:
@@ -625,18 +635,19 @@ Note: this must be done each time you change the script, before running the Cell
 
     def visible_settings(self):
         visible_settings = []
+        global imagej_process
 
         # Update the visible settings based on the selected initialization method
         # If ImageJ is already initialized we just want to report how it was initialized
         # Otherwise we show: a string entry for "endpoint", a directory chooser for "local" (and file chooser if on mac),
         # and nothing if "latest"
-        if not self.imagej_process:
+        if not imagej_process:
             visible_settings += [self.init_choice]
             input_type = self.init_choice.get_value()
             # ImageJ is not initialized yet
-            if input_type == init_endpoint:
+            if input_type == INIT_ENDPOINT:
                 visible_settings += [self.endpoint_string]
-            elif input_type == init_local:
+            elif input_type == INIT_LOCAL:
                 visible_settings += [self.app_directory]
                 if platform == 'darwin':
                     visible_settings += [self.app_file]
@@ -677,9 +688,9 @@ Note: this must be done each time you change the script, before running the Cell
             group.append("remover", RemoveSettingButton("", "Remove this variable", self.script_parameter_list, group))
             add_param_info_settings(group, param_name, param_type, io_class)
             self.script_parameter_list.append(group)
-            if input_class == io_class:
+            if INPUT_CLASS == io_class:
                 self.script_input_settings[param_name] = setting
-            elif output_class == io_class:
+            elif OUTPUT_CLASS == io_class:
                 self.script_output_settings[param_name] = setting
 
     def validate_module(self, pipeline):
@@ -704,7 +715,7 @@ Note: this must be done each time you change the script, before running the Cell
                 self.script_file
             )
 
-        if self.init_choice.get_value() == init_local:
+        if self.init_choice.get_value() == INIT_LOCAL:
             app_path = self.get_init_string()
             if not path.exists(app_path):
                 raise ValidationError(
@@ -714,13 +725,14 @@ Note: this must be done each time you change the script, before running the Cell
         pass
 
     def validate_module_warnings(self, pipeline):
+        global imagej_process
         """Warn user if the specified FIJI executable directory is not found, and warn that a copy of FIJI will be downloaded"""
         warn_msg = "Please note: any initialization method except \"Local\", a new Fiji may be downloaded"
         " to your machine if cached dependencies not found."
         init_type = self.init_choice.get_value()
-        if init_type != init_local:
+        if init_type != INIT_LOCAL:
             # The component we attach the error to depends on if initialization has happened or not
-            if not self.imagej_process:
+            if not imagej_process:
                 raise ValidationError(warn_msg, self.init_choice)
             else:
                 raise ValidationError(warn_msg + " If re-initialization is required, please restart CellProfiler.",
@@ -752,15 +764,15 @@ Note: this must be done each time you change the script, before running the Cell
                 script_inputs[name] = setting.get_value()
 
         # Start the script
-        self.to_imagej.put({pyimagej_key_command: pyimagej_cmd_script_run, pyimagej_key_input:
-            {pyimagej_script_run_file_key: script_filepath,
-             pyimagej_script_run_input_key: script_inputs}
+        to_imagej.put({PYIMAGEJ_KEY_COMMAND: PYIMAGEJ_CMD_SCRIPT_RUN, PYIMAGEJ_KEY_INPUT:
+            {PYIMAGEJ_SCRIPT_RUN_FILE_KEY: script_filepath,
+             PYIMAGEJ_SCRIPT_RUN_INPUT_KEY: script_inputs}
                             })
 
         # Retrieve script output
-        ij_return = self.from_imagej.get()
-        if ij_return != pyimagej_status_cmd_unknown:
-            script_outputs = ij_return[pyimagej_key_output]
+        ij_return = from_imagej.get()
+        if ij_return != PYIMAGEJ_STATUS_CMD_UNKNOWN:
+            script_outputs = ij_return[PYIMAGEJ_KEY_OUTPUT]
             for name in self.script_output_settings:
                 output_key = self.script_output_settings[name].get_value()
                 output_value = script_outputs[name]
