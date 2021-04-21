@@ -89,12 +89,3 @@ def test_copy_image():
     output_image = workspace.image_set.get_image("copy")
 
     assert numpy.all(output_image.pixel_data == input_image)
-
-def test_invalid_script():
-    pass
-
-def test_do_something_to_image():
-    pass
-
-def test_multiple_output_images():
-    pass
