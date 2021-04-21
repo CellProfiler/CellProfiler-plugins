@@ -77,7 +77,7 @@ PYIMAGEJ_SCRIPT_RUN_FILE_KEY = "SCRIPT_RUN_FILE_KEY"  # The script filename key
 PYIMAGEJ_SCRIPT_RUN_INPUT_KEY = "SCRIPT_RUN_INPUT_KEY"  # The script input dictionary key
 PYIMAGEJ_CMD_EXIT = "COMMAND_EXIT"  # Shut down the pyimagej daemon
 PYIMAGEJ_STATUS_CMD_UNKNOWN = "STATUS_COMMAND_UNKNOWN"  # Returned when an unknown command is passed to pyimagej
-PYIMGAEJ_STATUS_STARTUP_COMPLETE = "STATUS_STARTUP_COMPLETE"  # Returned after initial startup before daemon loop
+PYIMAGEJ_STATUS_STARTUP_COMPLETE = "STATUS_STARTUP_COMPLETE"  # Returned after initial startup before daemon loop
 PYIMAGEJ_STATUS_STARTUP_FAILED = "STATUS_STARTUP_FAILED"  # Returned when imagej.init fails
 INPUT_CLASS = "INPUT"
 OUTPUT_CLASS = "OUTPUT"
@@ -307,7 +307,7 @@ def start_imagej_process(input_queue, output_queue, init_string):
     script_service = ij.script()
 
     # Signify output is complete
-    output_queue.put(PYIMGAEJ_STATUS_STARTUP_COMPLETE)
+    output_queue.put(PYIMAGEJ_STATUS_STARTUP_COMPLETE)
 
     # Main daemon loop, polling the input queue
     while True:
