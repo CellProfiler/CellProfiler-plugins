@@ -246,7 +246,6 @@ def preprocess_script_inputs(ij, input_map):
     for key in input_map:
         if isinstance(input_map[key], Image):
             input_map[key] = ij.py.to_dataset(input_map[key].get_image())
-    pass
 
 
 def start_imagej_process(input_queue, output_queue, init_string):
@@ -347,7 +346,6 @@ def start_imagej_process(input_queue, output_queue, init_string):
     # Shut down the daemon
     ij.getContext().dispose()
     jpype.shutdownJVM()
-    pass
 
 
 class RunImageJScript(Module):
@@ -499,7 +497,6 @@ Note: this must be done each time you change the script, before running the Cell
         global imagej_process, to_imagej
         if imagej_process is not None:
             to_imagej.put({PYIMAGEJ_KEY_COMMAND: PYIMAGEJ_CMD_EXIT})
-        pass
 
     def init_pyimagej(self):
         """
@@ -526,7 +523,6 @@ Note: this must be done each time you change the script, before running the Cell
                 if init_display_string != INIT_LATEST:
                     init_display_string += ": " + init_string
                 self.initialized_method.set_value(init_display_string)
-        pass
 
     def clear_script_parameters(self):
         """
@@ -537,7 +533,6 @@ Note: this must be done each time you change the script, before running the Cell
         self.script_output_settings.clear()
         self.parsed_params = False
         self.initialization_failed = False
-        pass
 
     def get_parameters_helper(self):
         """
@@ -566,7 +561,6 @@ Note: this must be done each time you change the script, before running the Cell
 
         if not self.initialization_failed:
             self.parsed_params = True
-        pass
 
     def get_parameters_from_script(self):
         """
@@ -618,7 +612,6 @@ Note: this must be done each time you change the script, before running the Cell
                         self.script_parameter_list.append(group)
 
             stop_progress_thread = True
-        pass
 
     def settings(self):
         result = [self.script_parameter_count, self.init_choice, self.app_directory, self.app_file, self.endpoint_string, self.script_directory, self.script_file, self.get_parameters_button]
@@ -721,8 +714,7 @@ Note: this must be done each time you change the script, before running the Cell
                 raise ValidationError(
                     "The local application you have selected is not a valid path.",
                     self.app_directory
-            )
-        pass
+                )
 
     def validate_module_warnings(self, pipeline):
         global imagej_process
@@ -781,7 +773,6 @@ Note: this must be done each time you change the script, before running the Cell
                 if self.show_window:
                     workspace.display_data.script_output_pixels[name] = output_image.pixel_data
                     workspace.display_data.dimensions = output_image.dimensions
-        pass
 
     def display(self, workspace, figure):
         # TODO how do we handle differences in dimensionality between input/output images?
@@ -807,4 +798,3 @@ Note: this must be done each time you change the script, before running the Cell
                 title="Output image: {}".format(name),
             )
             i += 1
-        pass
