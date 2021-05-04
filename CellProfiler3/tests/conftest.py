@@ -1,15 +1,15 @@
 # Something in CellProfiler is importing wx before we can set
 # headless mode. Setting headless here efore importing anything
 # else from CellProfiler.
-import cellprofiler_core.preferences
+import cellprofiler.preferences
 
-cellprofiler_core.preferences.set_headless()
+cellprofiler.preferences.set_headless()
 
-import cellprofiler_core.image
-import cellprofiler_core.measurement
-import cellprofiler_core.object
-import cellprofiler_core.pipeline
-import cellprofiler_core.workspace
+import cellprofiler.image
+import cellprofiler.measurement
+import cellprofiler.object
+import cellprofiler.pipeline
+import cellprofiler.workspace
 import numpy
 import skimage.data
 import skimage.color
@@ -34,12 +34,12 @@ import pytest
 def image(request):
     data, dimensions = request.param
 
-    return cellprofiler_core.image.Image(image=data, dimensions=dimensions)
+    return cellprofiler.image.Image(image=data, dimensions=dimensions)
 
 
 @pytest.fixture(scope="function")
 def image_empty():
-    image = cellprofiler_core.image.Image()
+    image = cellprofiler.image.Image()
 
     return image
 
@@ -63,12 +63,12 @@ def image_set_empty(image_empty, image_set_list):
 
 @pytest.fixture(scope="function")
 def image_set_list():
-    return cellprofiler_core.image.ImageSetList()
+    return cellprofiler.image.ImageSetList()
 
 
 @pytest.fixture(scope="function")
 def measurements():
-    return cellprofiler_core.measurement.Measurements()
+    return cellprofiler.measurement.Measurements()
 
 
 @pytest.fixture(scope="function")
@@ -80,7 +80,7 @@ def module(request):
 
 @pytest.fixture(scope="function")
 def objects(image):
-    obj = cellprofiler_core.object.Objects()
+    obj = cellprofiler.object.Objects()
     obj.parent_image = image
 
     return obj
@@ -88,14 +88,14 @@ def objects(image):
 
 @pytest.fixture(scope="function")
 def objects_empty():
-    obj = cellprofiler_core.object.Objects()
+    obj = cellprofiler.object.Objects()
 
     return obj
 
 
 @pytest.fixture(scope="function")
 def object_set(objects):
-    objects_set = cellprofiler_core.object.ObjectSet()
+    objects_set = cellprofiler.object.ObjectSet()
     objects_set.add_objects(objects, "InputObjects")
 
     return objects_set
@@ -103,7 +103,7 @@ def object_set(objects):
 
 @pytest.fixture(scope="function")
 def object_set_empty(objects_empty):
-    objects_set = cellprofiler_core.object.ObjectSet()
+    objects_set = cellprofiler.object.ObjectSet()
     objects_set.add_objects(objects_empty, "InputObjects")
 
     return objects_set
@@ -120,7 +120,7 @@ def object_with_data(image):
 
     labels = skimage.measure.label(binary)
 
-    objects = cellprofiler_core.object.Objects()
+    objects = cellprofiler.object.Objects()
 
     objects.segmented = labels
     objects.parent_image = image
@@ -130,7 +130,7 @@ def object_with_data(image):
 
 @pytest.fixture(scope="function")
 def object_set_with_data(object_with_data):
-    objects_set = cellprofiler_core.object.ObjectSet()
+    objects_set = cellprofiler.object.ObjectSet()
     objects_set.add_objects(object_with_data, "InputObjects")
 
     return objects_set
@@ -138,20 +138,20 @@ def object_set_with_data(object_with_data):
 
 @pytest.fixture(scope="function")
 def pipeline():
-    return cellprofiler_core.pipeline.Pipeline()
+    return cellprofiler.pipeline.Pipeline()
 
 
 @pytest.fixture(scope="function")
 def workspace(pipeline, module, image_set, object_set, measurements, image_set_list):
-    return cellprofiler_core.workspace.Workspace(pipeline, module, image_set, object_set, measurements, image_set_list)
+    return cellprofiler.workspace.Workspace(pipeline, module, image_set, object_set, measurements, image_set_list)
 
 
 @pytest.fixture(scope="function")
 def workspace_empty(pipeline, module, image_set_empty, object_set_empty, measurements, image_set_list):
-    return cellprofiler_core.workspace.Workspace(pipeline, module, image_set_empty, object_set_empty, measurements, image_set_list)
+    return cellprofiler.workspace.Workspace(pipeline, module, image_set_empty, object_set_empty, measurements, image_set_list)
 
 
 @pytest.fixture(scope="function")
 def workspace_with_data(pipeline, module, image_set, object_set_with_data, measurements, image_set_list):
-    return cellprofiler_core.workspace.Workspace(pipeline, module, image_set, object_set_with_data,
+    return cellprofiler.workspace.Workspace(pipeline, module, image_set, object_set_with_data,
                                             measurements, image_set_list)
