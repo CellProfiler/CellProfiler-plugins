@@ -16,7 +16,7 @@ CUDA_LINK = "https://pytorch.org/get-started/locally/"
 
 __doc__ = f"""\
 RunCellpose
-=====================
+===========
 
 **RunCellpose** uses a pre-trained machine learning model (Cellpose) to detect cells or nuclei in an image.
 This module is useful for automating simple segmentation tasks in CellProfiler.
