@@ -157,7 +157,12 @@ def convert_java_to_python_type(ij, return_value):
     """
     if return_value is None:
         return None
-    type_string = str(return_value.getClass().toString()).split()[1]
+    return_class = return_value.getClass()
+    type_string = str(return_class.toString()).split()[1]
+
+    ds_class = jpype.JClass('net.imagej.Dataset')
+    img_class = jpype.JClass('net.imagej.ImgPlus')
+
     if type_string == "java.lang.String" or type_string == "java.lang.Character":
         return str(return_value)
     elif type_string == "java.lang.Integer" or type_string == "java.lang.Long" or type_string == "java.lang.Short":
@@ -171,7 +176,7 @@ def convert_java_to_python_type(ij, return_value):
             return False
     elif type_string == "java.lang.Byte":
         return bytes(return_value)
-    elif type_string == "net.imagej.Dataset" or type_string == "net.imagej.ImgPlus":
+    elif issubclass(return_class, ds_class) or issubclass(return_class, img_class):
         return ij.py.from_java(return_value)
 
     # Not a supported type
