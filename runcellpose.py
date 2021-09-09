@@ -26,7 +26,6 @@ Loading in a model will take slightly longer the first time you run it each sess
 performance you may want to consider the time taken to predict subsequent images.
 
 Installation:
-You'll want to run `pip install cellpose` on your CellProfiler Python environment to setup Cellpose. 
 On the first time loading into CellProfiler, Cellpose will need to download some model files from the internet. This 
 may take some time. If you want to use a GPU to run the model, you'll need a compatible version of PyTorch and a 
 supported GPU. Instructions are avaiable at this link: {CUDA_LINK}

@@ -1,4 +1,5 @@
 cellh5
 pyimagej
+cellpose
 microscopeimagequality
 keras
