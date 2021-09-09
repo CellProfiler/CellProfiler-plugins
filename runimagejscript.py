@@ -368,15 +368,14 @@ class RunImageJScript(Module):
 
     def create_settings(self):
         module_explanation = [
-            "The", self.module_name,
-            "module allows you to run any supported ImageJ script as part of your workflow.\n\n"
-            "1. Select your desired initialization method and specify the app directory or endpoint(s) if needed\n"
-            "2. Select a script file to be executed by this module\n"
-            "3. Click the \"Get parameters from script\" button to detect required inputs for your script\n"
-            "Each input will have its own setting created, allowing you to pass data from CellProfiler to ImageJ. "
-            "After filling in any required inputs you can run the module normally.\n\n"
-            "Note: ImageJ will only be initialized once per CellProfiler session.\n"
-            "Note: only numeric, text and image input types are currently supported.\n\n"
+            "The" + self.module_name + "module allows you to run any supported ImageJ script as part of your workflow.",
+            "First, select your desired initialization method and specify the app directory or endpoint(s) if needed.",
+            "Then select a script file to be executed by this module.",
+            "Click the \"Get parameters from script\" button to detect required inputs for your script:",
+            "each input will have its own setting created, allowing you to pass data from CellProfiler to ImageJ.",
+            "After filling in any required inputs you can run the module normally.",
+            "Note: ImageJ will only be initialized once per CellProfiler session.",
+            "Note: only numeric, text and image parameters are currently supported.",
             "See also ImageJ Scripting: https://imagej.net/Scripting."
 
         ]
