@@ -160,8 +160,7 @@ def convert_java_to_python_type(ij, return_value):
     return_class = return_value.getClass()
     type_string = str(return_class.toString()).split()[1]
 
-    ds_class = jpype.JClass('net.imagej.Dataset')
-    img_class = jpype.JClass('net.imagej.ImgPlus')
+    image_classes = (jpype.JClass('ij.ImagePlus'), jpype.JClass('net.imagej.Dataset'), jpype.JClass('net.imagej.ImgPlus'))
 
     if type_string == "java.lang.String" or type_string == "java.lang.Character":
         return str(return_value)
@@ -176,7 +175,7 @@ def convert_java_to_python_type(ij, return_value):
             return False
     elif type_string == "java.lang.Byte":
         return bytes(return_value)
-    elif issubclass(return_class, ds_class) or issubclass(return_class, img_class):
+    elif bool((img_class for img_class in image_classes if issubclass(return_class, img_class))):
         return ij.py.from_java(return_value)
 
     # Not a supported type
@@ -201,6 +200,7 @@ def convert_java_type_to_setting(param_name, param_type, param_class):
     A new Setting of a type appropriate for param_type, named with param_name. Or None if no valid conversion exists.
     """
     type_string = param_type.split()[1]
+    img_strings = ("ij.ImagePlus", "net.imagej.Dataset", "net.imagej.ImgPlus")
     if INPUT_CLASS == param_class:
         param_label = param_name
         if type_string == "java.lang.String":
@@ -223,10 +223,10 @@ def convert_java_type_to_setting(param_name, param_type, param_class):
             return Float(param_label, minval=-2 ** 63, maxval=((2 ** 63) - 1))
         elif type_string == "java.io.File":
             return Filename(param_label, "")
-        elif type_string == "net.imagej.Dataset" or type_string == "net.imagej.ImgPlus":
+        elif bool((img_string for img_string in img_strings if type_string == img_string)):
             return ImageSubscriber(param_label)
     elif OUTPUT_CLASS == param_class:
-        if type_string == "net.imagej.Dataset" or type_string == "net.imagej.ImgPlus":
+        if bool((img_string for img_string in img_strings if type_string == img_string)):
             return ImageName("[OUTPUT, " + type_string + "] " + param_name, param_name, doc=
             """
             You may use this setting to rename the indicated output variable, if desired.
