@@ -250,7 +250,11 @@ def preprocess_script_inputs(ij, input_map):
     """
     for key in input_map:
         if isinstance(input_map[key], Image):
-            input_map[key] = ij.py.to_dataset(input_map[key].get_image())
+            cp_image = input_map[key].get_image()
+            # CellProfiler images are typically stored as floats which can cause unexpected results in ImageJ.
+            # By default, we convert to 16-bit int type.
+            cp_image = skimage.img_as_uint(cp_image)
+            input_map[key] = ij.py.to_dataset(cp_image)
 
 
 def start_imagej_process(input_queue, output_queue, init_string):
@@ -772,6 +776,8 @@ Note: this must be done each time you change the script, before running the Cell
             for name in self.script_output_settings:
                 output_key = self.script_output_settings[name].get_value()
                 output_value = script_outputs[name]
+                # convert back to floats for CellProfiler
+                output_value = skimage.img_as_float(output_value)
                 output_image = Image(image=output_value, convert=False)
                 workspace.image_set.add(output_key, output_image)
                 if self.show_window:
