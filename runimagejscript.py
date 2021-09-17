@@ -34,10 +34,10 @@ import random
 import skimage.io
 
 __doc__ = """\
-Run ImageJ Script
+RunImageJScript
 =================
 
-The **Run ImageJ Script** module allows you to run any supported ImageJ script as part
+The **RunImageJScript** module allows you to run any supported ImageJ script as part
 of your workflow.
 
 First, select a script file. Then click the \"Get parameters from script\" button to detect required inputs for your
