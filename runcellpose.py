@@ -10,7 +10,7 @@ from cellprofiler_core.setting import Binary
 from cellprofiler_core.setting.choice import Choice
 from cellprofiler_core.setting.do_something import DoSomething
 from cellprofiler_core.setting.subscriber import ImageSubscriber
-from cellprofiler_core.setting.text import Integer, ImageName, Directory, Filename
+from cellprofiler_core.setting.text import Integer, ImageName, Directory, Filename, Float
 
 CUDA_LINK = "https://pytorch.org/get-started/locally/"
 
@@ -51,7 +51,7 @@ class RunCellpose(ImageSegmentation):
 
     module_name = "RunCellpose"
 
-    variable_revision_number = 1
+    variable_revision_number = 2
 
     def create_settings(self):
         super(RunCellpose, self).create_settings()
@@ -176,6 +176,21 @@ If you have multiple GPUs on your system, this button will only test the first o
 """,
         )
 
+        self.flow_threshold = Float(
+            text="Flow threshold",
+            value=0.4,
+            minval=0,
+            doc="""Flow error threshold. All cells with errors below this threshold are kept. Recommended default is 0.4""",
+        )
+
+        self.dist_threshold = Float(
+            text="Cell probability threshold",
+            value=0.0,
+            minval=0,
+            doc=f"""\
+Cell probability threshold (all pixels with probability above threshold kept for masks). Recommended default is 0.0. """,
+        )
+
     def settings(self):
         return [
             self.x_name,
@@ -190,6 +205,8 @@ If you have multiple GPUs on your system, this button will only test the first o
             self.probabilities_name,
             self.model_directory,
             self.model_file_name,
+            self.flow_threshold,
+            self.dist_threshold
         ]
 
     def visible_settings(self):
@@ -202,7 +219,7 @@ If you have multiple GPUs on your system, this button will only test the first o
         if self.mode.value == MODE_CUSTOM:
             vis_settings += [self.model_directory, self.model_file_name]
 
-        vis_settings += [self.expected_diameter, self.y_name, self.save_probabilities]
+        vis_settings += [self.expected_diameter, self.flow_threshold, self.dist_threshold, self.y_name, self.save_probabilities]
 
         if self.save_probabilities.value:
             vis_settings += [self.probabilities_name]
@@ -254,6 +271,9 @@ If you have multiple GPUs on your system, this button will only test the first o
                 diameter=diam,
                 net_avg=self.use_averaging.value,
                 do_3D=x.volumetric,
+                flow_threshold=self.flow_threshold.value,
+                cellprob_threshold=self.dist_threshold.value
+
             )
         finally:
             if self.use_gpu.value and model.torch:
@@ -341,3 +361,11 @@ If you have multiple GPUs on your system, this button will only test the first o
             message = "GPU test failed. There may be something wrong with your configuration."
         import wx
         wx.MessageBox(message, caption="GPU Test")
+
+
+
+    def upgrade_settings(self, setting_values, variable_revision_number, module_name):
+        if variable_revision_number == 1:
+            setting_values = setting_values+["0.4", "0.0"]
+            variable_revision_number = 2
+        return setting_values, variable_revision_number
