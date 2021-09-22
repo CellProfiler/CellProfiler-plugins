@@ -10,6 +10,7 @@ from cellprofiler_core.constants.module import (
     IO_FOLDER_CHOICE_HELP_TEXT,
 )
 from cellprofiler_core.setting import ValidationError
+from cellprofiler_core.setting import Binary
 from cellprofiler_core.setting.do_something import DoSomething, RemoveSettingButton
 from cellprofiler_core.setting._settings_group import SettingsGroup
 from cellprofiler_core.setting import Divider, HiddenCount
@@ -33,10 +34,10 @@ import random
 import skimage.io
 
 __doc__ = """\
-Run ImageJ Script
+RunImageJScript
 =================
 
-The **Run ImageJ Script** module allows you to run any supported ImageJ script as part
+The **RunImageJScript** module allows you to run any supported ImageJ script as part
 of your workflow.
 
 First, select a script file. Then click the \"Get parameters from script\" button to detect required inputs for your
@@ -75,6 +76,7 @@ PYIMAGEJ_SCRIPT_PARSE_OUTPUTS = "SCRIPT_PARSE_OUTPUTS"  # Script output dictiona
 PYIMAGEJ_CMD_SCRIPT_RUN = "COMMAND_SCRIPT_RUN"  # Run a script
 PYIMAGEJ_SCRIPT_RUN_FILE_KEY = "SCRIPT_RUN_FILE_KEY"  # The script filename key
 PYIMAGEJ_SCRIPT_RUN_INPUT_KEY = "SCRIPT_RUN_INPUT_KEY"  # The script input dictionary key
+PYIMAGEJ_SCRIPT_RUN_CONVERT_IMAGES = "SCRIPT_RUN_CONVERT_IMAGES" # Whether images should be converted or not
 PYIMAGEJ_CMD_EXIT = "COMMAND_EXIT"  # Shut down the pyimagej daemon
 PYIMAGEJ_STATUS_CMD_UNKNOWN = "STATUS_COMMAND_UNKNOWN"  # Returned when an unknown command is passed to pyimagej
 PYIMAGEJ_STATUS_STARTUP_COMPLETE = "STATUS_STARTUP_COMPLETE"  # Returned after initial startup before daemon loop
@@ -157,7 +159,11 @@ def convert_java_to_python_type(ij, return_value):
     """
     if return_value is None:
         return None
-    type_string = str(return_value.getClass().toString()).split()[1]
+    return_class = return_value.getClass()
+    type_string = str(return_class.toString()).split()[1]
+
+    image_classes = (jpype.JClass('ij.ImagePlus'), jpype.JClass('net.imagej.Dataset'), jpype.JClass('net.imagej.ImgPlus'))
+
     if type_string == "java.lang.String" or type_string == "java.lang.Character":
         return str(return_value)
     elif type_string == "java.lang.Integer" or type_string == "java.lang.Long" or type_string == "java.lang.Short":
@@ -171,7 +177,7 @@ def convert_java_to_python_type(ij, return_value):
             return False
     elif type_string == "java.lang.Byte":
         return bytes(return_value)
-    elif type_string == "net.imagej.Dataset" or type_string == "net.imagej.ImgPlus":
+    elif bool((img_class for img_class in image_classes if issubclass(return_class, img_class))):
         return ij.py.from_java(return_value)
 
     # Not a supported type
@@ -196,6 +202,7 @@ def convert_java_type_to_setting(param_name, param_type, param_class):
     A new Setting of a type appropriate for param_type, named with param_name. Or None if no valid conversion exists.
     """
     type_string = param_type.split()[1]
+    img_strings = ("ij.ImagePlus", "net.imagej.Dataset", "net.imagej.ImgPlus")
     if INPUT_CLASS == param_class:
         param_label = param_name
         if type_string == "java.lang.String":
@@ -218,10 +225,10 @@ def convert_java_type_to_setting(param_name, param_type, param_class):
             return Float(param_label, minval=-2 ** 63, maxval=((2 ** 63) - 1))
         elif type_string == "java.io.File":
             return Filename(param_label, "")
-        elif type_string == "net.imagej.Dataset" or type_string == "net.imagej.ImgPlus":
+        elif bool((img_string for img_string in img_strings if type_string == img_string)):
             return ImageSubscriber(param_label)
     elif OUTPUT_CLASS == param_class:
-        if type_string == "net.imagej.Dataset" or type_string == "net.imagej.ImgPlus":
+        if bool((img_string for img_string in img_strings if type_string == img_string)):
             return ImageName("[OUTPUT, " + type_string + "] " + param_name, param_name, doc=
             """
             You may use this setting to rename the indicated output variable, if desired.
@@ -231,7 +238,7 @@ def convert_java_type_to_setting(param_name, param_type, param_class):
     return None
 
 
-def preprocess_script_inputs(ij, input_map):
+def preprocess_script_inputs(ij, input_map, convert_images):
     """Helper method to convert pythonic inputs to something that can be handled by ImageJ
 
     In particular this is necessary for image inputs which won't be auto-converted by Jpype
@@ -242,10 +249,17 @@ def preprocess_script_inputs(ij, input_map):
         ImageJ entry point (from imagej.init())
     input_map:
         map of input names to values
+    convert_images:
+        boolean indicating if image inputs and outputs should be auto-converted to appropriate numeric types
     """
     for key in input_map:
         if isinstance(input_map[key], Image):
-            input_map[key] = ij.py.to_dataset(input_map[key].get_image())
+            cp_image = input_map[key].get_image()
+            # CellProfiler images are typically stored as floats which can cause unexpected results in ImageJ.
+            # By default, we convert to 16-bit int type.
+            if convert_images:
+                cp_image = skimage.img_as_uint(cp_image)
+            input_map[key] = ij.py.to_dataset(cp_image)
 
 
 def start_imagej_process(input_queue, output_queue, init_string):
@@ -328,7 +342,8 @@ def start_imagej_process(input_queue, output_queue, init_string):
             script_path = (command_dictionary[PYIMAGEJ_KEY_INPUT])[PYIMAGEJ_SCRIPT_RUN_FILE_KEY]
             script_file = Path(script_path)
             input_map = (command_dictionary[PYIMAGEJ_KEY_INPUT])[PYIMAGEJ_SCRIPT_RUN_INPUT_KEY]
-            preprocess_script_inputs(ij, input_map)
+            convert_types = (command_dictionary[PYIMAGEJ_KEY_INPUT])[PYIMAGEJ_SCRIPT_RUN_CONVERT_IMAGES]
+            preprocess_script_inputs(ij, input_map, convert_types)
             script_out_map = script_service.run(script_file, True, input_map).get().getOutputs()
             output_dict = {}
             for entry in script_out_map.entrySet():
@@ -353,7 +368,7 @@ class RunImageJScript(Module):
     Module to run ImageJ scripts via pyimagej
     """
     module_name = "RunImageJScript"
-    variable_revision_number = 1
+    variable_revision_number = 2
     category = "Advanced"
 
     def __init__(self):
@@ -363,15 +378,14 @@ class RunImageJScript(Module):
 
     def create_settings(self):
         module_explanation = [
-            "The", self.module_name,
-            "module allows you to run any supported ImageJ script as part of your workflow.\n\n"
-            "1. Select your desired initialization method and specify the app directory or endpoint(s) if needed\n"
-            "2. Select a script file to be executed by this module\n"
-            "3. Click the \"Get parameters from script\" button to detect required inputs for your script\n"
-            "Each input will have its own setting created, allowing you to pass data from CellProfiler to ImageJ. "
-            "After filling in any required inputs you can run the module normally.\n\n"
-            "Note: ImageJ will only be initialized once per CellProfiler session.\n"
-            "Note: only numeric, text and image input types are currently supported.\n\n"
+            "The" + self.module_name + "module allows you to run any supported ImageJ script as part of your workflow.",
+            "First, select your desired initialization method and specify the app directory or endpoint(s) if needed.",
+            "Then select a script file to be executed by this module.",
+            "Click the \"Get parameters from script\" button to detect required inputs for your script:",
+            "each input will have its own setting created, allowing you to pass data from CellProfiler to ImageJ.",
+            "After filling in any required inputs you can run the module normally.",
+            "Note: ImageJ will only be initialized once per CellProfiler session.",
+            "Note: only numeric, text and image parameters are currently supported.",
             "See also ImageJ Scripting: https://imagej.net/Scripting."
 
         ]
@@ -408,6 +422,14 @@ Specify an initialization string as described in https://github.com/imagej/pyima
 Indicates the method that was used to initialized ImageJ in this CellProfiler session. 
             """,
         )
+
+        self.convert_types = Binary("Adjust image type?", True, doc="""\
+If enabled, ensures images are always converted to unsigned integer types when sent to ImageJ, and back to signed float types when returned to CellProfiler.
+This can help common display issues by providing each application a best guess at its "expected" data type.
+If you choose to disable this function, your ImageJ script will need to account for images coming in as signed float types.
+            """,
+        )
+
         global init_display_string
         if init_display_string:
             # ImageJ thread is already running
@@ -614,7 +636,7 @@ Note: this must be done each time you change the script, before running the Cell
             stop_progress_thread = True
 
     def settings(self):
-        result = [self.script_parameter_count, self.init_choice, self.app_directory, self.app_file, self.endpoint_string, self.script_directory, self.script_file, self.get_parameters_button]
+        result = [self.script_parameter_count, self.init_choice, self.app_directory, self.app_file, self.endpoint_string, self.script_directory, self.script_file, self.get_parameters_button, self.convert_types]
         if len(self.script_parameter_list) > 0:
             result += [Divider(line=True)]
         for script_parameter_group in self.script_parameter_list:
@@ -647,9 +669,8 @@ Note: this must be done each time you change the script, before running the Cell
         else:
             # ImageJ is initialized
             visible_settings += [self.initialized_method]
-
         visible_settings += [Divider(line=True)]
-        visible_settings += [self.script_directory, self.script_file, self.get_parameters_button]
+        visible_settings += [self.script_directory, self.script_file, self.get_parameters_button, self.convert_types]
         if len(self.script_parameter_list) > 0:
             visible_settings += [Divider(line=True)]
         for script_parameter in self.script_parameter_list:
@@ -758,7 +779,8 @@ Note: this must be done each time you change the script, before running the Cell
         # Start the script
         to_imagej.put({PYIMAGEJ_KEY_COMMAND: PYIMAGEJ_CMD_SCRIPT_RUN, PYIMAGEJ_KEY_INPUT:
             {PYIMAGEJ_SCRIPT_RUN_FILE_KEY: script_filepath,
-             PYIMAGEJ_SCRIPT_RUN_INPUT_KEY: script_inputs}
+             PYIMAGEJ_SCRIPT_RUN_INPUT_KEY: script_inputs,
+             PYIMAGEJ_SCRIPT_RUN_CONVERT_IMAGES: self.convert_types.value}
                             })
 
         # Retrieve script output
@@ -768,6 +790,9 @@ Note: this must be done each time you change the script, before running the Cell
             for name in self.script_output_settings:
                 output_key = self.script_output_settings[name].get_value()
                 output_value = script_outputs[name]
+                # convert back to floats for CellProfiler
+                if self.convert_types.value:
+                    output_value = skimage.img_as_float(output_value)
                 output_image = Image(image=output_value, convert=False)
                 workspace.image_set.add(output_key, output_image)
                 if self.show_window:
@@ -798,3 +823,12 @@ Note: this must be done each time you change the script, before running the Cell
                 title="Output image: {}".format(name),
             )
             i += 1
+
+
+    def upgrade_settings(self, setting_values, variable_revision_number, module_name):
+        if variable_revision_number == 1:
+            # Added convert_types Binary setting
+            setting_values = setting_values[:8]+[True]+setting_values[8:]
+            variable_revision_number = 2
+
+        return setting_values, variable_revision_number
