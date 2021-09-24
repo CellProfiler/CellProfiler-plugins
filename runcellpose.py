@@ -186,7 +186,8 @@ If you have multiple GPUs on your system, this button will only test the first o
         self.dist_threshold = Float(
             text="Cell probability threshold",
             value=0.0,
-            minval=0,
+            minval=-6.0,
+            maxval=6.0,
             doc=f"""\
 Cell probability threshold (all pixels with probability above threshold kept for masks). Recommended default is 0.0. """,
         )
