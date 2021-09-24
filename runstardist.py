@@ -37,6 +37,8 @@ components when adding stardist to the environment.
 You'll want to run `pip install --no-deps csbdeep` first to grab the cbsdeep package without installing an invalid 
 version of h5py (CellProfiler needs h5py 3+). Following this run `pip install tensorflow stardist` to install other 
 dependencies.
+For Windows you need to install Microsoft C++ Redistributable for Visual Studio 2015, 2017 and 2019 from
+https://support.microsoft.com/help/2977003/the-latest-supported-visual-c-downloads
 
 If using the pre-trained models, StarDist will download each when first used.
 
