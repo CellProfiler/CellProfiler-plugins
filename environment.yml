@@ -23,6 +23,8 @@ dependencies:
   - rise
   - tifffile
   - wxpython
+  - tensorflow-gpu=2.4.1
+  - keras=2.3.1
 #  - wxpython=3.0.2.0
   - pip:
     - git+https://github.com/CellProfiler/CellProfiler.git@master#egg=CellProfiler
