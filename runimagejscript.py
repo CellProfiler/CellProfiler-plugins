@@ -256,9 +256,12 @@ def preprocess_script_inputs(ij, input_map, convert_images):
         if isinstance(input_map[key], Image):
             cp_image = input_map[key].get_image()
             # CellProfiler images are typically stored as floats which can cause unexpected results in ImageJ.
-            # By default, we convert to 16-bit int type.
+            # By default, we convert to 16-bit int type, unless we're sure it's 8 bit in which case we use that.
             if convert_images:
-                cp_image = skimage.img_as_uint(cp_image)
+                if input_map[key].scale==255:
+                    cp_image = skimage.img_as_ubyte(cp_image)
+                else:
+                    cp_image = skimage.img_as_uint(cp_image)
             input_map[key] = ij.py.to_dataset(cp_image)
 
 
