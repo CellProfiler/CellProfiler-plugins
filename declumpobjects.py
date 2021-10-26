@@ -16,8 +16,8 @@ of the segmented objects or through the intensity values of a reference image
 NOTE: This implementation is based off of the **IdentifyPrimaryObjects** declumping implementation.
 For more information, see the aforementioned module.
 
-.. Euclidean distance transformation: https://docs.scipy.org/doc/scipy-0.14.0/reference/generated/scipy.ndimage.morphology.distance_transform_edt.html
-.. local maxima: http://scikit-image.org/docs/dev/api/skimage.feature.html#peak-local-max
+.. _Euclidean distance transformation: https://docs.scipy.org/doc/scipy-0.14.0/reference/generated/scipy.ndimage.morphology.distance_transform_edt.html
+.. _local maxima: http://scikit-image.org/docs/dev/api/skimage.feature.html#peak-local-max
 
 |
 

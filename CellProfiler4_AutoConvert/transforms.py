@@ -114,7 +114,7 @@ class Transforms(cpm.Module):
         #
         self.input_image_name = ImageSubscriber(
             # The text to the left of the edit box
-            "Input image name:",
+            "Input image name",
             # HTML help that gets displayed when the user presses the
             # help button to the right of the edit box
             doc = """This is the image that the module operates on. You can
@@ -127,7 +127,7 @@ class Transforms(cpm.Module):
         # modules.
         #
         self.output_image_name = ImageName(
-            "Output image name:",
+            "Output image name",
             # The second parameter holds a suggested name for the image.
             "OutputImage",
             doc = """This is the image resulting from the operation.""")
@@ -136,7 +136,7 @@ class Transforms(cpm.Module):
         # can be done.
         #
         self.transform_choice = Choice(
-            "Transform choice:",
+            "Transform choice",
             # The choice takes a list of possibilities. The first one
             # is the default - the one the user will typically choose.
             [ M_FOURIER, M_SIMONCELLI_P, M_SIMONCELLI_R, M_TEST_FOURIER, M_TEST_SIMONCELLI_P, M_TEST_SIMONCELLI_R, M_HAAR_S, M_HAAR_T, M_TEST_HAAR, M_CHEBYSHEV_T],
@@ -162,7 +162,7 @@ class Transforms(cpm.Module):
         # an invalid scale.
         #
         self.scale = Integer(
-            "Scale:",
+            "Scale",
             # The default value is 1 - a short-range scale
             3,
             # We don't let the user type in really small values
@@ -176,7 +176,7 @@ class Transforms(cpm.Module):
             short-range gradients""")
         
         self.M = Integer(
-            "Order:",
+            "Order",
             # The default value is 1 - a short-range scale
             0,
             # We don't let the user type in really small values

@@ -7,7 +7,11 @@
 #################################
 
 import numpy
+
+import scipy.ndimage
+
 import skimage.exposure
+import skimage.morphology
 
 #################################
 #
@@ -183,6 +187,40 @@ and 1.  This will be applied before masking or rescaling or histogram compensati
             doc = "Enter a percentile between 0.1 and 100 to use for comparing ratios"
         )
 
+        self.do_tophat_filter = cellprofiler.setting.Binary(
+            'Should the images have a tophat filter applied before correction?', 
+            False,
+            doc="""\
+Whether or not to apply a tophat filter to enhance small bright spots. This filter will be
+applied before rescaling or any other enhancements."""
+        )
+
+        self.tophat_radius = cellprofiler.setting.Integer(
+            'What size radius should be used for the tophat filter?',
+            value = 3,
+            minval = 1, 
+            maxval = 100,
+            doc = "Enter a radius; a disk structuring element of this radius will be used for tophat filtering."
+
+        )
+
+        self.do_LoG_filter = cellprofiler.setting.Binary(
+            'Should the images have a Laplacian of Gaussian filter applied before correction?', 
+            False,
+            doc="""\
+Whether or not to apply a Laplacian of Gaussian. This filter will be
+applied before rescaling or any other enhancements (except tophat filtering if used)."""
+        )
+
+        self.LoG_radius = cellprofiler.setting.Integer(
+            'What size radius should be used for the LoG filter?',
+            value = 1,
+            minval = 1, 
+            maxval = 100,
+            doc = "Enter a sigma in pixels; this sigma will be used for LoG filtering."
+
+        )
+
     def add_image(self, can_delete=True):
         """Add an image to the image_groups collection
 
@@ -252,6 +290,7 @@ Select the objects to perform compensation within."""
         result += [object_group.object_name for object_group in self.object_groups]
         result += [self.do_rescale_input, self.do_rescale_after_mask, self.do_match_histograms, self.histogram_match_class, self.do_rescale_output]
         result += [self.do_scalar_multiply, self.scalar_percentile]
+        result += [self.do_tophat_filter, self.tophat_radius, self.do_LoG_filter, self.LoG_radius]
         return result
 
     def prepare_settings(self, setting_values):
@@ -285,6 +324,12 @@ Select the objects to perform compensation within."""
         if self.do_match_histograms != 'No':
             result += [self.histogram_match_class]
         result += [self.do_rescale_output]
+        result += [self.do_tophat_filter]
+        if self.do_tophat_filter:
+            result += [self.tophat_radius]
+        result += [self.do_LoG_filter]
+        if self.do_LoG_filter:
+            result += [self.LoG_radius]
         return result
 
     def run(self, workspace):
@@ -326,6 +371,14 @@ Select the objects to perform compensation within."""
 
         for eachgroup in self.image_groups:
             eachimage = workspace.image_set.get_image(eachgroup.image_name.value).pixel_data
+
+            if self.do_tophat_filter.value:
+                selem = skimage.morphology.disk(radius=int(self.tophat_radius.value))
+                eachimage = skimage.morphology.white_tophat(eachimage, selem)
+
+            if self.do_LoG_filter.value:
+                eachimage = log_ndi(eachimage, int(self.LoG_radius.value))
+
             eachimage = eachimage / group_scaling[eachgroup.class_num.value]
             if self.do_rescale_input.value == 'Yes':
                 eachimage =  skimage.exposure.rescale_intensity(
@@ -486,3 +539,13 @@ def match_histograms(image, reference):
     matched = _match_cumulative_cdf(image, reference)
 
     return matched
+
+def log_ndi(data, sigma):
+    """
+    """
+    data = skimage.img_as_uint(data)
+    f = scipy.ndimage.gaussian_laplace
+    arr_ = -1 * f(data.astype(float), sigma)
+    arr_ = numpy.clip(arr_, 0, 65535) / 65535
+    
+    return skimage.img_as_float(arr_)
