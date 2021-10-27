@@ -21,6 +21,7 @@ from _boolean import Boolean
 
 from wx import Gauge
 from wx import Window
+from collections.abc import Iterable
 from threading import Thread
 import multiprocessing as mp
 from multiprocessing import Process
@@ -199,7 +200,7 @@ def convert_java_type_to_setting(param_name, param_type, param_class):
 
     Returns
     ---------
-    A new Setting of a type appropriate for param_type, named with param_name. Or None if no valid conversion exists.
+    One or more Settings of a type appropriate for param_type, named with param_name. Or None if no valid conversion exists.
     """
     type_string = param_type.split()[1]
     img_strings = ("ij.ImagePlus", "net.imagej.Dataset", "net.imagej.ImgPlus")
@@ -224,7 +225,18 @@ def convert_java_type_to_setting(param_name, param_type, param_class):
         elif type_string == "java.lang.Double":
             return Float(param_label, minval=-2 ** 63, maxval=((2 ** 63) - 1))
         elif type_string == "java.io.File":
-            return Filename(param_label, "")
+            param_dir = Directory(f'{param_label} directory', allow_metadata=False)
+            def set_directory_fn_app(path):
+                dir_choice, custom_path = param_dir.get_parts_from_path(path)
+                param_dir.join_parts(dir_choice, custom_path)
+            param_file = Filename(
+                param_label,
+                param_label,
+                get_directory_fn=param_dir.get_absolute_path,
+                set_directory_fn=set_directory_fn_app,
+                browse_msg=f'Choose {param_label} file'
+                )
+            return (param_dir, param_file)
         elif bool((img_string for img_string in img_strings if type_string == img_string)):
             return ImageSubscriber(param_label)
     elif OUTPUT_CLASS == param_class:
@@ -371,7 +383,7 @@ class RunImageJScript(Module):
     Module to run ImageJ scripts via pyimagej
     """
     module_name = "RunImageJScript"
-    variable_revision_number = 2
+    variable_revision_number = 3
     category = "Advanced"
 
     def __init__(self):
@@ -643,7 +655,11 @@ Note: this must be done each time you change the script, before running the Cell
         if len(self.script_parameter_list) > 0:
             result += [Divider(line=True)]
         for script_parameter_group in self.script_parameter_list:
-            result += [script_parameter_group.setting]
+            if isinstance(script_parameter_group.setting, Iterable):
+                for s in script_parameter_group.setting:
+                    result += [s]
+            else :
+                result += [script_parameter_group.setting]
             result += [script_parameter_group.remover]
             result += [script_parameter_group.name]
             result += [script_parameter_group.type]
@@ -677,7 +693,11 @@ Note: this must be done each time you change the script, before running the Cell
         if len(self.script_parameter_list) > 0:
             visible_settings += [Divider(line=True)]
         for script_parameter in self.script_parameter_list:
-            visible_settings += [script_parameter.setting]
+            if isinstance(script_parameter.setting, Iterable):
+                for s in script_parameter.setting:
+                    visible_settings += [s]
+            else :
+                visible_settings += [script_parameter.setting]
             visible_settings += [script_parameter.remover]
 
         return visible_settings
@@ -692,23 +712,38 @@ Note: this must be done each time you change the script, before running the Cell
         # Params were parsed previously and saved
         self.parsed_params = True
 
-        # Looking at the last 5N elements will give the us (value, remover, name, type, io_class) for the N settings
-        # We care about the name and type information, since this goes in one of our settings
-        settings_info = setting_values[-settings_count * 5:]
-        for i in range(0, len(settings_info), 5):
+        # Settings are stored sequentially as (value(s), remover, name, type, io_class)
+        # Since some settings have multiple values for a setting we have to work backwards
+        i = len(setting_values) - 1
+        loaded_settings = []
+        while settings_count > 0:
             group = SettingsGroup()
-            param_name = settings_info[i + 2]
-            param_type = settings_info[i + 3]
-            io_class = settings_info[i + 4]
+            # get the name, type and class
+            param_name = setting_values[i - 2]
+            param_type = setting_values[i - 1]
+            io_class = setting_values[i]
             setting = convert_java_type_to_setting(param_name, param_type, io_class)
+            # account for remover, name, type and io_class
+            i -= 4
+            # account for the number of values in this setting
+            if isinstance(setting, Iterable):
+                i -= len(setting)
+            else:
+                i -= 1
             group.append("setting", setting)
             group.append("remover", RemoveSettingButton("", "Remove this variable", self.script_parameter_list, group))
             add_param_info_settings(group, param_name, param_type, io_class)
-            self.script_parameter_list.append(group)
+            loaded_settings.append(group)
             if INPUT_CLASS == io_class:
                 self.script_input_settings[param_name] = setting
             elif OUTPUT_CLASS == io_class:
                 self.script_output_settings[param_name] = setting
+            settings_count -= 1
+
+        # add the loaded settings to our overall list, in proper order
+        loaded_settings.reverse()
+        for s in loaded_settings:
+            self.script_parameter_list.append(s)
 
     def validate_module(self, pipeline):
         if self.initialization_failed:
@@ -775,6 +810,11 @@ Note: this must be done each time you change the script, before running the Cell
                 if self.show_window:
                     workspace.display_data.script_input_pixels[name] = script_inputs[name].pixel_data
                     workspace.display_data.script_input_dimensions[name] = script_inputs[name].dimensions
+            elif isinstance(setting, Iterable):
+                # Currently the only supported multi-part setting is a Filename + Directory
+                setting_dir = setting[0]
+                setting_file = setting[1]
+                script_inputs[name] = path.join(setting_dir.get_absolute_path(), setting_file.value)
             else:
                 # Other settings can be read directly
                 script_inputs[name] = setting.get_value()
@@ -833,5 +873,10 @@ Note: this must be done each time you change the script, before running the Cell
             # Added convert_types Binary setting
             setting_values = setting_values[:8]+[True]+setting_values[8:]
             variable_revision_number = 2
+        if variable_revision_number == 2:
+            # Allowed multiple settings per parameter
+            # Force re-parsing of parameters
+            setting_values[0] = "0"
+            variable_revision_number = 3
 
         return setting_values, variable_revision_number
