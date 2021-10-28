@@ -233,8 +233,7 @@ Cell probability threshold (all pixels with probability above threshold kept for
         return vis_settings
 
     def run(self, workspace):
-        try: self.model
-        except AttributeError: self.model=None
+        self.model=None
         if self.mode.value != MODE_CUSTOM and self.model is None:
             self.model = models.Cellpose(model_type='cyto' if self.mode.value == MODE_CELLS else 'nuclei',
                                     gpu=self.use_gpu.value)
