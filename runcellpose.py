@@ -232,11 +232,20 @@ Cell probability threshold (all pixels with probability above threshold kept for
 
         return vis_settings
 
+    def prepare_run(self, workspace):
+        """Prepare a pipeline and measurements to run
+
+        """
+        global model
+        model = None
+        return 
+
     def run(self, workspace):
-        if self.mode.value != MODE_CUSTOM:
+        global model
+        if self.mode.value != MODE_CUSTOM and model is None:
             model = models.Cellpose(model_type='cyto' if self.mode.value == MODE_CELLS else 'nuclei',
                                     gpu=self.use_gpu.value)
-        else:
+        elif model is None:
             model_file = self.model_file_name.value
             model_directory = self.model_directory.get_absolute_path()
             model_path = os.path.join(model_directory, model_file)
@@ -280,7 +289,6 @@ Cell probability threshold (all pixels with probability above threshold kept for
             if self.use_gpu.value and model.torch:
                 # Try to clear some GPU memory for other worker processes.
                 try:
-                    del model
                     from torch import cuda
                     cuda.empty_cache()
                 except Exception as e:
