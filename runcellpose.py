@@ -232,7 +232,7 @@ Cell probability threshold (all pixels with probability above threshold kept for
 
         return vis_settings
 
-    def prepare_run(self, workspace):
+    def prepare_run(self):
         """Prepare a pipeline and measurements to run
 
         """
@@ -241,7 +241,8 @@ Cell probability threshold (all pixels with probability above threshold kept for
         return 
 
     def run(self, workspace):
-        global model
+        try: model
+        except NameError: model=None
         if self.mode.value != MODE_CUSTOM and model is None:
             model = models.Cellpose(model_type='cyto' if self.mode.value == MODE_CELLS else 'nuclei',
                                     gpu=self.use_gpu.value)
