@@ -233,17 +233,16 @@ Cell probability threshold (all pixels with probability above threshold kept for
         return vis_settings
 
     def run(self, workspace):
-        global model
-        try: model
-        except NameError: model=None
-        if self.mode.value != MODE_CUSTOM and model is None:
-            model = models.Cellpose(model_type='cyto' if self.mode.value == MODE_CELLS else 'nuclei',
+        try: self.model
+        except NameError: self.model=None
+        if self.mode.value != MODE_CUSTOM and self.model is None:
+            self.model = models.Cellpose(model_type='cyto' if self.mode.value == MODE_CELLS else 'nuclei',
                                     gpu=self.use_gpu.value)
-        elif model is None:
+        elif self.model is None:
             model_file = self.model_file_name.value
             model_directory = self.model_directory.get_absolute_path()
             model_path = os.path.join(model_directory, model_file)
-            model = models.CellposeModel(pretrained_model=model_path, gpu=self.use_gpu.value)
+            self.model = models.CellposeModel(pretrained_model=model_path, gpu=self.use_gpu.value)
 
         x_name = self.x_name.value
         y_name = self.y_name.value
