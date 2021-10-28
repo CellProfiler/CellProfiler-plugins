@@ -267,7 +267,7 @@ Cell probability threshold (all pixels with probability above threshold kept for
         diam = self.expected_diameter.value if self.expected_diameter.value > 0 else None
 
         try:
-            y_data, flows, *_ = model.eval(
+            y_data, flows, *_ = self.model.eval(
                 x_data,
                 channels=channels,
                 diameter=diam,
@@ -278,7 +278,7 @@ Cell probability threshold (all pixels with probability above threshold kept for
 
             )
         finally:
-            if self.use_gpu.value and model.torch:
+            if self.use_gpu.value and self.model.torch:
                 # Try to clear some GPU memory for other worker processes.
                 try:
                     from torch import cuda
