@@ -232,14 +232,6 @@ Cell probability threshold (all pixels with probability above threshold kept for
 
         return vis_settings
 
-    def prepare_run(self, workspace):
-        """Prepare a pipeline and measurements to run
-
-        """
-        global model
-        model = None
-        return 
-
     def run(self, workspace):
         try: model
         except NameError: model=None
