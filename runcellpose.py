@@ -232,7 +232,7 @@ Cell probability threshold (all pixels with probability above threshold kept for
 
         return vis_settings
 
-    def prepare_run(self):
+    def prepare_run(self, workspace):
         """Prepare a pipeline and measurements to run
 
         """
