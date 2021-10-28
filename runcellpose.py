@@ -234,6 +234,7 @@ Cell probability threshold (all pixels with probability above threshold kept for
 
     def prepare_run(self, workspace):
         self.model=None
+        print(self.model)
         return
 
     def run(self, workspace):
