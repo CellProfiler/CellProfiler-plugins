@@ -234,13 +234,13 @@ Cell probability threshold (all pixels with probability above threshold kept for
 
     def run(self, workspace):
         try: model
-        except NameError: model=None
-        if self.mode.value != MODE_CUSTOM and model is None:
+        except NameError: 
             global model
+            model=None
+        if self.mode.value != MODE_CUSTOM and model is None:
             model = models.Cellpose(model_type='cyto' if self.mode.value == MODE_CELLS else 'nuclei',
                                     gpu=self.use_gpu.value)
         elif model is None:
-            global model
             model_file = self.model_file_name.value
             model_directory = self.model_directory.get_absolute_path()
             model_path = os.path.join(model_directory, model_file)
