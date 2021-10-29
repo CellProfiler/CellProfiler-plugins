@@ -235,10 +235,7 @@ Cell probability threshold (all pixels with probability above threshold kept for
 
         return vis_settings
 
-
-    def run(self, workspace):
-        import tensorflow as tf
-        tf.config.experimental.set_memory_growth
+    def prepare_run(self, workspace):
         if self.mode.value != MODE_CUSTOM:
             self.model = models.Cellpose(model_type='cyto' if self.mode.value == MODE_CELLS else 'nuclei',
                                     gpu=self.use_gpu.value)
@@ -247,6 +244,8 @@ Cell probability threshold (all pixels with probability above threshold kept for
             model_directory = self.model_directory.get_absolute_path()
             model_path = os.path.join(model_directory, model_file)
             self.model = models.CellposeModel(pretrained_model=model_path, gpu=self.use_gpu.value)
+    def run(self, workspace):
+        
 
         x_name = self.x_name.value
         y_name = self.y_name.value
