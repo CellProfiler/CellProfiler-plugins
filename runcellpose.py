@@ -338,8 +338,6 @@ Cell probability threshold (all pixels with probability above threshold kept for
             workspace.display_data.y_data = y_data
             workspace.display_data.dimensions = dimensions
             
-        lock.release()
-
     def display(self, workspace, figure):
         if self.save_probabilities.value:
             layout = (2, 2)
