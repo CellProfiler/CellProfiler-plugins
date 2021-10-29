@@ -239,7 +239,7 @@ Cell probability threshold (all pixels with probability above threshold kept for
         import keras
         import tensorflow as tf
 
-        config = tf.ConfigProto()
+        config = tf.config.experimental()
         config.gpu_options.per_process_gpu_memory_fraction = 0.9
         keras.backend.tensorflow_backend.set_session(tf.Session(config=config))
         if self.mode.value != MODE_CUSTOM:
