@@ -49,7 +49,7 @@ MODE_CUSTOM = "Custom"
 
 
 class RunCellpose(ImageSegmentation):
-    lock=threading.Lock()
+   
     category = "Object Processing"
 
     module_name = "RunCellpose"
@@ -236,7 +236,8 @@ Cell probability threshold (all pixels with probability above threshold kept for
         return vis_settings
 
 
-    def run(self, workspace, lock):
+    def run(self, workspace):
+        lock=threading.Lock()
         lock.acquire()
         if self.mode.value != MODE_CUSTOM:
             self.model = models.Cellpose(model_type='cyto' if self.mode.value == MODE_CELLS else 'nuclei',
