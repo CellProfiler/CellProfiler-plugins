@@ -271,7 +271,7 @@ Cell probability threshold (all pixels with probability above threshold kept for
         from time import sleep
         print(cuda.memory_reserved())
         print(cuda.get_device_properties(0).total_memory/2)
-        while cuda.memory_reserved()>=(cuda.get_device_properties(0).total_memory/10):
+        while cuda.memory_reserved()>=30000000:
             print("worker waiting for GPU memory...")
             sleep(5)
         else:
