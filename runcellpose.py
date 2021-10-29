@@ -267,6 +267,8 @@ Cell probability threshold (all pixels with probability above threshold kept for
         diam = self.expected_diameter.value if self.expected_diameter.value > 0 else None
         from torch import cuda
         from time import sleep
+        print(cuda.memory_reserved())
+        print(cuda.get_device_properties(0).total_memory/2)
         while cuda.memory_reserved()>=(cuda.get_device_properties(0).total_memory/2):
             sleep(5)
         else:
@@ -279,7 +281,6 @@ Cell probability threshold (all pixels with probability above threshold kept for
                     do_3D=x.volumetric,
                     flow_threshold=self.flow_threshold.value,
                     cellprob_threshold=self.dist_threshold.value
-
                 )
             finally:
                 if self.use_gpu.value and self.model.torch:
