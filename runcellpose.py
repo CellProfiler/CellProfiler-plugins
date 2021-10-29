@@ -290,7 +290,7 @@ Cell probability threshold (all pixels with probability above threshold kept for
                     # Try to clear some GPU memory for other worker processes.
                     try:
                         from torch import cuda
-                        del self.model
+                        #del self.model
                         cuda.empty_cache()
                         print("memory after clearing cache:")
                         print(cuda.memory_reserved())
