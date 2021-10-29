@@ -12,12 +12,7 @@ from cellprofiler_core.setting.do_something import DoSomething
 from cellprofiler_core.setting.subscriber import ImageSubscriber
 from cellprofiler_core.setting.text import Integer, ImageName, Directory, Filename, Float
 
-import keras
-import tensorflow as tf
 
-config = tf.ConfigProto()
-config.gpu_options.per_process_gpu_memory_fraction = 0.9
-keras.backend.tensorflow_backend.set_session(tf.Session(config=config))
 
 CUDA_LINK = "https://pytorch.org/get-started/locally/"
 
@@ -241,6 +236,12 @@ Cell probability threshold (all pixels with probability above threshold kept for
 
 
     def run(self, workspace):
+        import keras
+        import tensorflow as tf
+
+        config = tf.ConfigProto()
+        config.gpu_options.per_process_gpu_memory_fraction = 0.9
+        keras.backend.tensorflow_backend.set_session(tf.Session(config=config))
         if self.mode.value != MODE_CUSTOM:
             self.model = models.Cellpose(model_type='cyto' if self.mode.value == MODE_CELLS else 'nuclei',
                                     gpu=self.use_gpu.value)
