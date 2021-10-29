@@ -235,11 +235,9 @@ Cell probability threshold (all pixels with probability above threshold kept for
 
     def run(self, workspace):
         if self.mode.value != MODE_CUSTOM:
-            self.model=None
             self.model = models.Cellpose(model_type='cyto' if self.mode.value == MODE_CELLS else 'nuclei',
                                     gpu=self.use_gpu.value)
         else:
-            self.model=None
             model_file = self.model_file_name.value
             model_directory = self.model_directory.get_absolute_path()
             model_path = os.path.join(model_directory, model_file)
@@ -267,60 +265,63 @@ Cell probability threshold (all pixels with probability above threshold kept for
             channels = [0, 0]
 
         diam = self.expected_diameter.value if self.expected_diameter.value > 0 else None
+        from torch import cuda
+        from time import sleep
+        while cuda.memory_reserved()>=(cuda.get_device_properties(0).total_memory/2):
+            sleep(5)
+        else:
+            try:
+                y_data, flows, *_ = self.model.eval(
+                    x_data,
+                    channels=channels,
+                    diameter=diam,
+                    net_avg=self.use_averaging.value,
+                    do_3D=x.volumetric,
+                    flow_threshold=self.flow_threshold.value,
+                    cellprob_threshold=self.dist_threshold.value
 
-        try:
-            y_data, flows, *_ = self.model.eval(
-                x_data,
-                channels=channels,
-                diameter=diam,
-                net_avg=self.use_averaging.value,
-                do_3D=x.volumetric,
-                flow_threshold=self.flow_threshold.value,
-                cellprob_threshold=self.dist_threshold.value
+                )
+            finally:
+                if self.use_gpu.value and self.model.torch:
+                    # Try to clear some GPU memory for other worker processes.
+                    try:
+                        from torch import cuda
+                        cuda.empty_cache()
+                    except Exception as e:
+                        print(f"Unable to clear GPU memory. You may need to restart CellProfiler to change models. {e}")
 
-            )
-        finally:
-            if self.use_gpu.value and self.model.torch:
-                # Try to clear some GPU memory for other worker processes.
-                try:
-                    from torch import cuda
-                    self.model=None
-                    cuda.empty_cache()
-                except Exception as e:
-                    print(f"Unable to clear GPU memory. You may need to restart CellProfiler to change models. {e}")
+            y = Objects()
+            y.segmented = y_data
+            y.parent_image = x.parent_image
+            objects = workspace.object_set
+            objects.add_objects(y, y_name)
 
-        y = Objects()
-        y.segmented = y_data
-        y.parent_image = x.parent_image
-        objects = workspace.object_set
-        objects.add_objects(y, y_name)
+            if self.save_probabilities.value:
+                # Flows come out sized relative to CellPose's inbuilt model size.
+                # We need to slightly resize to match the original image.
+                size_corrected = resize(flows[2], y_data.shape)
+                prob_image = Image(
+                    size_corrected,
+                    parent_image=x.parent_image,
+                    convert=False,
+                    dimensions=len(size_corrected.shape),
+                )
 
-        if self.save_probabilities.value:
-            # Flows come out sized relative to CellPose's inbuilt model size.
-            # We need to slightly resize to match the original image.
-            size_corrected = resize(flows[2], y_data.shape)
-            prob_image = Image(
-                size_corrected,
-                parent_image=x.parent_image,
-                convert=False,
-                dimensions=len(size_corrected.shape),
-            )
+                workspace.image_set.add(self.probabilities_name.value, prob_image)
 
-            workspace.image_set.add(self.probabilities_name.value, prob_image)
+                if self.show_window:
+                    workspace.display_data.probabilities = size_corrected
+
+            self.add_measurements(workspace)
 
             if self.show_window:
-                workspace.display_data.probabilities = size_corrected
-
-        self.add_measurements(workspace)
-
-        if self.show_window:
-            if x.volumetric:
-                # Can't show CellPose-accepted colour images in 3D
-                workspace.display_data.x_data = x.pixel_data
-            else:
-                workspace.display_data.x_data = x_data
-            workspace.display_data.y_data = y_data
-            workspace.display_data.dimensions = dimensions
+                if x.volumetric:
+                    # Can't show CellPose-accepted colour images in 3D
+                    workspace.display_data.x_data = x.pixel_data
+                else:
+                    workspace.display_data.x_data = x_data
+                workspace.display_data.y_data = y_data
+                workspace.display_data.dimensions = dimensions
 
     def display(self, workspace, figure):
         if self.save_probabilities.value:
