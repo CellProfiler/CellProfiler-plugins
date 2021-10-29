@@ -236,12 +236,6 @@ Cell probability threshold (all pixels with probability above threshold kept for
 
 
     def run(self, workspace):
-        import keras
-        import tensorflow as tf
-
-        config = tf.config.experimental
-        config.gpu_options.per_process_gpu_memory_fraction = 0.9
-        keras.backend.tensorflow_backend.set_session(tf.Session(config=config))
         if self.mode.value != MODE_CUSTOM:
             self.model = models.Cellpose(model_type='cyto' if self.mode.value == MODE_CELLS else 'nuclei',
                                     gpu=self.use_gpu.value)
@@ -277,7 +271,7 @@ Cell probability threshold (all pixels with probability above threshold kept for
         from time import sleep
         print(cuda.memory_reserved())
         print(cuda.get_device_properties(0).total_memory/2)
-        while cuda.memory_reserved()>=(cuda.get_device_properties(0).total_memory/2):
+        while cuda.memory_reserved()>=(cuda.get_device_properties(0).total_memory/10):
             print("worker waiting for GPU memory...")
             sleep(5)
         else:
@@ -296,6 +290,7 @@ Cell probability threshold (all pixels with probability above threshold kept for
                     # Try to clear some GPU memory for other worker processes.
                     try:
                         from torch import cuda
+                        del self.model
                         cuda.empty_cache()
                         print("memory after clearing cache:")
                         print(cuda.memory_reserved())
