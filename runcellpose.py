@@ -270,6 +270,7 @@ Cell probability threshold (all pixels with probability above threshold kept for
         print(cuda.memory_reserved())
         print(cuda.get_device_properties(0).total_memory/2)
         while cuda.memory_reserved()>=(cuda.get_device_properties(0).total_memory/2):
+            print("worker waiting for GPU memory...")
             sleep(5)
         else:
             try:
@@ -288,6 +289,8 @@ Cell probability threshold (all pixels with probability above threshold kept for
                     try:
                         from torch import cuda
                         cuda.empty_cache()
+                        print("memory after clearing cache:")
+                        print(cuda.memory_reserved())
                     except Exception as e:
                         print(f"Unable to clear GPU memory. You may need to restart CellProfiler to change models. {e}")
 
