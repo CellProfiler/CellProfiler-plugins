@@ -6,6 +6,7 @@ from skimage.transform import resize
 from cellprofiler_core.image import Image
 from cellprofiler_core.module.image_segmentation import ImageSegmentation
 from cellprofiler_core.object import Objects
+from cellprofiler_core.preferences import get_max_workers, get_headless
 from cellprofiler_core.setting import Binary
 from cellprofiler_core.setting.choice import Choice
 from cellprofiler_core.setting.do_something import DoSomething
@@ -258,6 +259,11 @@ of workers in each copy of CellProfiler times the number of copies of CellProfil
 
         return vis_settings
 
+    def prepare_run(self, workspace):
+        if self.auto_calculate_GPU_share:
+            workspace.is_in_GUI_mode = get_headless()
+            workspace.n_workers = get_max_workers()
+
     def run(self, workspace):
         if self.mode.value != MODE_CUSTOM:
             model = models.Cellpose(model_type='cyto' if self.mode.value == MODE_CELLS else 'nuclei',
@@ -273,9 +279,8 @@ of workers in each copy of CellProfiler times the number of copies of CellProfil
             if not self.auto_calculate_GPU_share.value:
                 cuda.set_per_process_memory_fraction(self.manual_GPU_memory_share.value)
             else:
-                from cellprofiler_core.preferences import get_max_workers, get_headless
-                if not get_headless():
-                    n_workers = get_max_workers()
+                if workspace.is_in_GUI_mode:
+                    n_workers = workspace.n_workers
                     if type (n_workers) in [int,float]:
                         amount_per_worker = 0.90/n_workers
                         cuda.set_per_process_memory_fraction(amount_per_worker)
