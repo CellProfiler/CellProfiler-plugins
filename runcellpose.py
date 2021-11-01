@@ -6,7 +6,6 @@ from skimage.transform import resize
 from cellprofiler_core.image import Image
 from cellprofiler_core.module.image_segmentation import ImageSegmentation
 from cellprofiler_core.object import Objects
-from cellprofiler_core.preferences import get_max_workers, get_headless
 from cellprofiler_core.setting import Binary
 from cellprofiler_core.setting.choice import Choice
 from cellprofiler_core.setting.do_something import DoSomething
