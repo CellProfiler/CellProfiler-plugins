@@ -274,7 +274,6 @@ of workers in each copy of CellProfiler times the number of copies of CellProfil
                 cuda.set_per_process_memory_fraction(self.manual_GPU_memory_share.value)
             else:
                 from cellprofiler_core.preferences import get_max_workers, get_headless
-                from torch import cuda
                 if not get_headless():
                     n_workers = get_max_workers()
                     if type (n_workers) in [int,float]:
@@ -321,7 +320,6 @@ of workers in each copy of CellProfiler times the number of copies of CellProfil
             if self.use_gpu.value and model.torch:
                 # Try to clear some GPU memory for other worker processes.
                 try:
-                    from torch import cuda
                     cuda.empty_cache()
                 except Exception as e:
                     print(f"Unable to clear GPU memory. You may need to restart CellProfiler to change models. {e}")
