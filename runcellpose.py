@@ -193,24 +193,14 @@ If you have multiple GPUs on your system, this button will only test the first o
 Cell probability threshold (all pixels with probability above threshold kept for masks). Recommended default is 0.0. """,
         )
 
-        self.auto_calculate_GPU_share = Binary(
-            text="Do you want CellProfiler to automatically determine the fraction of GPU memory each worker gets?",
-            value=True,
-            doc="""\
-Errors can happen when the GPU memory is unequally shared between workers. CellProfiler will automatically distribute
-the GPU memory by the number of workers set in the Preferences window in GUI mode, and all of it in headless mode. 
-Select "False" to override this value.
-""",
-        )
-
         self.manual_GPU_memory_share = Float(
             text="GPU memory share for each worker",
             value=0.1,
             minval=0.0000001,
             maxval=1,
             doc="""\
-Fraction of the GPU memory share available to each worker. Value should be set such that the number
-of workers in each copy of CellProfiler times the number of copies of CellProfiler running (if applicable) are <1
+Fraction of the GPU memory share available to each worker. Value should be set such that this number times the number
+of workers in each copy of CellProfiler times the number of copies of CellProfiler running (if applicable) is <1
 """,
         )
 
@@ -231,7 +221,6 @@ of workers in each copy of CellProfiler times the number of copies of CellProfil
             self.model_file_name,
             self.flow_threshold,
             self.dist_threshold,
-            self.auto_calculate_GPU_share,
             self.manual_GPU_memory_share
         ]
 
@@ -253,16 +242,9 @@ of workers in each copy of CellProfiler times the number of copies of CellProfil
         vis_settings += [self.use_averaging, self.use_gpu]
 
         if self.use_gpu.value:
-            vis_settings += [self.gpu_test, self.auto_calculate_GPU_share]
-            if not self.auto_calculate_GPU_share.value:
-                vis_settings += [self.manual_GPU_memory_share]
+            vis_settings += [self.gpu_test, self.manual_GPU_memory_share]
 
         return vis_settings
-
-    def prepare_run(self, workspace):
-        if self.auto_calculate_GPU_share:
-            workspace.is_in_GUI_mode = get_headless()
-            workspace.n_workers = get_max_workers()
 
     def run(self, workspace):
         if self.mode.value != MODE_CUSTOM:
@@ -276,16 +258,7 @@ of workers in each copy of CellProfiler times the number of copies of CellProfil
 
         if self.use_gpu.value and model.torch:
             from torch import cuda
-            if not self.auto_calculate_GPU_share.value:
-                cuda.set_per_process_memory_fraction(self.manual_GPU_memory_share.value)
-            else:
-                if workspace.is_in_GUI_mode:
-                    n_workers = workspace.n_workers
-                    if type (n_workers) in [int,float]:
-                        amount_per_worker = 0.90/n_workers
-                        cuda.set_per_process_memory_fraction(amount_per_worker)
-                else:
-                    pass
+            cuda.set_per_process_memory_fraction(self.manual_GPU_memory_share.value)
 
         x_name = self.x_name.value
         y_name = self.y_name.value
