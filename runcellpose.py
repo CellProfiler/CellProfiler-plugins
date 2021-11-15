@@ -192,6 +192,18 @@ If you have multiple GPUs on your system, this button will only test the first o
 Cell probability threshold (all pixels with probability above threshold kept for masks). Recommended default is 0.0. """,
         )
 
+        self.manual_GPU_memory_share = Float(
+            text="GPU memory share for each worker",
+            value=0.1,
+            minval=0.0000001,
+            maxval=1,
+            doc="""\
+Fraction of the GPU memory share available to each worker. Value should be set such that this number times the number
+of workers in each copy of CellProfiler times the number of copies of CellProfiler running (if applicable) is <1
+""",
+        )
+
+
     def settings(self):
         return [
             self.x_name,
@@ -207,7 +219,8 @@ Cell probability threshold (all pixels with probability above threshold kept for
             self.model_directory,
             self.model_file_name,
             self.flow_threshold,
-            self.dist_threshold
+            self.dist_threshold,
+            self.manual_GPU_memory_share
         ]
 
     def visible_settings(self):
@@ -228,7 +241,7 @@ Cell probability threshold (all pixels with probability above threshold kept for
         vis_settings += [self.use_averaging, self.use_gpu]
 
         if self.use_gpu.value:
-            vis_settings += [self.gpu_test]
+            vis_settings += [self.gpu_test, self.manual_GPU_memory_share]
 
         return vis_settings
 
@@ -241,6 +254,10 @@ Cell probability threshold (all pixels with probability above threshold kept for
             model_directory = self.model_directory.get_absolute_path()
             model_path = os.path.join(model_directory, model_file)
             model = models.CellposeModel(pretrained_model=model_path, gpu=self.use_gpu.value)
+
+        if self.use_gpu.value and model.torch:
+            from torch import cuda
+            cuda.set_per_process_memory_fraction(self.manual_GPU_memory_share.value)
 
         x_name = self.x_name.value
         y_name = self.y_name.value
@@ -280,7 +297,6 @@ Cell probability threshold (all pixels with probability above threshold kept for
             if self.use_gpu.value and model.torch:
                 # Try to clear some GPU memory for other worker processes.
                 try:
-                    from torch import cuda
                     cuda.empty_cache()
                 except Exception as e:
                     print(f"Unable to clear GPU memory. You may need to restart CellProfiler to change models. {e}")
