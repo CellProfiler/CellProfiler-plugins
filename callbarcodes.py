@@ -383,7 +383,9 @@ Enter the sequence that represents barcoding reads of an empty vector"""
 
         barcodes = self.barcodeset(
             self.metadata_field_barcode.value, self.metadata_field_tag.value
-        )
+        ) 
+
+        cropped_barcode_dict = {y[:self.ncycles.value]:y for y in list(barcodes.keys())}
 
         scorelist = []
         matchedbarcode = []
@@ -396,11 +398,12 @@ Enter the sequence that represents barcoding reads of an empty vector"""
             pixel_data_score = objects.segmented
         count = 1
         for eachbarcode in calledbarcodes:
-            eachscore, eachmatch = self.queryall(barcodes, eachbarcode)
+            eachscore, eachmatch = self.queryall(cropped_barcode_dict, eachbarcode)
             scorelist.append(eachscore)
             matchedbarcode.append(eachmatch)
-            matchedbarcodeid.append(barcodes[eachmatch][0])
-            matchedbarcodecode.append(barcodes[eachmatch][1])
+            m_id, m_code = barcodes[eachmatch]
+            matchedbarcodeid.append(m_id)
+            matchedbarcodecode.append(m_code)
             if self.wants_call_image:
                 pixel_data_call = numpy.where(
                     labels == count, barcodes[eachmatch][0], pixel_data_call
@@ -533,16 +536,23 @@ Enter the sequence that represents barcoding reads of an empty vector"""
             barcodeset[self.empty_vector_barcode_sequence.value]=(count,"EmptyVector")
         return barcodeset
 
-    def queryall(self, barcodeset, query):
-        barcodelist = list(barcodeset.keys())
-        scoredict = {
-            sum([1 for x in range(len(query)) if query[x] == y[x]])
-            / float(len(query)): y
-            for y in barcodelist
-        }
-        scores = list(scoredict.keys())
-        scores.sort(reverse=True)
-        return scores[0], scoredict[scores[0]]
+    def queryall(self, cropped_barcode_dict, query):
+
+        cropped_barcode_list = list(cropped_barcode_dict.keys())
+
+        if query in cropped_barcode_list:
+            #is a perfect match
+            return 1, cropped_barcode_dict[query]
+
+        else:
+            scoredict = {
+                sum([1 for x in range(len(query)) if query[x] == y[x]])
+                / float(len(query)): y
+                for y in cropped_barcode_list
+            }
+            scores = list(scoredict.keys())
+            scores.sort(reverse=True)
+            return scores[0], cropped_barcode_dict[scoredict[scores[0]]]
 
     def get_measurement_columns(self, pipeline):
 
