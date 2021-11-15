@@ -463,10 +463,9 @@ Enter the sequence that represents barcoding reads of an empty vector"""
                 ),
             )
 
-        statistics = [["Feature", "Mean", "Median", "SD"]]
-
-        workspace.display_data.statistics = statistics
-
+        if self.show_window:
+            workspace.display_data.col_labels = ("Image Mean Score", "Image Mean Quality Score")
+            workspace.display_data.statistics = [imagemeanscore, imagemeanquality]
 
     def display(self, workspace, figure):
         statistics = workspace.display_data.statistics
