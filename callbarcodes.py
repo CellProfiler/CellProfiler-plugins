@@ -360,11 +360,14 @@ Enter the sequence that represents barcoding reads of an empty vector"""
             listofmeasurements, self.ncycles.value, self.cycle1measure.value
         )
 
-        calledbarcodes = self.callonebarcode(
+        objectcount = len(measurements.get_current_measurement(self.input_object_name.value,listofmeasurements[0]))
+
+        calledbarcodes, quality_scores = self.callonebarcode(
             measurements_for_calls,
             measurements,
             self.input_object_name.value,
             self.ncycles.value,
+            objectcount,
         )
 
         workspace.measurements.add_measurement(
@@ -372,6 +375,11 @@ Enter the sequence that represents barcoding reads of an empty vector"""
             "_".join([C_CALL_BARCODES, "BarcodeCalled"]),
             calledbarcodes,
         )
+
+        workspace.measurements.add_measurement(
+            self.input_object_name.value,
+            "_".join([C_CALL_BARCODES,"MeanQualityScore"]),
+            quality_scores)
 
         barcodes = self.barcodeset(
             self.metadata_field_barcode.value, self.metadata_field_tag.value
@@ -402,6 +410,21 @@ Enter the sequence that represents barcoding reads of an empty vector"""
                     labels == count, 65535 * eachscore, pixel_data_score
                 )
             count += 1
+
+        imagemeanscore = numpy.mean(scorelist)
+
+        workspace.measurements.add_measurement(
+            "Image", 
+            "_".join([C_CALL_BARCODES,"MeanBarcodeScore"]), 
+            imagemeanscore)
+
+        imagemeanquality = numpy.mean(quality_scores)
+
+        workspace.measurements.add_measurement(
+            "Image", 
+            "_".join([C_CALL_BARCODES,"MeanQualityScore"]), 
+            imagemeanquality)
+
         workspace.measurements.add_measurement(
             self.input_object_name.value,
             "_".join([C_CALL_BARCODES, "MatchedTo_Barcode"]),
@@ -466,9 +489,10 @@ Enter the sequence that represents barcoding reads of an empty vector"""
                         measurementdict[parsed_cycle].update({eachmeas: parsed_base})
         return measurementdict
 
-    def callonebarcode(self, measurementdict, measurements, object_name, ncycles):
+    def callonebarcode(self, measurementdict, measurements, object_name, ncycles, objectcount):
 
         master_cycles = []
+        score_array = numpy.zeros([ncycles,objectcount])
 
         for eachcycle in range(1, ncycles + 1):
             cycles_measures_perobj = []
@@ -481,12 +505,19 @@ Enter the sequence that represents barcoding reads of an empty vector"""
                 )
                 cyclecode.append(measurementdict[eachcycle][eachmeasure])
             cycle_measures_perobj = numpy.transpose(numpy.array(cycles_measures_perobj))
-            max_per_obj = numpy.argmax(cycle_measures_perobj, 1)
-            max_per_obj = list(max_per_obj)
-            max_per_obj = [cyclecode[x] for x in max_per_obj]
-            master_cycles.append(list(max_per_obj))
+            argmax_per_obj = numpy.argmax(cycle_measures_perobj,1)
+            max_per_obj = numpy.max(cycle_measures_perobj,1)
+            sum_per_obj = numpy.sum(cycle_measures_perobj,1)
+            score_per_obj = max_per_obj/sum_per_obj
+            argmax_per_obj = list(argmax_per_obj)
+            argmax_per_obj = [cyclecode[x] for x in argmax_per_obj]
 
-        return list(map("".join, list(zip(*master_cycles))))
+            master_cycles.append(list(argmax_per_obj))
+            score_array[eachcycle-1] = score_per_obj
+
+        mean_per_object = score_array.mean(axis=0)
+
+        return list(map("".join, zip(*master_cycles))), mean_per_object
 
     def barcodeset(self, barcodecol, genecol):
         fd = self.open_csv()
@@ -517,7 +548,20 @@ Enter the sequence that represents barcoding reads of an empty vector"""
 
         input_object_name = self.input_object_name.value
 
-        return [
+        result = [
+            (
+                "Image",
+                "_".join([C_CALL_BARCODES,"MeanBarcodeScore"]), 
+                cellprofiler_core.constants.measurement.COLTYPE_FLOAT
+            ),
+            (
+                "Image",
+                "_".join([C_CALL_BARCODES,"MeanQualityScore"]), 
+                cellprofiler_core.constants.measurement.COLTYPE_FLOAT
+            ),
+            ]
+
+        result += [
             (
                 input_object_name,
                 "_".join([C_CALL_BARCODES, "BarcodeCalled"]),
@@ -543,10 +587,17 @@ Enter the sequence that represents barcoding reads of an empty vector"""
                 "_".join([C_CALL_BARCODES, "MatchedTo_Score"]),
                 cellprofiler_core.constants.measurement.COLTYPE_FLOAT,
             ),
+            (
+                input_object_name,
+                "_".join([C_CALL_BARCODES, "MeanQualityScore"]),
+                cellprofiler_core.constants.measurement.COLTYPE_FLOAT,
+            ),
         ]
 
+        return result
+
     def get_categories(self, pipeline, object_name):
-        if object_name == self.input_object_name:
+        if object_name == self.input_object_name or object_name == "Image":
             return [C_CALL_BARCODES]
 
         return []
@@ -559,6 +610,13 @@ Enter the sequence that represents barcoding reads of an empty vector"""
                 "MatchedTo_ID",
                 "MatchedTo_GeneCode",
                 "MatchedTo_Score",
+                "MeanQualityScore",
+            ]
+        
+        elif object_name == object_name == "Image":
+            return [
+                "MeanBarcodeScore",
+                "MeanQualityScore",
             ]
 
         return []
