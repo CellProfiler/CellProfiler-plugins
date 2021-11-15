@@ -617,10 +617,10 @@ class EnhancedMeasureTexture(cpm.Module):
         ny=len(cum_sum)
 
         hk = k / 2
-        startx = max(0, x - hk)
-        starty = max(0, y - hk)
-        stopx = min(nx-1, x + hk - 1)
-        stopy = min(ny-1, y + hk - 1)
+        startx = int(max(0, x - hk))
+        starty = int(max(0, y - hk))
+        stopx = int(min(nx-1, x + hk - 1))
+        stopy = int(min(ny-1, y + hk - 1))
         
         if startx == 0: left=0.0
         else: left=cum_sum[stopy,startx-1]
@@ -649,7 +649,7 @@ class EnhancedMeasureTexture(cpm.Module):
             return pixels
         nx=len(pixels[0])
         ny=len(pixels)           
-        hLk = Lk / 2
+        hLk = (Lk // 2)
         result = np.zeros(pixels.shape, pixels.dtype)
         result[hLk:-(hLk-1), hLk:-(hLk-1)] = \
             ((cum_sum[(Lk-1):, (Lk-1):] - 
@@ -657,7 +657,7 @@ class EnhancedMeasureTexture(cpm.Module):
               cum_sum[(Lk-1):, :-(Lk-1)] +
               cum_sum[:-(Lk-1), :-(Lk-1)]) / 
              ((Lk - 1)* (Lk - 1)))
-        for x in range(0, hLk) + range(nx-hLk+1, nx):
+        for x in  list(range(0, hLk)) +  list(range(nx-hLk+1, nx)):
             for y in range(0, ny):
                 result[y, x] = self.localmean(x,y,Lk,cum_sum)
         for x in range(hLk, nx-hLk+1):
@@ -688,10 +688,10 @@ class EnhancedMeasureTexture(cpm.Module):
             Lk=Lk*2 # tamura.cpp
             x_good = (x+(Lk/2)<nx) & (x-(Lk/2)>=0)
             x1, y1 = x[x_good], y[x_good]
-            Ekh[k, y1, x1]=np.fabs(Ak[k,y1,x1+(Lk/2)]-Ak[k,y1,x1-(Lk/2)])
+            Ekh[k, y1, x1]=np.fabs(Ak[k,y1,x1+(Lk//2)]-Ak[k,y1,x1-(Lk//2)])
             y_good = (y+(Lk/2)<ny) & (y-(Lk/2)>=0)
             x1, y1 = x[y_good], y[y_good]
-            Ekv[k,y1,x1]=np.fabs(Ak[k,y1+(Lk/2),x1]-Ak[k,y1-(Lk/2),x1])            
+            Ekv[k,y1,x1]=np.fabs(Ak[k,y1+(Lk//2),x1]-Ak[k,y1-(Lk//2),x1])            
                                       
         # 3rd Step
         # Here, I compare the current k for the x / y grid to
@@ -1022,7 +1022,7 @@ class EnhancedMeasureTexture(cpm.Module):
         return statistics  
     
     def upgrade_settings(self,setting_values,variable_revision_number,
-                         module_name,from_matlab):
+                         module_name):
         """Adjust the setting_values for older save file versions
         
         setting_values - a list of strings representing the settings for
@@ -1030,32 +1030,16 @@ class EnhancedMeasureTexture(cpm.Module):
         variable_revision_number - the variable revision number of the module
                                    that saved the settings
         module_name - the name of the module that saved the settings
-        from_matlab - true if it was a Matlab module that saved the settings
-        
-        returns the modified settings, revision number and "from_matlab" flag
+               
+        returns the modified settings, revision number
         """
-        if from_matlab and variable_revision_number == 2:
-            #
-            # The first 3 settings are:
-            # image count (1 for legacy)
-            # object count (calculated)
-            # scale_count (calculated)
-            #
-            object_names = [name for name in setting_values[1:7]
-                            if name.upper() != 'Do not use'.upper()]
-            scales = setting_values[7].split(',')
-            setting_values = ([ "1", str(len(object_names)), str(len(scales)),
-                               setting_values[0]] + object_names + scales +
-                              ["4"])
-            variable_revision_number = 1
-            from_matlab = False
-        if not from_matlab and variable_revision_number == 1:
+        if variable_revision_number == 1:
             #
             # Added "wants_gabor"
             #
             setting_values = setting_values[:-1] + ["Yes"] + setting_values[-1:]
             variable_revision_number = 2
-        if not from_matlab and variable_revision_number == 2:
+        if variable_revision_number == 2:
             #
             # Added angles
             #
@@ -1070,4 +1054,4 @@ class EnhancedMeasureTexture(cpm.Module):
             setting_values = new_setting_values
             variable_revision_number = 3
                 
-        return setting_values, variable_revision_number, from_matlab
+      return setting_values, variable_revision_number
