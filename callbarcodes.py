@@ -187,6 +187,18 @@ module).""".format(
 Enter the name to be given to the barcode score image.""",
         )
 
+        self.has_empty_vector_barcode = cellprofiler_core.setting.Binary(
+            "Do you have an empty vector barcode you would like to add to the barcode list?", False, doc="""\
+Select "*{YES}*" to manually enter a sequence that should be added to the uploaded barcode 
+list with the gene name of "EmptyVector". This can be helpful when there is a consistent
+backbone sequence to look out for in every barcoding set).""" .format(**{"YES": "Yes"
+                       }))
+
+        self.empty_vector_barcode_sequence = cellprofiler_core.setting.Text(
+            "What is the empty vector sequence?", "AAAAAAAAAAAAAAA", doc="""\
+Enter the sequence that represents barcoding reads of an empty vector"""
+        )
+
 
     def settings(self):
         return [
@@ -201,6 +213,8 @@ Enter the name to be given to the barcode score image.""",
             self.outimage_calls_name,
             self.wants_score_image,
             self.outimage_score_name,
+            self.has_empty_vector_barcode,
+            self.empty_vector_barcode_sequence,
         ]
 
     def visible_settings(self):
@@ -221,6 +235,9 @@ Enter the name to be given to the barcode score image.""",
 
         if self.wants_score_image:
             result += [self.outimage_score_name]
+        
+        if self.has_empty_vector_barcode:
+            result += [self.empty_vector_barcode_sequence]
 
         return result
 
@@ -481,6 +498,8 @@ Enter the name to be given to the barcode score image.""",
                 barcodeset[row[barcodecol]] = (count, row[genecol])
                 count += 1
         fd.close()
+        if self.has_empty_vector_barcode:
+            barcodeset[self.empty_vector_barcode_sequence.value]=(count,"EmptyVector")
         return barcodeset
 
     def queryall(self, barcodeset, query):
