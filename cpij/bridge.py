@@ -304,3 +304,6 @@ def init_pyimagej(init_string):
         else:
             atexit.register(close_pyimagej)  # TODO is there a more CP-ish way to do this?
             return True
+
+if __name__ == '__main__':
+    mp.freeze_support()
