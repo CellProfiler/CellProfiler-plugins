@@ -145,6 +145,9 @@ def _convert_java_to_python_type(ij, return_value):
     elif type_string == "java.lang.Byte":
         return bytes(return_value)
     elif bool((img_class for img_class in image_classes if issubclass(return_class, img_class))):
+        # TODO actualize changes in a virtual ImagePlus. Remove this when pyimagej does this innately
+        if issubclass(return_class, jpype.JClass('ij.ImagePlus')):
+            ij.py.synchronize_ij1_to_ij2(return_value)
         return ij.py.from_java(return_value)
 
     # Not a supported type
