@@ -331,18 +331,46 @@ def _start_imagej_process():
 
 
 def _start_server():
+    """
+    Start the server that will be used for sending communication between ImageJ
+    and CellProfiler.
+
+    NB: this method will permanently block its thread.
+    """
     m = QueueManager(address=('', SERVER_PORT), authkey=_SERVER_KEY)
     s = m.get_server()
     s.serve_forever()
 
 
 def _start_thread(target=None, args=(), name=None, daemon=True):
+    """
+    Create and start a thread to run a given target
+
+    Parameters
+    ----------
+    target : method to run
+        Same as threading.Thread
+    args : run method args
+        Same as threading.Thread
+    name : thread name
+        Same as threading.Thread
+    daemon : whether or not the thread should be a daemon
+        Default True
+    """
     thread = threading.Thread(target=target, args=args, name=name)
     thread.daemon = daemon
     thread.start()
 
 
 def main():
+    """
+    Start the pyimagej server. This will create a new "imagej-server" thread that
+    handles inter-process communication, and will block the main thread in a poll
+    listening for that communication and excxhanging data with the Java ImageJ
+    process.
+
+    For that reason, this method should be called in a new subprocess.
+    """
     _start_thread(target=_start_server, name="imagej-server")
     # FIXME wait for server to start up here
     _start_imagej_process()

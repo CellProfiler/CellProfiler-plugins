@@ -61,6 +61,10 @@ def _shutdown_imagej_on_close():
 
 
 def start_imagej_server():
+    """
+    If the ImageJ server is not already running, spawns the server in a new
+    Process.
+    """
     if server_running():
         return
 
