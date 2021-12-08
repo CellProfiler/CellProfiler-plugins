@@ -4,7 +4,7 @@ from cellprofiler_core.image import Image
 from cellprofiler_core.module import Module
 from cellprofiler_core.preferences import ABSOLUTE_FOLDER_NAME
 from cellprofiler_core.setting.choice import Choice
-from cellprofiler_core.setting.text import Filename, Text, Directory, Alphanumeric
+from cellprofiler_core.setting.text import Filename, Text, Directory
 from cellprofiler_core.constants.module import (
     IO_FOLDER_CHOICE_HELP_TEXT,
 )
@@ -15,18 +15,14 @@ from cellprofiler_core.setting._settings_group import SettingsGroup
 from cellprofiler_core.setting import Divider, HiddenCount
 from cellprofiler_core.setting.subscriber import ImageSubscriber
 
-from _character import Character
-from _boolean import Boolean
-
 from wx import Gauge
 from wx import Window
 from collections.abc import Iterable
 from threading import Thread
 from sys import platform
 import time
-import random
 import skimage.io
-import cpij.bridge as cpij
+import cpij.bridge as ijbridge, cpij.server as ijserver
 
 __doc__ = """\
 RunImageJScript
@@ -137,9 +133,9 @@ class RunImageJScript(Module):
         self.set_notes([" ".join(module_explanation)])
 
         self.init_choice = Choice(
-            "Initialization type", [cpij.INIT_LOCAL, cpij.INIT_ENDPOINT, cpij.INIT_LATEST],
-            tooltips={cpij.INIT_LOCAL: "Use a local ImageJ/Fiji installation", cpij.INIT_ENDPOINT: "Specify a particular endpoint",
-                      cpij.INIT_LATEST: "Use the latest Fiji, downloading if needed."},
+            "Initialization type", [ijserver.INIT_LOCAL, ijserver.INIT_ENDPOINT, ijserver.INIT_LATEST],
+            tooltips={ijserver.INIT_LOCAL: "Use a local ImageJ/Fiji installation", ijserver.INIT_ENDPOINT: "Specify a particular endpoint",
+                      ijserver.INIT_LATEST: "Use the latest Fiji, downloading if needed."},
             doc="""\
 Note that initialization will only occur once per CellProfiler session! After initialization, these options will be
 locked for the remainder of the session.
@@ -151,9 +147,9 @@ Select the mechanism for initializing ImageJ:
 
 Note that any option besides {init_local} may result in a download of the requested components.
             """.format(
-                init_local=cpij.INIT_LOCAL,
-                init_endpoint=cpij.INIT_ENDPOINT,
-                init_latest=cpij.INIT_LATEST,
+                init_local=ijserver.INIT_LOCAL,
+                init_endpoint=ijserver.INIT_ENDPOINT,
+                init_latest=ijserver.INIT_LATEST,
             ),
         )
 
@@ -175,9 +171,10 @@ If you choose to disable this function, your ImageJ script will need to account 
             """,
         )
 
-        if cpij.init_display_string:
-            # ImageJ thread is already running
-            self.initialized_method.set_value(cpij.init_display_string)
+        # TODO expose the init string used - server needs to record it, bridge should have an accessor
+        # if cpij.init_display_string:
+        #     # ImageJ thread is already running
+        #     self.initialized_method.set_value(cpij.init_display_string)
 
         self.app_directory = Directory(
             "ImageJ directory", allow_metadata=False, doc="""\
@@ -244,14 +241,14 @@ Note: this must be done each time you change the script, before running the Cell
         or a version string.
         """
         choice = self.init_choice.get_value()
-        if choice == cpij.INIT_LATEST:
+        if choice == ijserver.INIT_LATEST:
             return None
 
-        if choice == cpij.INIT_LOCAL:
+        if choice == ijserver.INIT_LOCAL:
             init_string = self.app_directory.get_absolute_path()
             if platform == 'darwin':
                 init_string = path.join(init_string, self.app_file.value)
-        elif choice == cpij.INIT_ENDPOINT:
+        elif choice == ijserver.INIT_ENDPOINT:
             init_string = self.endpoint_string.get_value()
 
         return init_string
@@ -297,9 +294,9 @@ Note: this must be done each time you change the script, before running the Cell
     def init_pyimagej(self):
         self.initialization_failed = False
         init_string = self.get_init_string()
-        if cpij.init_pyimagej(init_string):
+        if ijbridge.init_pyimagej(init_string):
             init_display_string = self.init_choice.get_value()
-            if init_display_string != cpij.INIT_LATEST:
+            if init_display_string != ijserver.INIT_LATEST:
                 init_display_string += ": " + init_string
             self.initialized_method.set_value(init_display_string)
         else:
@@ -320,25 +317,26 @@ Note: this must be done each time you change the script, before running the Cell
 
         # Start pyimagej if needed
         self.init_pyimagej()
-        if not cpij.imagej_process:
+        if not ijbridge.server_running():
+            print("server is not running")
             stop_progress_thread = True
             return
 
         # Tell pyimagej to parse the script parameters
-        cpij.to_imagej.put({cpij.PYIMAGEJ_KEY_COMMAND: cpij.PYIMAGEJ_CMD_SCRIPT_PARSE, cpij.PYIMAGEJ_KEY_INPUT: script_filepath})
+        ijbridge.to_imagej().put({ijserver.PYIMAGEJ_KEY_COMMAND: ijserver.PYIMAGEJ_CMD_SCRIPT_PARSE, ijserver.PYIMAGEJ_KEY_INPUT: script_filepath})
 
-        ij_return = cpij.from_imagej.get()
+        ij_return = ijbridge.from_imagej().get()
 
         # Process pyimagej's output, converting script parameters to settings
-        if ij_return != cpij.PYIMAGEJ_STATUS_CMD_UNKNOWN:
-            input_params = ij_return[cpij.PYIMAGEJ_SCRIPT_PARSE_INPUTS]
-            output_params = ij_return[cpij.PYIMAGEJ_SCRIPT_PARSE_OUTPUTS]
+        if ij_return != ijserver.PYIMAGEJ_STATUS_CMD_UNKNOWN:
+            input_params = ij_return[ijserver.PYIMAGEJ_SCRIPT_PARSE_INPUTS]
+            output_params = ij_return[ijserver.PYIMAGEJ_SCRIPT_PARSE_OUTPUTS]
 
-            for param_dict, settings_dict, io_class in ((input_params, self.script_input_settings, cpij.INPUT_CLASS),
-                                                        (output_params, self.script_output_settings, cpij.OUTPUT_CLASS)):
+            for param_dict, settings_dict, io_class in ((input_params, self.script_input_settings, ijserver.INPUT_CLASS),
+                                                        (output_params, self.script_output_settings, ijserver.OUTPUT_CLASS)):
                 for param_name in param_dict:
                     param_type = param_dict[param_name]
-                    next_setting = cpij.convert_java_type_to_setting(param_name, param_type, io_class)
+                    next_setting = ijserver.convert_java_type_to_setting(param_name, param_type, io_class)
                     if next_setting is not None:
                         settings_dict[param_name] = next_setting
                         group = SettingsGroup()
@@ -380,13 +378,13 @@ Note: this must be done each time you change the script, before running the Cell
         # If ImageJ is already initialized we just want to report how it was initialized
         # Otherwise we show: a string entry for "endpoint", a directory chooser for "local" (and file chooser if on mac),
         # and nothing if "latest"
-        if not cpij.imagej_process:
+        if not ijbridge.server_running():
             visible_settings += [self.init_choice]
             input_type = self.init_choice.get_value()
             # ImageJ is not initialized yet
-            if input_type == cpij.INIT_ENDPOINT:
+            if input_type == ijserver.INIT_ENDPOINT:
                 visible_settings += [self.endpoint_string]
-            elif input_type == cpij.INIT_LOCAL:
+            elif input_type == ijserver.INIT_LOCAL:
                 visible_settings += [self.app_directory]
                 if platform == 'darwin':
                     visible_settings += [self.app_file]
@@ -408,6 +406,11 @@ Note: this must be done each time you change the script, before running the Cell
         return visible_settings
 
     def prepare_settings(self, setting_values):
+        # Start the ImageJ server here if it's not already running
+        # This ensures the server is started from the main process after the
+        # GUI has spun up
+        ijbridge.start_imagej_server()
+
         settings_count = int(setting_values[0])
 
         if settings_count == 0:
@@ -427,7 +430,7 @@ Note: this must be done each time you change the script, before running the Cell
             param_name = setting_values[i - 2]
             param_type = setting_values[i - 1]
             io_class = setting_values[i]
-            setting = cpij.convert_java_type_to_setting(param_name, param_type, io_class)
+            setting = ijserver.convert_java_type_to_setting(param_name, param_type, io_class)
             # account for remover, name, type and io_class
             i -= 4
             # account for the number of values in this setting
@@ -439,9 +442,9 @@ Note: this must be done each time you change the script, before running the Cell
             group.append("remover", RemoveSettingButton("", "Remove this variable", self.script_parameter_list, group))
             add_param_info_settings(group, param_name, param_type, io_class)
             loaded_settings.append(group)
-            if cpij.INPUT_CLASS == io_class:
+            if ijserver.INPUT_CLASS == io_class:
                 self.script_input_settings[param_name] = setting
-            elif cpij.OUTPUT_CLASS == io_class:
+            elif ijserver.OUTPUT_CLASS == io_class:
                 self.script_output_settings[param_name] = setting
             settings_count -= 1
 
@@ -472,7 +475,7 @@ Note: this must be done each time you change the script, before running the Cell
                 self.script_file
             )
 
-        if self.init_choice.get_value() == cpij.INIT_LOCAL:
+        if self.init_choice.get_value() == ijserver.INIT_LOCAL:
             app_path = self.get_init_string()
             if not path.exists(app_path):
                 raise ValidationError(
@@ -485,9 +488,9 @@ Note: this must be done each time you change the script, before running the Cell
         warn_msg = "Please note: any initialization method except \"Local\", a new Fiji may be downloaded"
         " to your machine if cached dependencies not found."
         init_type = self.init_choice.get_value()
-        if init_type != cpij.INIT_LOCAL:
+        if init_type != ijserver.INIT_LOCAL:
             # The component we attach the error to depends on if initialization has happened or not
-            if not cpij.imagej_process:
+            if not ijbridge.server_running():
                 raise ValidationError(warn_msg, self.init_choice)
             else:
                 raise ValidationError(warn_msg + " If re-initialization is required, please restart CellProfiler.",
@@ -524,19 +527,28 @@ Note: this must be done each time you change the script, before running the Cell
                 script_inputs[name] = setting.get_value()
 
         # Start the script
-        cpij.to_imagej.put({cpij.PYIMAGEJ_KEY_COMMAND: cpij.PYIMAGEJ_CMD_SCRIPT_RUN, cpij.PYIMAGEJ_KEY_INPUT:
-            {cpij.PYIMAGEJ_SCRIPT_RUN_FILE_KEY: script_filepath,
-             cpij.PYIMAGEJ_SCRIPT_RUN_INPUT_KEY: script_inputs,
-             cpij.PYIMAGEJ_SCRIPT_RUN_CONVERT_IMAGES: self.convert_types.value}
+        ijbridge.to_imagej().put({ijserver.PYIMAGEJ_KEY_COMMAND: ijserver.PYIMAGEJ_CMD_SCRIPT_RUN, ijserver.PYIMAGEJ_KEY_INPUT:
+            {ijserver.PYIMAGEJ_SCRIPT_RUN_FILE_KEY: script_filepath,
+             ijserver.PYIMAGEJ_SCRIPT_RUN_INPUT_KEY: script_inputs,
+             ijserver.PYIMAGEJ_SCRIPT_RUN_CONVERT_IMAGES: self.convert_types.value}
                             })
 
         # Retrieve script output
-        ij_return = cpij.from_imagej.get()
-        if ij_return != cpij.PYIMAGEJ_STATUS_CMD_UNKNOWN:
-            script_outputs = ij_return[cpij.PYIMAGEJ_KEY_OUTPUT]
+        ij_return = ijbridge.from_imagej().get()
+        # import time, queue
+        # while True:
+        #     try:
+        #         ij_return = ijbridge.from_imagej().get_nowait()
+        #     except queue.Empty:
+        #         print("waiting")
+        #         time.sleep(2)
+
+        if ij_return != ijserver.PYIMAGEJ_STATUS_CMD_UNKNOWN:
+            script_outputs = ij_return[ijserver.PYIMAGEJ_KEY_OUTPUT]
             for name in self.script_output_settings:
                 output_key = self.script_output_settings[name].get_value()
                 output_value = script_outputs[name]
+                # FIXME should only do this for image outputs
                 # convert back to floats for CellProfiler
                 if self.convert_types.value:
                     output_value = skimage.img_as_float(output_value)
