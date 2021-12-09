@@ -1,12 +1,12 @@
 from pathlib import Path
 from multiprocessing.managers import BaseManager
-import multiprocessing as mp
+from queue import Queue
 from cellprofiler_core.image import Image
 from cellprofiler_core.setting.text.alphanumeric.name.image_name import ImageName
 from cellprofiler_core.setting.text import Filename, Directory, Alphanumeric, Integer, Float
 from cellprofiler_core.setting.subscriber import ImageSubscriber
 from cellprofiler_core.setting import ValidationError
-import jpype, imagej, sys, threading
+import jpype, imagej, threading
 import skimage.io
 
 
@@ -40,9 +40,8 @@ SERVER_PORT = 45923
 #FIXME this needs to be encrypted somehow
 _SERVER_KEY = b'abracadabra'
 
-_ctx = mp.get_context('spawn')
-_in_queue = _ctx.Queue()
-_out_queue = _ctx.Queue()
+_in_queue = Queue()
+_out_queue = Queue()
 
 # FIXME change to SyncManager and use Lock()
 class QueueManager(BaseManager): pass
