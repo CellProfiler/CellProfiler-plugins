@@ -535,13 +535,6 @@ Note: this must be done each time you change the script, before running the Cell
 
         # Retrieve script output
         ij_return = ijbridge.from_imagej().get()
-        # import time, queue
-        # while True:
-        #     try:
-        #         ij_return = ijbridge.from_imagej().get_nowait()
-        #     except queue.Empty:
-        #         print("waiting")
-        #         time.sleep(2)
 
         if ij_return != ijserver.PYIMAGEJ_STATUS_CMD_UNKNOWN:
             script_outputs = ij_return[ijserver.PYIMAGEJ_KEY_OUTPUT]
