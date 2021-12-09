@@ -315,10 +315,12 @@ Note: this must be done each time you change the script, before running the Cell
             stop_progress_thread = True
             return
 
+        # start the imagej server if needed
+        ijbridge.start_imagej_server()
+
         # Start pyimagej if needed
         self.init_pyimagej()
-        if not ijbridge.server_running():
-            print("server is not running")
+        if self.initialization_failed == True:
             stop_progress_thread = True
             return
 
