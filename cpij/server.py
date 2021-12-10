@@ -6,7 +6,7 @@ from cellprofiler_core.setting.text.alphanumeric.name.image_name import ImageNam
 from cellprofiler_core.setting.text import Filename, Directory, Alphanumeric, Integer, Float
 from cellprofiler_core.setting.subscriber import ImageSubscriber
 from cellprofiler_core.setting import ValidationError
-import jpype, imagej, threading
+import jpype, imagej, socket, threading
 import skimage.io
 
 
@@ -361,6 +361,12 @@ def _start_thread(target=None, args=(), name=None, daemon=True):
     thread.start()
 
 
+def server_running(timeout=0.25):
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.settimeout(timeout)
+        return s.connect_ex(('localhost', SERVER_PORT)) == 0
+
+
 def main():
     """
     Start the pyimagej server. This will create a new "imagej-server" thread that
@@ -371,7 +377,11 @@ def main():
     For that reason, this method should be called in a new subprocess.
     """
     _start_thread(target=_start_server, name="imagej-server")
-    # FIXME wait for server to start up here
+
+    # FIXME don't wait indefinitely
+    while not server_running():
+        pass
+
     _start_imagej_process()
 
 

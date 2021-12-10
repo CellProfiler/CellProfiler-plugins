@@ -35,10 +35,7 @@ def init_pyimagej(init_string):
 
 
 def server_running(timeout=0.25):
-    import socket
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.settimeout(timeout)
-        return s.connect_ex(('localhost', ijserver.SERVER_PORT)) == 0
+    return ijserver.server_running(timeout)
 
 
 def _init_queues():
@@ -54,10 +51,8 @@ def _init_queues():
 
 
 def _shutdown_imagej_on_close():
-    manager = QueueManager(address=('127.0.0.1', ijserver.SERVER_PORT), authkey=ijserver._SERVER_KEY)
-    manager.connect()
-    to_imagej = manager.input_queue()
-    to_imagej.put({ijserver.PYIMAGEJ_KEY_COMMAND: ijserver.PYIMAGEJ_CMD_EXIT})
+    if server_running():
+        to_imagej().put({ijserver.PYIMAGEJ_KEY_COMMAND: ijserver.PYIMAGEJ_CMD_EXIT})
 
 
 def start_imagej_server():
