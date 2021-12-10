@@ -64,9 +64,7 @@ def start_imagej_server():
     p.start()
 
     # wait for the server to start up
-    # FIXME: don't wait indefinitely...
-    while not server_running():
-        pass
+    ijserver.wait_for_server_startup()
 
     # Ensure server shuts down when main app closes
     atexit.register(_shutdown_imagej_on_close)

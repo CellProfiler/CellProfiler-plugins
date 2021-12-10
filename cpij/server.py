@@ -379,22 +379,47 @@ def is_server_running(timeout=0.25):
         return s.connect_ex(('localhost', SERVER_PORT)) == 0
 
 
+def wait_for_server_startup(timeout=15):
+    """
+    Helper method that blocks until the timeout value is reached, or the ImageJ
+    server becomes available for connection.
+
+    Parameters
+    ----------
+    timeout : number, optional (default 15)
+        Duration in seconds to wait for the server to start
+
+    Errors
+    ----------
+    RuntimeError
+        If timeout is exceeded
+    """
+    max_attempts = timeout * 4
+    current_attempt = 0
+    while not is_server_running(0.25) and current_attempt < max_attempts:
+        current_attempt += 1
+        pass
+
+    if current_attempt >= max_attempts:
+        raise RuntimeError(f"ImageJ server failed to start withiin {timeout} seconds.")
+
+
 def main():
     """
-    Start the pyimagej server. This will create a new "imagej-server" thread that
-    handles inter-process communication, and will block the main thread in a poll
-    listening for that communication and excxhanging data with the Java ImageJ
-    process.
+    Start the two pyimagej server components:
+    - This will create a new "imagej-server" thread that handles inter-process
+      communication
+    - The main thread will block in a poll listening for that
+      communication, and interacting with the Java ImageJ process.
 
-    For that reason, this method should be called in a new subprocess.
+    Because this runs indefinitely until instructed to shut down,
+    this method should be called in a new subprocess.
     """
     multiprocessing.freeze_support()
 
     _start_thread(target=_start_server, name="imagej-server")
 
-    # FIXME don't wait indefinitely
-    while not server_running():
-        pass
+    wait_for_server_startup()
 
     _start_imagej_process()
 
