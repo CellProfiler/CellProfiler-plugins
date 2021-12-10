@@ -171,7 +171,7 @@ If you choose to disable this function, your ImageJ script will need to account 
             """,
         )
 
-        # TODO expose the init string used - server needs to record it, bridge should have an accessor
+        # FIXME expose the init string used - server needs to record it, bridge should have an accessor
         # if cpij.init_display_string:
         #     # ImageJ thread is already running
         #     self.initialized_method.set_value(cpij.init_display_string)
