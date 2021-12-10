@@ -6,7 +6,7 @@ from cellprofiler_core.setting.text.alphanumeric.name.image_name import ImageNam
 from cellprofiler_core.setting.text import Filename, Directory, Alphanumeric, Integer, Float
 from cellprofiler_core.setting.subscriber import ImageSubscriber
 from cellprofiler_core.setting import ValidationError
-import jpype, imagej, socket, threading
+import jpype, imagej, multiprocessing, socket, threading
 import skimage.io
 
 
@@ -376,6 +376,8 @@ def main():
 
     For that reason, this method should be called in a new subprocess.
     """
+    multiprocessing.freeze_support()
+
     _start_thread(target=_start_server, name="imagej-server")
 
     # FIXME don't wait indefinitely
