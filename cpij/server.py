@@ -50,13 +50,15 @@ QueueManager.register('output_queue', callable=lambda:_out_queue)
 
 
 class Character(Alphanumeric):
-    """ A Setting for text entries of size one
+    """
+    A Setting for text entries of size one
     """
     def __init__(self, text, value, *args, **kwargs):
         super().__init__(text, value, *args, **kwargs)
 
     def test_valid(self, pipeline):
-        """Restrict value to single character
+        """
+        Restrict value to single character
         """
         super().test_valid(pipeline)
         if len(self.value) > 1:
@@ -64,9 +66,9 @@ class Character(Alphanumeric):
 
 
 class Boolean(Integer):
-    """ A helper setting for boolean values, converting 0 to False and any other number to True
     """
-
+    A helper setting for boolean values, converting 0 to False and any other number to True
+    """
     def __init__(self, text, value, *args, **kwargs):
         super().__init__(text, value, doc="""\
 Enter '0' for \"False\" and any other value for \"True\"
@@ -82,7 +84,8 @@ Enter '0' for \"False\" and any other value for \"True\"
 
 
 def _preprocess_script_inputs(ij, input_map, convert_images):
-    """Helper method to convert pythonic inputs to something that can be handled by ImageJ
+    """
+    Helper method to convert pythonic inputs to something that can be handled by ImageJ
 
     In particular this is necessary for image inputs which won't be auto-converted by Jpype
 
@@ -90,9 +93,9 @@ def _preprocess_script_inputs(ij, input_map, convert_images):
     ----------
     ij : imagej.init(), required
         ImageJ entry point (from imagej.init())
-    input_map:
+    input_map: map, required
         map of input names to values
-    convert_images:
+    convert_images: boolean, required
         boolean indicating if image inputs and outputs should be auto-converted to appropriate numeric types
     """
     for key in input_map:
@@ -252,16 +255,6 @@ def _start_imagej_process():
     Return values
     ----------
     {pyimagej_status_cmd_unknown} : unrecognized command, no further output is coming
-
-    Parameters
-    ----------
-    input_queue : multiprocessing.Queue, required
-        This Queue will be polled for input commands to run through ImageJ
-    output_queue : multiprocessing.Queue, required
-        This Queue will be filled with outputs to return to CellProfiler
-    init_string : str, optional
-        This can be a path to a local ImageJ installation, or an initialization string per imagej.init(),
-        e.g. sc.fiji:fiji:2.1.0
     """
 
     manager = QueueManager(address=('127.0.0.1', SERVER_PORT), authkey=_SERVER_KEY)
@@ -347,11 +340,11 @@ def _start_thread(target=None, args=(), name=None, daemon=True):
 
     Parameters
     ----------
-    target : method to run
+    target : runnable
         Same as threading.Thread
-    args : run method args
+    args : list
         Same as threading.Thread
-    name : thread name
+    name : string
         Same as threading.Thread
     daemon : whether or not the thread should be a daemon
         Default True

@@ -11,12 +11,26 @@ _from_ij_queue = None
 
 
 def to_imagej():
+    """
+    Helper method to send data to the ImageJ server
+
+    Returns
+    ---------
+    A Queue connected to the ImageJ server. Only its put method should be called.
+    """
     _init_queues()
     global _to_ij_queue
     return _to_ij_queue
 
 
 def from_imagej():
+    """
+    Helper method to retrieve data from the ImageJ server
+
+    Returns
+    ---------
+    A Queue connected to the ImageJ server. Only its get method should be called.
+    """
     _init_queues()
     global _from_ij_queue
     return _from_ij_queue
@@ -25,6 +39,12 @@ def from_imagej():
 def init_pyimagej(init_string):
     """
     Start the pyimagej daemon thread if it isn't already running.
+
+    Parameters
+    ----------
+    init_string : str, optional
+        This can be a path to a local ImageJ installation, or an initialization string per imagej.init(),
+        e.g. sc.fiji:fiji:2.1.0
     """
     to_imagej().put({ijserver.PYIMAGEJ_KEY_COMMAND: ijserver.PYIMAGEJ_CMD_START,
                      ijserver.PYIMAGEJ_KEY_INPUT: init_string})
@@ -35,6 +55,10 @@ def init_pyimagej(init_string):
 
 
 def _init_queues():
+    """
+    Helper method to cache intput/output queues for this process to communicate
+    with the ImageJ server.
+    """
     global _to_ij_queue, _from_ij_queue
     if _to_ij_queue is None:
         if not ijserver.is_server_running():
@@ -47,6 +71,10 @@ def _init_queues():
 
 
 def _shutdown_imagej_on_close():
+    """
+    Helper method to send the shutdown signal to ImageJ. Intended to be called
+    at process exit.
+    """
     if ijserver.is_server_running():
         to_imagej().put({ijserver.PYIMAGEJ_KEY_COMMAND: ijserver.PYIMAGEJ_CMD_EXIT})
 
@@ -54,7 +82,7 @@ def _shutdown_imagej_on_close():
 def start_imagej_server():
     """
     If the ImageJ server is not already running, spawns the server in a new
-    Process.
+    Process. Blocks until the server is up and running.
     """
     if ijserver.is_server_running():
         return
