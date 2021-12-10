@@ -361,7 +361,19 @@ def _start_thread(target=None, args=(), name=None, daemon=True):
     thread.start()
 
 
-def server_running(timeout=0.25):
+def is_server_running(timeout=0.25):
+    """
+    Helper method to determine if the ImageJ server is up and running.
+
+    Parameters
+    ----------
+    timeout : number, optional (default 0.25)
+        Duration in seconds to wait when connecting to server
+
+    Return values
+    ----------
+    True if there was a response from the server. False otherwise.
+    """
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.settimeout(timeout)
         return s.connect_ex(('localhost', SERVER_PORT)) == 0

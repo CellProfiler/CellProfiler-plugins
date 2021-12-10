@@ -380,7 +380,7 @@ Note: this must be done each time you change the script, before running the Cell
         # If ImageJ is already initialized we just want to report how it was initialized
         # Otherwise we show: a string entry for "endpoint", a directory chooser for "local" (and file chooser if on mac),
         # and nothing if "latest"
-        if not ijbridge.server_running():
+        if not ijserver.is_server_running():
             visible_settings += [self.init_choice]
             input_type = self.init_choice.get_value()
             # ImageJ is not initialized yet
@@ -492,7 +492,7 @@ Note: this must be done each time you change the script, before running the Cell
         init_type = self.init_choice.get_value()
         if init_type != ijserver.INIT_LOCAL:
             # The component we attach the error to depends on if initialization has happened or not
-            if not ijbridge.server_running():
+            if not ijserver.is_server_running():
                 raise ValidationError(warn_msg, self.init_choice)
             else:
                 raise ValidationError(warn_msg + " If re-initialization is required, please restart CellProfiler.",

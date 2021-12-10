@@ -34,14 +34,10 @@ def init_pyimagej(init_string):
     return True
 
 
-def server_running(timeout=0.25):
-    return ijserver.server_running(timeout)
-
-
 def _init_queues():
     global _to_ij_queue, _from_ij_queue
     if _to_ij_queue is None:
-        if not server_running():
+        if not ijserver.is_server_running():
             raise RuntimeError("No ImageJ server instance available")
 
         manager = QueueManager(address=('127.0.0.1', ijserver.SERVER_PORT), authkey=ijserver._SERVER_KEY)
@@ -51,7 +47,7 @@ def _init_queues():
 
 
 def _shutdown_imagej_on_close():
-    if server_running():
+    if ijserver.is_server_running():
         to_imagej().put({ijserver.PYIMAGEJ_KEY_COMMAND: ijserver.PYIMAGEJ_CMD_EXIT})
 
 
@@ -60,7 +56,7 @@ def start_imagej_server():
     If the ImageJ server is not already running, spawns the server in a new
     Process.
     """
-    if server_running():
+    if ijserver.is_server_running():
         return
 
     ctx = mp.get_context('spawn')
