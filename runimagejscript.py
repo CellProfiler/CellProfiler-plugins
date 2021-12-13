@@ -384,7 +384,6 @@ Note: this must be done each time you change the script, before running the Cell
         # Otherwise we show: a string entry for "endpoint", a directory chooser for "local" (and file chooser if on mac),
         # and nothing if "latest"
         init_method = ijbridge.init_method()
-        print("init method is: ", init_method)
         if not init_method:
             # ImageJ is not initialized yet
             visible_settings += [self.init_choice]
