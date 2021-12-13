@@ -18,6 +18,7 @@ PYIMAGEJ_KEY_INPUT = "KEY_INPUT"  # Matching value is command-specific input obj
 PYIMAGEJ_KEY_OUTPUT = "KEY_OUTPUT"  # Matching value is command-specific output object
 PYIMAGEJ_KEY_ERROR = "KEY_OUTPUT"  # Matching value is command-specific output object
 PYIMAGEJ_CMD_START = "COMMAND_START"  # Start the PyImageJ instance + JVM
+PYIMAGEJ_CMD_GET_INIT_METHOD = "COMMAND_GET_INIT_METHOD" # Get the initialization string used for PyImageJ
 PYIMAGEJ_CMD_SCRIPT_PARSE = "COMMAND_SCRIPT_PARAMS"  # Parse a script file's parameters
 PYIMAGEJ_SCRIPT_PARSE_INPUTS = "SCRIPT_PARSE_INPUTS"  # Script input dictionary key
 PYIMAGEJ_SCRIPT_PARSE_OUTPUTS = "SCRIPT_PARSE_OUTPUTS"  # Script output dictionary key
@@ -265,6 +266,7 @@ def _start_imagej_process():
 
     ij = False
     script_service = None
+    init_string = None
 
     # Main daemon loop, polling the input queue
     while True:
@@ -278,12 +280,15 @@ def _start_imagej_process():
                     ij = imagej.init(init_string)
                 else:
                     ij = imagej.init()
+                    init_string = INIT_LATEST
                 script_service = ij.script()
                 output_queue.put(PYIMAGEJ_STATUS_STARTUP_COMPLETE)
             except jpype.JException as ex:
                 # Initialization failed
                 output_queue.put(PYIMAGEJ_STATUS_STARTUP_FAILED)
                 jpype.shutdownJVM()
+        elif cmd == PYIMAGEJ_CMD_GET_INIT_METHOD:
+            output_queue.put({PYIMAGEJ_KEY_OUTPUT: init_string})
         elif cmd == PYIMAGEJ_CMD_SCRIPT_PARSE:
             script_path = command_dictionary[PYIMAGEJ_KEY_INPUT]
             script_file = Path(script_path)

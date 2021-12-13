@@ -171,10 +171,10 @@ If you choose to disable this function, your ImageJ script will need to account 
             """,
         )
 
-        # FIXME expose the init string used - server needs to record it, bridge should have an accessor
-        # if cpij.init_display_string:
-        #     # ImageJ thread is already running
-        #     self.initialized_method.set_value(cpij.init_display_string)
+        init_display_string = ijbridge.init_method()
+        if init_display_string:
+            # ImageJ thread is already running
+            self.initialized_method.set_value(init_display_string)
 
         self.app_directory = Directory(
             "ImageJ directory", allow_metadata=False, doc="""\
@@ -383,10 +383,12 @@ Note: this must be done each time you change the script, before running the Cell
         # If ImageJ is already initialized we just want to report how it was initialized
         # Otherwise we show: a string entry for "endpoint", a directory chooser for "local" (and file chooser if on mac),
         # and nothing if "latest"
-        if not ijserver.is_server_running():
+        init_method = ijbridge.init_method()
+        print("init method is: ", init_method)
+        if not init_method:
+            # ImageJ is not initialized yet
             visible_settings += [self.init_choice]
             input_type = self.init_choice.get_value()
-            # ImageJ is not initialized yet
             if input_type == ijserver.INIT_ENDPOINT:
                 visible_settings += [self.endpoint_string]
             elif input_type == ijserver.INIT_LOCAL:
@@ -395,6 +397,7 @@ Note: this must be done each time you change the script, before running the Cell
                     visible_settings += [self.app_file]
         else:
             # ImageJ is initialized
+            self.initialized_method.set_value(init_method)
             visible_settings += [self.initialized_method]
         visible_settings += [Divider(line=True)]
         visible_settings += [self.script_directory, self.script_file, self.get_parameters_button, self.convert_types]
@@ -490,16 +493,13 @@ Note: this must be done each time you change the script, before running the Cell
 
     def validate_module_warnings(self, pipeline):
         """Warn user if the specified FIJI executable directory is not found, and warn that a copy of FIJI will be downloaded"""
-        warn_msg = "Please note: any initialization method except \"Local\", a new Fiji may be downloaded"
+        warn_msg = "Please note: for any initialization method except \"Local\", a new Fiji may be downloaded"
         " to your machine if cached dependencies not found."
         init_type = self.init_choice.get_value()
         if init_type != ijserver.INIT_LOCAL:
             # The component we attach the error to depends on if initialization has happened or not
-            if not ijserver.is_server_running():
+            if not ijbridge.init_method():
                 raise ValidationError(warn_msg, self.init_choice)
-            else:
-                raise ValidationError(warn_msg + " If re-initialization is required, please restart CellProfiler.",
-                                      self.initialized_method)
 
 
     def run(self, workspace):

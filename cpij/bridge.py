@@ -10,6 +10,21 @@ QueueManager.register('get_lock')
 _to_ij_queue = None
 _from_ij_queue = None
 _sync_lock = None
+_init_method = None
+
+
+def init_method():
+    global _init_method
+    if not _init_method:
+        if ijserver.is_server_running():
+            l = lock()
+            l.acquire()
+            to_imagej().put({ijserver.PYIMAGEJ_KEY_COMMAND: ijserver.PYIMAGEJ_CMD_GET_INIT_METHOD})
+            _init_method = from_imagej().get()[ijserver.PYIMAGEJ_KEY_OUTPUT]
+            l.release()
+
+    return _init_method
+
 
 
 def lock():
@@ -68,6 +83,9 @@ def init_pyimagej(init_string):
     result = from_imagej().get()
     if result == ijserver.PYIMAGEJ_STATUS_STARTUP_FAILED:
         return False
+
+    global _init_method
+    _init_method = init_string
     return True
 
 
