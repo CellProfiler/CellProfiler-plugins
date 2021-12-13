@@ -399,7 +399,7 @@ def wait_for_server_startup(timeout=15):
         pass
 
     if current_attempt >= max_attempts:
-        raise RuntimeError(f"ImageJ server failed to start withiin {timeout} seconds.")
+        raise RuntimeError(f"ImageJ server failed to start within {timeout} seconds.")
 
 
 def main():
