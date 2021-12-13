@@ -16,7 +16,6 @@ Constants for communicating with pyimagej
 PYIMAGEJ_KEY_COMMAND = "KEY_COMMAND"  # Matching value indicates what command to execute
 PYIMAGEJ_KEY_INPUT = "KEY_INPUT"  # Matching value is command-specific input object
 PYIMAGEJ_KEY_OUTPUT = "KEY_OUTPUT"  # Matching value is command-specific output object
-PYIMAGEJ_KEY_ERROR = "KEY_OUTPUT"  # Matching value is command-specific output object
 PYIMAGEJ_CMD_START = "COMMAND_START"  # Start the PyImageJ instance + JVM
 PYIMAGEJ_CMD_GET_INIT_METHOD = "COMMAND_GET_INIT_METHOD" # Get the initialization string used for PyImageJ
 PYIMAGEJ_CMD_SCRIPT_PARSE = "COMMAND_SCRIPT_PARAMS"  # Parse a script file's parameters
@@ -319,7 +318,7 @@ def _start_imagej_process():
         elif cmd == PYIMAGEJ_CMD_EXIT:
             break
         else:
-            output_queue.put({PYIMAGEJ_KEY_ERROR: PYIMAGEJ_STATUS_CMD_UNKNOWN})
+            output_queue.put(PYIMAGEJ_STATUS_CMD_UNKNOWN)
 
     # Shut down the imagej process
     if ij:
