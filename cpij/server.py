@@ -1,5 +1,5 @@
 from pathlib import Path
-from multiprocessing.managers import BaseManager
+from multiprocessing.managers import SyncManager
 from queue import Queue
 from cellprofiler_core.image import Image
 from cellprofiler_core.setting.text.alphanumeric.name.image_name import ImageName
@@ -42,11 +42,12 @@ _SERVER_KEY = b'abracadabra'
 
 _in_queue = Queue()
 _out_queue = Queue()
+_sync_lock = threading.Lock()
 
-# FIXME change to SyncManager and use Lock()
-class QueueManager(BaseManager): pass
+class QueueManager(SyncManager): pass
 QueueManager.register('input_queue', callable=lambda:_in_queue)
 QueueManager.register('output_queue', callable=lambda:_out_queue)
+QueueManager.register('get_lock', callable=lambda:_sync_lock)
 
 
 class Character(Alphanumeric):

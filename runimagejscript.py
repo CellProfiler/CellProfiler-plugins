@@ -325,9 +325,12 @@ Note: this must be done each time you change the script, before running the Cell
             return
 
         # Tell pyimagej to parse the script parameters
+        lock = ijbridge.lock()
+        lock.acquire()
         ijbridge.to_imagej().put({ijserver.PYIMAGEJ_KEY_COMMAND: ijserver.PYIMAGEJ_CMD_SCRIPT_PARSE, ijserver.PYIMAGEJ_KEY_INPUT: script_filepath})
 
         ij_return = ijbridge.from_imagej().get()
+        lock.release()
 
         # Process pyimagej's output, converting script parameters to settings
         if ij_return != ijserver.PYIMAGEJ_STATUS_CMD_UNKNOWN:
@@ -529,6 +532,8 @@ Note: this must be done each time you change the script, before running the Cell
                 script_inputs[name] = setting.get_value()
 
         # Start the script
+        lock = ijbridge.lock()
+        lock.acquire()
         ijbridge.to_imagej().put({ijserver.PYIMAGEJ_KEY_COMMAND: ijserver.PYIMAGEJ_CMD_SCRIPT_RUN, ijserver.PYIMAGEJ_KEY_INPUT:
             {ijserver.PYIMAGEJ_SCRIPT_RUN_FILE_KEY: script_filepath,
              ijserver.PYIMAGEJ_SCRIPT_RUN_INPUT_KEY: script_inputs,
@@ -537,6 +542,7 @@ Note: this must be done each time you change the script, before running the Cell
 
         # Retrieve script output
         ij_return = ijbridge.from_imagej().get()
+        lock.release()
 
         if ij_return != ijserver.PYIMAGEJ_STATUS_CMD_UNKNOWN:
             script_outputs = ij_return[ijserver.PYIMAGEJ_KEY_OUTPUT]

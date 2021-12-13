@@ -1,14 +1,31 @@
-from multiprocessing.managers import BaseManager
+from multiprocessing.managers import SyncManager
 import multiprocessing as mp
 import atexit, cpij.server as ijserver
 
-class QueueManager(BaseManager): pass
+class QueueManager(SyncManager): pass
 QueueManager.register('input_queue')
 QueueManager.register('output_queue')
+QueueManager.register('get_lock')
 
 _to_ij_queue = None
 _from_ij_queue = None
+_sync_lock = None
 
+
+def lock():
+    """
+    Helper method to synchronzie requests with the ImageJ server.
+
+    A lock should be acquired before sending data to the server, and released after
+    receiving the result.
+
+    Returns
+    ---------
+    A Lock connected to the ImageJ server.
+    """
+    _init_queues()
+    global _sync_lock
+    return _sync_lock
 
 def to_imagej():
     """
@@ -59,7 +76,7 @@ def _init_queues():
     Helper method to cache intput/output queues for this process to communicate
     with the ImageJ server.
     """
-    global _to_ij_queue, _from_ij_queue
+    global _to_ij_queue, _from_ij_queue, _sync_lock
     if _to_ij_queue is None:
         if not ijserver.is_server_running():
             raise RuntimeError("No ImageJ server instance available")
@@ -68,6 +85,7 @@ def _init_queues():
         manager.connect()
         _to_ij_queue = manager.input_queue()
         _from_ij_queue = manager.output_queue()
+        _sync_lock = manager.get_lock()
 
 
 def _shutdown_imagej_on_close():
