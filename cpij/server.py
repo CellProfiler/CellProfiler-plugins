@@ -6,7 +6,7 @@ from cellprofiler_core.setting.text.alphanumeric.name.image_name import ImageNam
 from cellprofiler_core.setting.text import Filename, Directory, Alphanumeric, Integer, Float
 from cellprofiler_core.setting.subscriber import ImageSubscriber
 from cellprofiler_core.setting import ValidationError
-import jpype, imagej, multiprocessing, socket, threading
+import jpype, imagej, multiprocessing, socket, threading, time
 import skimage.io
 
 
@@ -394,12 +394,13 @@ def wait_for_server_startup(timeout=15):
     """
     max_attempts = timeout * 4
     current_attempt = 0
-    while not is_server_running(0.25) and current_attempt < max_attempts:
+    while (not is_server_running(0.01)) and (current_attempt < max_attempts):
+        time.sleep(0.25)
         current_attempt += 1
         pass
 
     if current_attempt >= max_attempts:
-        raise RuntimeError(f"ImageJ server failed to start within {timeout} seconds.")
+        raise RuntimeError(f"ImageJ server failed to start within allotted time.")
 
 
 def main():
