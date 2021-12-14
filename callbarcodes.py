@@ -54,7 +54,7 @@ YES          Yes           YES
 
 What do I need as input?
 ^^^^^^^^^^^^^^^^^^^^^^^^
-To be added 
+To be added
 
 What do I get as output?
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -189,12 +189,12 @@ Enter the name to be given to the barcode score image.""",
 
         self.has_empty_vector_barcode = cellprofiler_core.setting.Binary(
             "Do you have an empty vector barcode you would like to add to the barcode list?", False, doc="""\
-Select "*{YES}*" to manually enter a sequence that should be added to the uploaded barcode 
+Select "*{YES}*" to manually enter a sequence that should be added to the uploaded barcode
 list with the gene name of "EmptyVector". This can be helpful when there is a consistent
 backbone sequence to look out for in every barcoding set).""" .format(**{"YES": "Yes"
                        }))
 
-        self.empty_vector_barcode_sequence = cellprofiler_core.setting.Text(
+        self.empty_vector_barcode_sequence = cellprofiler_core.setting.text.Text(
             "What is the empty vector sequence?", "AAAAAAAAAAAAAAA", doc="""\
 Enter the sequence that represents barcoding reads of an empty vector"""
         )
@@ -235,7 +235,7 @@ Enter the sequence that represents barcoding reads of an empty vector"""
 
         if self.wants_score_image:
             result += [self.outimage_score_name]
-        
+
         if self.has_empty_vector_barcode:
             result += [self.empty_vector_barcode_sequence]
 
@@ -383,7 +383,7 @@ Enter the sequence that represents barcoding reads of an empty vector"""
 
         barcodes = self.barcodeset(
             self.metadata_field_barcode.value, self.metadata_field_tag.value
-        ) 
+        )
 
         cropped_barcode_dict = {y[:self.ncycles.value]:y for y in list(barcodes.keys())}
 
@@ -417,15 +417,15 @@ Enter the sequence that represents barcoding reads of an empty vector"""
         imagemeanscore = numpy.mean(scorelist)
 
         workspace.measurements.add_measurement(
-            "Image", 
-            "_".join([C_CALL_BARCODES,"MeanBarcodeScore"]), 
+            "Image",
+            "_".join([C_CALL_BARCODES,"MeanBarcodeScore"]),
             imagemeanscore)
 
         imagemeanquality = numpy.mean(quality_scores)
 
         workspace.measurements.add_measurement(
-            "Image", 
-            "_".join([C_CALL_BARCODES,"MeanQualityScore"]), 
+            "Image",
+            "_".join([C_CALL_BARCODES,"MeanQualityScore"]),
             imagemeanquality)
 
         workspace.measurements.add_measurement(
@@ -560,12 +560,12 @@ Enter the sequence that represents barcoding reads of an empty vector"""
         result = [
             (
                 "Image",
-                "_".join([C_CALL_BARCODES,"MeanBarcodeScore"]), 
+                "_".join([C_CALL_BARCODES,"MeanBarcodeScore"]),
                 cellprofiler_core.constants.measurement.COLTYPE_FLOAT
             ),
             (
                 "Image",
-                "_".join([C_CALL_BARCODES,"MeanQualityScore"]), 
+                "_".join([C_CALL_BARCODES,"MeanQualityScore"]),
                 cellprofiler_core.constants.measurement.COLTYPE_FLOAT
             ),
             ]
@@ -621,7 +621,7 @@ Enter the sequence that represents barcoding reads of an empty vector"""
                 "MatchedTo_Score",
                 "MeanQualityScore",
             ]
-        
+
         elif object_name == object_name == "Image":
             return [
                 "MeanBarcodeScore",
