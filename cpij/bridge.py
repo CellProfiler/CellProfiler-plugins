@@ -82,6 +82,10 @@ def init_pyimagej(init_string):
                      ijserver.PYIMAGEJ_KEY_INPUT: init_string})
     result = from_imagej().get()
     if result == ijserver.PYIMAGEJ_STATUS_STARTUP_FAILED:
+        _shutdown_imagej()
+        # Wait for the server to shut down
+        while ijserver.is_server_running():
+            pass
         return False
 
     global _init_method
@@ -106,7 +110,7 @@ def _init_queues():
         _sync_lock = manager.get_lock()
 
 
-def _shutdown_imagej_on_close():
+def _shutdown_imagej():
     """
     Helper method to send the shutdown signal to ImageJ. Intended to be called
     at process exit.
@@ -131,4 +135,4 @@ def start_imagej_server():
     ijserver.wait_for_server_startup()
 
     # Ensure server shuts down when main app closes
-    atexit.register(_shutdown_imagej_on_close)
+    atexit.register(_shutdown_imagej)

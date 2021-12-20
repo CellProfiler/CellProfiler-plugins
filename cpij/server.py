@@ -280,8 +280,12 @@ def _start_imagej_process():
                 else:
                     ij = imagej.init()
                     init_string = INIT_LATEST
-                script_service = ij.script()
-                output_queue.put(PYIMAGEJ_STATUS_STARTUP_COMPLETE)
+                if not ij:
+                    init_string = None
+                    output_queue.put(PYIMAGEJ_STATUS_STARTUP_FAILED)
+                else:
+                    script_service = ij.script()
+                    output_queue.put(PYIMAGEJ_STATUS_STARTUP_COMPLETE)
             except jpype.JException as ex:
                 # Initialization failed
                 output_queue.put(PYIMAGEJ_STATUS_STARTUP_FAILED)
