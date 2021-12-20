@@ -1,6 +1,8 @@
 from multiprocessing.managers import SyncManager
 import multiprocessing as mp
 import atexit, cpij.server as ijserver
+from queue import Queue
+from threading import Lock
 
 class QueueManager(SyncManager): pass
 QueueManager.register('input_queue')
@@ -23,7 +25,7 @@ def init_method():
     return _init_method
 
 
-def lock():
+def lock() -> Lock:
     """
     Helper method to synchronzie requests with the ImageJ server.
 
@@ -37,7 +39,7 @@ def lock():
     return _manager().get_lock()
 
 
-def to_imagej():
+def to_imagej() -> Queue:
     """
     Helper method to send data to the ImageJ server
 
@@ -48,7 +50,7 @@ def to_imagej():
     return _manager().input_queue()
 
 
-def from_imagej():
+def from_imagej() -> Queue:
     """
     Helper method to retrieve data from the ImageJ server
 
