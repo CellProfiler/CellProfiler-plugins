@@ -7,9 +7,6 @@ QueueManager.register('input_queue')
 QueueManager.register('output_queue')
 QueueManager.register('get_lock')
 
-_to_ij_queue = None
-_from_ij_queue = None
-_sync_lock = None
 _init_method = None
 
 
@@ -26,7 +23,6 @@ def init_method():
     return _init_method
 
 
-
 def lock():
     """
     Helper method to synchronzie requests with the ImageJ server.
@@ -38,9 +34,8 @@ def lock():
     ---------
     A Lock connected to the ImageJ server.
     """
-    _init_queues()
-    global _sync_lock
-    return _sync_lock
+    return _manager().get_lock()
+
 
 def to_imagej():
     """
@@ -50,9 +45,7 @@ def to_imagej():
     ---------
     A Queue connected to the ImageJ server. Only its put method should be called.
     """
-    _init_queues()
-    global _to_ij_queue
-    return _to_ij_queue
+    return _manager().input_queue()
 
 
 def from_imagej():
@@ -63,9 +56,7 @@ def from_imagej():
     ---------
     A Queue connected to the ImageJ server. Only its get method should be called.
     """
-    _init_queues()
-    global _from_ij_queue
-    return _from_ij_queue
+    return _manager().output_queue()
 
 
 def init_pyimagej(init_string):
@@ -93,21 +84,16 @@ def init_pyimagej(init_string):
     return True
 
 
-def _init_queues():
+def _manager() -> QueueManager:
     """
-    Helper method to cache intput/output queues for this process to communicate
-    with the ImageJ server.
+    Helper method to return a QueueManager connected to the ImageJ server
     """
-    global _to_ij_queue, _from_ij_queue, _sync_lock
-    if _to_ij_queue is None:
-        if not ijserver.is_server_running():
-            raise RuntimeError("No ImageJ server instance available")
+    if not ijserver.is_server_running():
+        raise RuntimeError("No ImageJ server instance available")
 
-        manager = QueueManager(address=('127.0.0.1', ijserver.SERVER_PORT), authkey=ijserver._SERVER_KEY)
-        manager.connect()
-        _to_ij_queue = manager.input_queue()
-        _from_ij_queue = manager.output_queue()
-        _sync_lock = manager.get_lock()
+    manager = QueueManager(address=('127.0.0.1', ijserver.SERVER_PORT), authkey=ijserver._SERVER_KEY)
+    manager.connect()
+    return manager
 
 
 def _shutdown_imagej():
