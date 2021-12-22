@@ -580,6 +580,7 @@ Note: this must be done each time you change the script, before running the Cell
                 i,
                 workspace.display_data.script_output_pixels[name],
                 title="Output image: {}".format(name),
+                sharexy=figure.subplot(0,i),
             )
             i += 1
 
