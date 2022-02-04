@@ -79,6 +79,13 @@ CellPose comes with models for detecting nuclei or cells. Alternatively, you can
 generated using the command line or Cellpose GUI. Custom models can be useful if working with unusual cell types.
 """,
         )
+ 
+        self.do_3D= Binary(
+            text="Use 3D",
+            value=False,
+            doc="""\
+If enabled, 3D specific settings will be available."""
+        )
 
         self.use_gpu = Binary(
             text="Use GPU",
@@ -180,7 +187,10 @@ If you have multiple GPUs on your system, this button will only test the first o
             text="Flow threshold",
             value=0.4,
             minval=0,
-            doc="""Flow error threshold. All cells with errors below this threshold are kept. Recommended default is 0.4""",
+            doc="""\
+Flow error threshold. All cells with errors below this threshold are kept. Recommended default is 0.4.
+3D Segmentation ignores the flow threshold.
+""",
         )
 
         self.dist_threshold = Float(
@@ -190,6 +200,26 @@ If you have multiple GPUs on your system, this button will only test the first o
             maxval=6.0,
             doc=f"""\
 Cell probability threshold (all pixels with probability above threshold kept for masks). Recommended default is 0.0. """,
+        )
+
+self.stitch_threshold = Float(
+            text="Stitch Threshold",
+            value=0.0,
+            minval=0,
+            doc=f"""\
+There may be additional differences in YZ and XZ slices that make them unable to be used for 3D segmentation. 
+In those instances, you may want to turn off 3D segmentation (do_3D=False) and run instead with stitch_threshold>0. 
+Cellpose will create masks in 2D on each XY slice and then stitch them across slices if the IoU between the mask on the current slice and the next slice is greater than or equal to the stitch_threshold.
+""",
+        )
+
+        self.min_size = Integer(
+            text="Minimum size",
+            value=15,
+            minval=-1,
+            doc="""\
+Minimum number of pixels per mask, can turn off by setting value to -1
+""",
         )
 
         self.manual_GPU_memory_share = Float(
@@ -220,7 +250,10 @@ of workers in each copy of CellProfiler times the number of copies of CellProfil
             self.model_file_name,
             self.flow_threshold,
             self.dist_threshold,
-            self.manual_GPU_memory_share
+            self.manual_GPU_memory_share,
+            self.stitch_threshold,
+            self.do_3D,
+            self.min_size,
         ]
 
     def visible_settings(self):
@@ -231,9 +264,14 @@ of workers in each copy of CellProfiler times the number of copies of CellProfil
             if self.supply_nuclei.value:
                 vis_settings += [self.nuclei_image]
         if self.mode.value == MODE_CUSTOM:
-            vis_settings += [self.model_directory, self.model_file_name]
+            vis_settings += [self.model_directory, self.model_file_name,]
+        
+        vis_settings += [self.expected_diameter, self.dist_threshold, self.min_size, self.y_name, self.save_probabilities]
 
-        vis_settings += [self.expected_diameter, self.flow_threshold, self.dist_threshold, self.y_name, self.save_probabilities]
+        vis_settings += [self.do_3D,]
+
+        if not self.do_3D.value:
+            vis_settings += [self.stitch_threshold, self.flow_threshold]
 
         if self.save_probabilities.value:
             vis_settings += [self.probabilities_name]
@@ -272,7 +310,7 @@ of workers in each copy of CellProfiler times the number of copies of CellProfil
         if self.mode.value != "Nuclei" and self.supply_nuclei.value:
             nuc_image = images.get_image(self.nuclei_image.value)
             # CellPose expects RGB, we'll have a blank red channel, cells in green and nuclei in blue.
-            if x.volumetric:
+            if self.do_3D.value:
                 x_data = numpy.stack((numpy.zeros_like(x_data), x_data, nuc_image.pixel_data), axis=1)
             else:
                 x_data = numpy.stack((numpy.zeros_like(x_data), x_data, nuc_image.pixel_data), axis=-1)
@@ -288,7 +326,7 @@ of workers in each copy of CellProfiler times the number of copies of CellProfil
                 channels=channels,
                 diameter=diam,
                 net_avg=self.use_averaging.value,
-                do_3D=x.volumetric,
+                do_3D=self.do_3D.value,
                 flow_threshold=self.flow_threshold.value,
                 cellprob_threshold=self.dist_threshold.value
 
@@ -326,7 +364,7 @@ of workers in each copy of CellProfiler times the number of copies of CellProfil
         self.add_measurements(workspace)
 
         if self.show_window:
-            if x.volumetric:
+            if self.do_3D.value:
                 # Can't show CellPose-accepted colour images in 3D
                 workspace.display_data.x_data = x.pixel_data
             else:
