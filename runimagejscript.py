@@ -504,6 +504,12 @@ Note: this must be done each time you change the script, before running the Cell
     def run(self, workspace):
         self.init_pyimagej()
 
+        # Unwrap the current settings from their SettingsGroups
+        all_settings = list(map(lambda x: x.settings[0], self.script_parameter_list))
+        # Update the script input/output settings in case any were removed from the GUI
+        self.script_input_settings = {k: v for (k,v) in self.script_input_settings.items() if v in all_settings}
+        self.script_output_settings = {k: v for (k,v) in self.script_output_settings.items() if v in all_settings}
+
         if self.show_window:
             workspace.display_data.script_input_pixels = {}
             workspace.display_data.script_input_dimensions = {}
