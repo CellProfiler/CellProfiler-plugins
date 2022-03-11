@@ -13,6 +13,8 @@ from cellprofiler_core.setting.subscriber import ImageSubscriber
 from cellprofiler_core.setting.text import Integer, ImageName, Directory, Filename, Float
 
 CUDA_LINK = "https://pytorch.org/get-started/locally/"
+Cellpose_link = " https://doi.org/10.1038/s41592-020-01018-x"
+Omnipose_link = "https://doi.org/10.1101/2021.11.03.467199"
 
 __doc__ = f"""\
 RunCellpose
@@ -25,15 +27,21 @@ The module accepts greyscale input images and produces an object set. Probabilit
 Loading in a model will take slightly longer the first time you run it each session. When evaluating 
 performance you may want to consider the time taken to predict subsequent images.
 
+This module now also supports Ominpose. Omnipose builds on Cellpose, for the purpose of **RunCellpose** it adds 2 additional 
+features: additional models; bact-omni and cyto2-omni which were trained using the Omnipose architechture, and bact 
+and the mask reconstruction algorithm for Omnipose that was created to solve over-segemnation of large cells; useful for bacterial cells, 
+but can be used for other arbitrary and anisotropic shapes. You can mix and match Omnipose models with Cellpose style masking or vice versa.
+
 Installation:
 You'll want to run `pip install cellpose` on your CellProfiler Python environment to setup Cellpose. 
+To use Omnipose models, and mask reconstruction method you'll want to run 'pip install omnipose'.
+
 On the first time loading into CellProfiler, Cellpose will need to download some model files from the internet. This 
 may take some time. If you want to use a GPU to run the model, you'll need a compatible version of PyTorch and a 
 supported GPU. Instructions are avaiable at this link: {CUDA_LINK}
 
-To use Omnipose models, and mask reconstruction method you'll want to run 'pip install omnipose'.
-|
-
+Stringer, C., Wang, T., Michaelos, M. et al. Cellpose: a generalist algorithm for cellular segmentation. Nat Methods 18, 100–106 (2021). {Cellpose_link}
+Kevin J. Cutler, Carsen Stringer, Paul A. Wiggins, Joseph D. Mougous. Omnipose: a high-precision morphology-independent solution for bacterial cell segmentation. bioRxiv 2021.11.03.467199. {Omnipose_link}
 ============ ============ ===============
 Supports 2D? Supports 3D? Respects masks?
 ============ ============ ===============
@@ -75,7 +83,7 @@ detect much smaller objects it may be more efficient to resize the image first u
         self.mode = Choice(
             text="Detection mode",
             choices= model_dic,
-            value=model_dic[2],
+            value='cyto2',
             doc="""\
 CellPose comes with models for detecting nuclei or cells. Alternatively, you can supply a custom-trained model 
 generated using the command line or Cellpose GUI. Custom models can be useful if working with unusual cell types.
@@ -126,7 +134,7 @@ single model will be called to produce results. Disabling averaging is faster to
             text="Invert images",
             value=False,
             doc="""\
-For use with fluorescence images using bact model (bact model was trained on phase images"""
+If enabled the image will be inverted and also normalized. For use with fluorescence images using bact model (bact model was trained on phase images"""
         )
 
         self.supply_nuclei = Binary(
@@ -300,6 +308,7 @@ Volumetric stacks do not always have the same sampling in XY as they do in Z. Yo
         vis_settings += [self.do_3D, self.stitch_threshold]
 
         if self.do_3D.value:
+            vis_settings.remove( self.stitch_threshold)
             vis_settings += [ self.anisotropy]
 
 
@@ -398,7 +407,7 @@ Volumetric stacks do not always have the same sampling in XY as they do in Z. Yo
         self.add_measurements(workspace)
 
         if self.show_window:
-            if self.do_3D.value:
+            if x.volumetric:
                 # Can't show CellPose-accepted colour images in 3D
                 workspace.display_data.x_data = x.pixel_data
             else:
@@ -457,4 +466,7 @@ Volumetric stacks do not always have the same sampling in XY as they do in Z. Yo
         if variable_revision_number == 1:
             setting_values = setting_values+["0.4", "0.0"]
             variable_revision_number = 2
+        if variable_revision_number == 2:
+            setting_values = setting_values + ["0.0", False, "15", "0.0", False, False]
+            variable_revision_number = 3
         return setting_values, variable_revision_number
