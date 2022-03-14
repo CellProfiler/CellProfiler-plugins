@@ -1,6 +1,6 @@
 import numpy
 import os
-from cellpose import models
+from cellpose import models, io
 from skimage.transform import resize
 
 from cellprofiler_core.image import Image
@@ -13,6 +13,8 @@ from cellprofiler_core.setting.subscriber import ImageSubscriber
 from cellprofiler_core.setting.text import Integer, ImageName, Directory, Filename, Float
 
 CUDA_LINK = "https://pytorch.org/get-started/locally/"
+Cellpose_link = " https://doi.org/10.1038/s41592-020-01018-x"
+Omnipose_link = "https://doi.org/10.1101/2021.11.03.467199"
 
 __doc__ = f"""\
 RunCellpose
@@ -25,14 +27,21 @@ The module accepts greyscale input images and produces an object set. Probabilit
 Loading in a model will take slightly longer the first time you run it each session. When evaluating 
 performance you may want to consider the time taken to predict subsequent images.
 
+This module now also supports Ominpose. Omnipose builds on Cellpose, for the purpose of **RunCellpose** it adds 2 additional 
+features: additional models; bact-omni and cyto2-omni which were trained using the Omnipose architechture, and bact 
+and the mask reconstruction algorithm for Omnipose that was created to solve over-segemnation of large cells; useful for bacterial cells, 
+but can be used for other arbitrary and anisotropic shapes. You can mix and match Omnipose models with Cellpose style masking or vice versa.
+
 Installation:
 You'll want to run `pip install cellpose` on your CellProfiler Python environment to setup Cellpose. 
+To use Omnipose models, and mask reconstruction method you'll want to run 'pip install omnipose'.
+
 On the first time loading into CellProfiler, Cellpose will need to download some model files from the internet. This 
 may take some time. If you want to use a GPU to run the model, you'll need a compatible version of PyTorch and a 
 supported GPU. Instructions are avaiable at this link: {CUDA_LINK}
 
-|
-
+Stringer, C., Wang, T., Michaelos, M. et al. Cellpose: a generalist algorithm for cellular segmentation. Nat Methods 18, 100–106 (2021). {Cellpose_link}
+Kevin J. Cutler, Carsen Stringer, Paul A. Wiggins, Joseph D. Mougous. Omnipose: a high-precision morphology-independent solution for bacterial cell segmentation. bioRxiv 2021.11.03.467199. {Omnipose_link}
 ============ ============ ===============
 Supports 2D? Supports 3D? Respects masks?
 ============ ============ ===============
@@ -41,9 +50,10 @@ YES          YES          NO
 
 """
 
-MODE_CELLS = "Cells"
-MODE_NUCLEI = "Nuclei"
-MODE_CUSTOM = "Custom"
+
+
+model_dic = models.MODEL_NAMES
+model_dic.append('custom')
 
 
 class RunCellpose(ImageSegmentation):
@@ -51,7 +61,7 @@ class RunCellpose(ImageSegmentation):
 
     module_name = "RunCellpose"
 
-    variable_revision_number = 2
+    variable_revision_number = 3
 
     def create_settings(self):
         super(RunCellpose, self).create_settings()
@@ -72,12 +82,26 @@ detect much smaller objects it may be more efficient to resize the image first u
 
         self.mode = Choice(
             text="Detection mode",
-            choices=[MODE_NUCLEI, MODE_CELLS, MODE_CUSTOM],
-            value=MODE_NUCLEI,
+            choices= model_dic,
+            value='cyto2',
             doc="""\
 CellPose comes with models for detecting nuclei or cells. Alternatively, you can supply a custom-trained model 
 generated using the command line or Cellpose GUI. Custom models can be useful if working with unusual cell types.
 """,
+        )
+        
+        self.omni= Binary(
+            text="Use Omnipose for mask reconstruction",
+            value=False,
+            doc="""\
+If enabled, use omnipose mask recontruction features will be used (Omnipose installation required and CellPose >= 1.0)  """
+        )
+
+        self.do_3D= Binary(
+            text="Use 3D",
+            value=False,
+            doc="""\
+If enabled, 3D specific settings will be available."""
         )
 
         self.use_gpu = Binary(
@@ -104,6 +128,13 @@ GPU memory.
             doc="""\
 If enabled, CellPose will run it's 4 inbuilt models and take a consensus to determine the results. If disabled, only a 
 single model will be called to produce results. Disabling averaging is faster to run but less accurate."""
+        )
+
+        self.invert = Binary(
+            text="Invert images",
+            value=False,
+            doc="""\
+If enabled the image will be inverted and also normalized. For use with fluorescence images using bact model (bact model was trained on phase images"""
         )
 
         self.supply_nuclei = Binary(
@@ -180,16 +211,22 @@ If you have multiple GPUs on your system, this button will only test the first o
             text="Flow threshold",
             value=0.4,
             minval=0,
-            doc="""Flow error threshold. All cells with errors below this threshold are kept. Recommended default is 0.4""",
+            doc="""\
+The flow_threshold parameter is the maximum allowed error of the flows for each mask. The default is flow_threshold=0.4. 
+Increase this threshold if cellpose is not returning as many masks as you’d expect. 
+Similarly, decrease this threshold if cellpose is returning too many ill-shaped masks
+""",
         )
 
-        self.dist_threshold = Float(
+        self.mask_threshold = Float(
             text="Cell probability threshold",
             value=0.0,
             minval=-6.0,
             maxval=6.0,
             doc=f"""\
-Cell probability threshold (all pixels with probability above threshold kept for masks). Recommended default is 0.0. """,
+Cell probability threshold (all pixels with probability above threshold kept for masks). Recommended default is 0.0. 
+Values vary from -6 to 6 
+""",
         )
 
         self.manual_GPU_memory_share = Float(
@@ -202,8 +239,35 @@ Fraction of the GPU memory share available to each worker. Value should be set s
 of workers in each copy of CellProfiler times the number of copies of CellProfiler running (if applicable) is <1
 """,
         )
+        
+        self.stitch_threshold = Float(
+            text="Stitch Threshold",
+            value=0.0,
+            minval=0,
+            doc=f"""\
+There may be additional differences in YZ and XZ slices that make them unable to be used for 3D segmentation. 
+In those instances, you may want to turn off 3D segmentation (do_3D=False) and run instead with stitch_threshold>0. 
+Cellpose will create masks in 2D on each XY slice and then stitch them across slices if the IoU between the mask on the current slice and the next slice is greater than or equal to the stitch_threshold.
+""",
+        )
 
+        self.min_size = Integer(
+            text="Minimum size",
+            value=15,
+            minval=-1,
+            doc="""\
+Minimum number of pixels per mask, can turn off by setting value to -1
+""",
+        )
 
+        self.anisotropy = Float(
+            text="Z rescaling factor (anisotropy)",
+            value=0.0,
+            doc=f"""\
+Volumetric stacks do not always have the same sampling in XY as they do in Z. You can set this parameter to allow for those differences
+(e.g. set to 2.0 if Z is sampled half as dense as X or Y)
+""",
+        )
     def settings(self):
         return [
             self.x_name,
@@ -219,21 +283,34 @@ of workers in each copy of CellProfiler times the number of copies of CellProfil
             self.model_directory,
             self.model_file_name,
             self.flow_threshold,
-            self.dist_threshold,
-            self.manual_GPU_memory_share
+            self.mask_threshold,
+            self.manual_GPU_memory_share,
+            self.stitch_threshold,
+            self.do_3D,
+            self.min_size,
+            self.anisotropy,
+            self.omni,
+            self.invert,
         ]
 
     def visible_settings(self):
-        vis_settings = [self.mode, self.x_name]
+        vis_settings = [self.mode, self.omni, self.x_name]
 
-        if self.mode.value != MODE_NUCLEI:
+        if self.mode.value != 'nuclei':
             vis_settings += [self.supply_nuclei]
             if self.supply_nuclei.value:
                 vis_settings += [self.nuclei_image]
-        if self.mode.value == MODE_CUSTOM:
-            vis_settings += [self.model_directory, self.model_file_name]
+        if self.mode.value == 'custom':
+            vis_settings += [self.model_directory, self.model_file_name,]
+        
+        vis_settings += [self.expected_diameter, self.mask_threshold, self.min_size, self.flow_threshold, self.y_name, self.invert, self.save_probabilities]
 
-        vis_settings += [self.expected_diameter, self.flow_threshold, self.dist_threshold, self.y_name, self.save_probabilities]
+        vis_settings += [self.do_3D, self.stitch_threshold]
+
+        if self.do_3D.value:
+            vis_settings.remove( self.stitch_threshold)
+            vis_settings += [ self.anisotropy]
+
 
         if self.save_probabilities.value:
             vis_settings += [self.probabilities_name]
@@ -246,8 +323,8 @@ of workers in each copy of CellProfiler times the number of copies of CellProfil
         return vis_settings
 
     def run(self, workspace):
-        if self.mode.value != MODE_CUSTOM:
-            model = models.Cellpose(model_type='cyto' if self.mode.value == MODE_CELLS else 'nuclei',
+        if self.mode.value != 'custom':
+            model = models.Cellpose(model_type= self.mode.value,
                                     gpu=self.use_gpu.value)
         else:
             model_file = self.model_file_name.value
@@ -269,10 +346,10 @@ of workers in each copy of CellProfiler times the number of copies of CellProfil
         if x.multichannel:
             raise ValueError("Color images are not currently supported. Please provide greyscale images.")
 
-        if self.mode.value != "Nuclei" and self.supply_nuclei.value:
+        if self.mode.value != "nuclei" and self.supply_nuclei.value:
             nuc_image = images.get_image(self.nuclei_image.value)
             # CellPose expects RGB, we'll have a blank red channel, cells in green and nuclei in blue.
-            if x.volumetric:
+            if self.do_3D.value:
                 x_data = numpy.stack((numpy.zeros_like(x_data), x_data, nuc_image.pixel_data), axis=1)
             else:
                 x_data = numpy.stack((numpy.zeros_like(x_data), x_data, nuc_image.pixel_data), axis=-1)
@@ -288,10 +365,14 @@ of workers in each copy of CellProfiler times the number of copies of CellProfil
                 channels=channels,
                 diameter=diam,
                 net_avg=self.use_averaging.value,
-                do_3D=x.volumetric,
+                do_3D=self.do_3D.value,
+                anisotropy=self.anisotropy.value,
                 flow_threshold=self.flow_threshold.value,
-                cellprob_threshold=self.dist_threshold.value
-
+                mask_threshold=self.mask_threshold.value,
+                stitch_threshold=self.stitch_threshold.value,
+                min_size=self.min_size.value,
+                omni=self.omni.value,
+                invert=self.invert.value,
             )
         finally:
             if self.use_gpu.value and model.torch:
@@ -385,4 +466,7 @@ of workers in each copy of CellProfiler times the number of copies of CellProfil
         if variable_revision_number == 1:
             setting_values = setting_values+["0.4", "0.0"]
             variable_revision_number = 2
+        if variable_revision_number == 2:
+            setting_values = setting_values + ["0.0", False, "15", "0.0", False, False]
+            variable_revision_number = 3
         return setting_values, variable_revision_number
