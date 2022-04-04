@@ -459,7 +459,7 @@ Volumetric stacks do not always have the same sampling in XY as they do in Z. Yo
     def do_check_gpu(self):
         import importlib.util
         torch_installed = importlib.util.find_spec('torch') is not None
-        if models.gpu(istorch=torch_installed):
+        if core.use_gpu(istorch=torch_installed):
             message = "GPU appears to be working correctly!"
         else:
             message = "GPU test failed. There may be something wrong with your configuration."
