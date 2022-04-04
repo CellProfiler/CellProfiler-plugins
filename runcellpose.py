@@ -32,8 +32,14 @@ features: additional models; bact-omni and cyto2-omni which were trained using t
 and the mask reconstruction algorithm for Omnipose that was created to solve over-segemnation of large cells; useful for bacterial cells, 
 but can be used for other arbitrary and anisotropic shapes. You can mix and match Omnipose models with Cellpose style masking or vice versa.
 
+The module has been updated to be compatible with the latest release of Cellpose. From the old version of the module the 'cells' model corresponds to 'cyto2' model.
+
 Installation:
-You'll want to run `pip install cellpose` on your CellProfiler Python environment to setup Cellpose. 
+
+It is necessary that you have installed Cellpose version >= 1.0.2
+
+You'll want to run `pip install cellpose` on your CellProfiler Python environment to setup Cellpose. If you have an older version of Cellpose
+run 'python -m pip install cellpose --upgrade'.
 To use Omnipose models, and mask reconstruction method you'll want to run 'pip install omnipose'.
 
 On the first time loading into CellProfiler, Cellpose will need to download some model files from the internet. This 
