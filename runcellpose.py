@@ -218,7 +218,7 @@ Similarly, decrease this threshold if cellpose is returning too many ill-shaped 
 """,
         )
 
-        self.mask_threshold = Float(
+        self.cellprob_threshold = Float(
             text="Cell probability threshold",
             value=0.0,
             minval=-6.0,
@@ -283,7 +283,7 @@ Volumetric stacks do not always have the same sampling in XY as they do in Z. Yo
             self.model_directory,
             self.model_file_name,
             self.flow_threshold,
-            self.mask_threshold,
+            self.cellprob_threshold,
             self.manual_GPU_memory_share,
             self.stitch_threshold,
             self.do_3D,
@@ -303,7 +303,7 @@ Volumetric stacks do not always have the same sampling in XY as they do in Z. Yo
         if self.mode.value == 'custom':
             vis_settings += [self.model_directory, self.model_file_name,]
         
-        vis_settings += [self.expected_diameter, self.mask_threshold, self.min_size, self.flow_threshold, self.y_name, self.invert, self.save_probabilities]
+        vis_settings += [self.expected_diameter, self.cellprob_threshold, self.min_size, self.flow_threshold, self.y_name, self.invert, self.save_probabilities]
 
         vis_settings += [self.do_3D, self.stitch_threshold]
 
@@ -368,7 +368,7 @@ Volumetric stacks do not always have the same sampling in XY as they do in Z. Yo
                 do_3D=self.do_3D.value,
                 anisotropy=self.anisotropy.value,
                 flow_threshold=self.flow_threshold.value,
-                mask_threshold=self.mask_threshold.value,
+                cellprob_threshold=self.cellprob_threshold.value,
                 stitch_threshold=self.stitch_threshold.value,
                 min_size=self.min_size.value,
                 omni=self.omni.value,
@@ -453,7 +453,7 @@ Volumetric stacks do not always have the same sampling in XY as they do in Z. Yo
     def do_check_gpu(self):
         import importlib.util
         torch_installed = importlib.util.find_spec('torch') is not None
-        if models.use_gpu(istorch=torch_installed):
+        if models.gpu(istorch=torch_installed):
             message = "GPU appears to be working correctly!"
         else:
             message = "GPU test failed. There may be something wrong with your configuration."
