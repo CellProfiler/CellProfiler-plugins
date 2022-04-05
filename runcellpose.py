@@ -2,6 +2,7 @@ import numpy
 import os
 from cellpose import models, io
 from skimage.transform import resize
+import importlib.metadata
 
 from cellprofiler_core.image import Image
 from cellprofiler_core.module.image_segmentation import ImageSegmentation
@@ -15,29 +16,37 @@ from cellprofiler_core.setting.text import Integer, ImageName, Directory, Filena
 CUDA_LINK = "https://pytorch.org/get-started/locally/"
 Cellpose_link = " https://doi.org/10.1038/s41592-020-01018-x"
 Omnipose_link = "https://doi.org/10.1101/2021.11.03.467199"
+cellpose_ver = importlib.metadata.version('cellpose')
 
 __doc__ = f"""\
 RunCellpose
 ===========
 
 **RunCellpose** uses a pre-trained machine learning model (Cellpose) to detect cells or nuclei in an image.
+
 This module is useful for automating simple segmentation tasks in CellProfiler.
 The module accepts greyscale input images and produces an object set. Probabilities can also be captured as an image.
 Loading in a model will take slightly longer the first time you run it each session. When evaluating 
 performance you may want to consider the time taken to predict subsequent images.
+
 This module now also supports Ominpose. Omnipose builds on Cellpose, for the purpose of **RunCellpose** it adds 2 additional 
 features: additional models; bact-omni and cyto2-omni which were trained using the Omnipose architechture, and bact 
 and the mask reconstruction algorithm for Omnipose that was created to solve over-segemnation of large cells; useful for bacterial cells, 
 but can be used for other arbitrary and anisotropic shapes. You can mix and match Omnipose models with Cellpose style masking or vice versa.
 The module has been updated to be compatible with the latest release of Cellpose. From the old version of the module the 'cells' model corresponds to 'cyto2' model.
+
 Installation:
 It is necessary that you have installed Cellpose version >= 1.0.2
+
 You'll want to run `pip install cellpose` on your CellProfiler Python environment to setup Cellpose. If you have an older version of Cellpose
 run 'python -m pip install cellpose --upgrade'.
-To use Omnipose models, and mask reconstruction method you'll want to run 'pip install omnipose'.
+
+To use Omnipose models, and mask reconstruction method you'll want to install Omnipose 'pip install omnipose' and Cellpose version 1.0.2 'pip install cellpose==1.0.2'.
+
 On the first time loading into CellProfiler, Cellpose will need to download some model files from the internet. This 
 may take some time. If you want to use a GPU to run the model, you'll need a compatible version of PyTorch and a 
 supported GPU. Instructions are avaiable at this link: {CUDA_LINK}
+
 Stringer, C., Wang, T., Michaelos, M. et al. Cellpose: a generalist algorithm for cellular segmentation. Nat Methods 18, 100–106 (2021). {Cellpose_link}
 Kevin J. Cutler, Carsen Stringer, Paul A. Wiggins, Joseph D. Mougous. Omnipose: a high-precision morphology-independent solution for bacterial cell segmentation. bioRxiv 2021.11.03.467199. {Omnipose_link}
 ============ ============ ===============
@@ -287,7 +296,10 @@ Volumetric stacks do not always have the same sampling in XY as they do in Z. Yo
         ]
 
     def visible_settings(self):
-        vis_settings = [self.mode, self.omni, self.x_name]
+        if float(cellpose_ver[0:3]) >= 0.7 and int(cellpose_ver[0])<2:
+            vis_settings = [self.mode, self.omni, self.x_name]
+        else:
+            vis_settings = [self.mode, self.x_name]
 
         if self.mode.value != 'nuclei':
             vis_settings += [self.supply_nuclei]
@@ -352,7 +364,21 @@ Volumetric stacks do not always have the same sampling in XY as they do in Z. Yo
 
         diam = self.expected_diameter.value if self.expected_diameter.value > 0 else None
 
-        try:
+        try: 
+            y_data, flows, *_ = model.eval(
+                x_data,
+                channels=channels,
+                diameter=diam,
+                net_avg=self.use_averaging.value,
+                do_3D=self.do_3D.value,
+                anisotropy=self.anisotropy.value,
+                flow_threshold=self.flow_threshold.value,
+                cellprob_threshold=self.cellprob_threshold.value,
+                stitch_threshold=self.stitch_threshold.value,
+                min_size=self.min_size.value,
+                invert=self.invert.value,
+            )
+        except float(cellpose_ver[0:3]) >= 0.7 and int(cellpose_ver[0])<2:
             y_data, flows, *_ = model.eval(
                 x_data,
                 channels=channels,
