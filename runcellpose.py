@@ -1,6 +1,6 @@
 import numpy
 import os
-from cellpose import models, io
+from cellpose import models, io, core
 from skimage.transform import resize
 import importlib.metadata
 
