@@ -33,9 +33,11 @@ This module now also supports Ominpose. Omnipose builds on Cellpose, for the pur
 features: additional models; bact-omni and cyto2-omni which were trained using the Omnipose architechture, and bact 
 and the mask reconstruction algorithm for Omnipose that was created to solve over-segemnation of large cells; useful for bacterial cells, 
 but can be used for other arbitrary and anisotropic shapes. You can mix and match Omnipose models with Cellpose style masking or vice versa.
+
 The module has been updated to be compatible with the latest release of Cellpose. From the old version of the module the 'cells' model corresponds to 'cyto2' model.
 
 Installation:
+
 It is necessary that you have installed Cellpose version >= 1.0.2
 
 You'll want to run `pip install cellpose` on your CellProfiler Python environment to setup Cellpose. If you have an older version of Cellpose
@@ -221,6 +223,7 @@ Similarly, decrease this threshold if cellpose is returning too many ill-shaped 
         )
 
         self.cellprob_threshold = Float(
+
             text="Cell probability threshold",
             value=0.0,
             minval=-6.0,
@@ -307,7 +310,7 @@ Volumetric stacks do not always have the same sampling in XY as they do in Z. Yo
                 vis_settings += [self.nuclei_image]
         if self.mode.value == 'custom':
             vis_settings += [self.model_directory, self.model_file_name,]
-        
+
         vis_settings += [self.expected_diameter, self.cellprob_threshold, self.min_size, self.flow_threshold, self.y_name, self.invert, self.save_probabilities]
 
         vis_settings += [self.do_3D, self.stitch_threshold]
