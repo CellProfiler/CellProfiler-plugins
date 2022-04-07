@@ -32,3 +32,9 @@ Please see help here: https://github.com/CellProfiler/CellProfiler/blob/master/c
     ```
     cellprofiler --run --run-headless --project PROJECT_FILE --plugins-directory PLUGIN_DIRECTORY/CellProfiler-plugins
     ```
+
+## ImageJ requirements
+
+ If using the `RunImageJScript` module, please note:
+ * You will also need to [install Maven](https://github.com/imagej/pyimagej/blob/master/doc/Install.md#installing-via-pip)
+ * CellProfiler will need to be [built from source](https://github.com/CellProfiler/CellProfiler/blob/master/cellprofiler/data/help/other_plugins.rst) due to the requirement of additional libraries

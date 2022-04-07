@@ -54,115 +54,32 @@ YES          Yes           YES
 
 What do I need as input?
 ^^^^^^^^^^^^^^^^^^^^^^^^
-
-Are there any assumptions about input data someone using this module
-should be made aware of? For example, is there a strict requirement that
-image data be single-channel, or that the foreground is brighter than
-the background? Describe any assumptions here.
-
-This section can be omitted if there is no requirement on the input.
+To be added
 
 What do I get as output?
 ^^^^^^^^^^^^^^^^^^^^^^^^
-
-Describe the output of this module. This is necessary if the output is
-more complex than a single image. For example, if there is data displayed
-over the image then describe what the data represents.
-
-This section can be omitted if there is no specialized output.
+To be added
 
 Measurements made by this module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Describe the measurements made by this module. Typically, measurements
-are described in the following format:
-
-**Measurement category:**
-
--  *MeasurementName*: A brief description of the measurement.
--  *MeasurementName*: A brief description of the measurement.
-
-**Measurement category:**
-
--  *MeasurementName*: A brief description of the measurement.
--  *MeasurementName*: A brief description of the measurement.
-
-This module makes the following measurements:
-
-**MT** (the MeasurementTemplate category):
-
--  *Intensity_[IMAGE_NAME]_N[Ni]_M[Mj]*: the Zernike feature of the
-   IMAGE_NAME image with radial degree Ni and Azimuthal degree Mj,
-   Mj >= 0.
--  *Intensity_[IMAGE_NAME]_N[Ni]_MM[Mj]*: the Zernike feature of
-   the IMAGE_NAME image with radial degree Ni and Azimuthal degree
-   Mj, Mj < 0.
-
-Technical notes
-^^^^^^^^^^^^^^^
-
-Include implementation details or notes here. Additionally provide any
-other background information about this module, including definitions
-or adopted conventions. Information which may be too specific to fit into
-the general description should be provided here.
-
-Omit this section if there is no technical information to mention.
-
-The Zernike features measured here are themselves interesting. You can
-reconstruct the image of a cell, approximately, by constructing the Zernike
-functions on a unit circle, multiplying the real parts by the corresponding
-features for positive M, multiplying the imaginary parts by the corresponding
-features for negative M and adding real and imaginary parts.
+To be added
 
 References
 ^^^^^^^^^^
-
-Provide citations here, if appropriate. Citations are formatted as a list and,
-wherever possible, include a link to the original work. For example,
-
--  Meyer F, Beucher S (1990) “Morphological segmentation.” *J Visual
-   Communication and Image Representation* 1, 21-46.
-   (`link <http://dx.doi.org/10.1016/1047-3203(90)90014-M>`__)
+Optical Pooled Screens in Human Cells.
+Feldman D, Singh A, Schmid-Burgk JL, Carlson RJ, Mezger A, Garrity AJ, Zhang F, Blainey PC.
+Cell. 2019 Oct 17;179(3):787-799.e17. doi: 10.1016/j.cell.2019.09.016.
 """
 
-#
-# Constants
-#
-# It's good programming practice to replace things like strings with
-# constants if they will appear more than once in your program. That way,
-# if someone wants to change the text, that text will change everywhere.
-# Also, you can't misspell it by accident.
-#
-"""This is the measurement template category"""
 C_CALL_BARCODES = "Barcode"
 
 
-#
-# The module class
-#
-# Your module should "inherit" from cellprofiler.module.Module.
-# This means that your module will use the methods from Module unless
-# you re-implement them. You can let Module do most of the work and
-# implement only what you need.
-#
 class CallBarcodes(cellprofiler_core.module.Module):
-    #
-    # The module starts by declaring the name that's used for display,
-    # the category under which it is stored and the variable revision
-    # number which can be used to provide backwards compatibility if
-    # you add user-interface functionality later.
-    #
+
     module_name = "CallBarcodes"
     category = "Data Tools"
     variable_revision_number = 1
 
-    #
-    # "create_settings" is where you declare the user interface elements
-    # (the "settings") which the user will use to customize your module.
-    #
-    # You can look at other modules and in cellprofiler.settings for
-    # settings you can use.
-    #
     def create_settings(self):
         self.csv_directory = cellprofiler_core.setting.text.Directory(
             "Input data file location",
@@ -192,11 +109,6 @@ Select the folder containing the CSV file to be loaded. {IO_FOLDER_CHOICE_HELP_T
             exts=[("Data file (*.csv)", "*.csv"), ("All files (*.*)", "*.*")],
         )
 
-        #
-        # The ObjectNameSubscriber is similar to the ImageNameSubscriber.
-        # It will ask the user which object to pick from the list of
-        # objects provided by upstream modules.
-        #
         self.input_object_name = cellprofiler_core.setting.subscriber.LabelSubscriber(
             text="Input object name",
             doc="These are the objects that the module operates on.",
@@ -275,17 +187,19 @@ module).""".format(
 Enter the name to be given to the barcode score image.""",
         )
 
-    #
-    # The "settings" method tells CellProfiler about the settings you
-    # have in your module. CellProfiler uses the list for saving
-    # and restoring values for your module when it saves or loads a
-    # pipeline file.
-    #
-    # This module does not have a "visible_settings" method. CellProfiler
-    # will use "settings" to make the list of user-interface elements
-    # that let the user configure the module. See imagetemplate.py for
-    # a template for visible_settings that you can cut and paste here.
-    #
+        self.has_empty_vector_barcode = cellprofiler_core.setting.Binary(
+            "Do you have an empty vector barcode you would like to add to the barcode list?", False, doc="""\
+Select "*{YES}*" to manually enter a sequence that should be added to the uploaded barcode
+list with the gene name of "EmptyVector". This can be helpful when there is a consistent
+backbone sequence to look out for in every barcoding set).""" .format(**{"YES": "Yes"
+                       }))
+
+        self.empty_vector_barcode_sequence = cellprofiler_core.setting.text.Text(
+            "What is the empty vector sequence?", "AAAAAAAAAAAAAAA", doc="""\
+Enter the sequence that represents barcoding reads of an empty vector"""
+        )
+
+
     def settings(self):
         return [
             self.ncycles,
@@ -299,6 +213,8 @@ Enter the name to be given to the barcode score image.""",
             self.outimage_calls_name,
             self.wants_score_image,
             self.outimage_score_name,
+            self.has_empty_vector_barcode,
+            self.empty_vector_barcode_sequence,
         ]
 
     def visible_settings(self):
@@ -319,6 +235,9 @@ Enter the name to be given to the barcode score image.""",
 
         if self.wants_score_image:
             result += [self.outimage_score_name]
+
+        if self.has_empty_vector_barcode:
+            result += [self.empty_vector_barcode_sequence]
 
         return result
 
@@ -430,14 +349,8 @@ Enter the name to be given to the barcode score image.""",
 
         return choices
 
-    #
-    # CellProfiler calls "run" on each image set in your pipeline.
-    #
     def run(self, workspace):
-        #
-        # Get the measurements object - we put the measurements we
-        # make in here
-        #
+
         measurements = workspace.measurements
         listofmeasurements = measurements.get_feature_names(
             self.input_object_name.value
@@ -447,11 +360,14 @@ Enter the name to be given to the barcode score image.""",
             listofmeasurements, self.ncycles.value, self.cycle1measure.value
         )
 
-        calledbarcodes = self.callonebarcode(
+        objectcount = len(measurements.get_current_measurement(self.input_object_name.value,listofmeasurements[0]))
+
+        calledbarcodes, quality_scores = self.callonebarcode(
             measurements_for_calls,
             measurements,
             self.input_object_name.value,
             self.ncycles.value,
+            objectcount,
         )
 
         workspace.measurements.add_measurement(
@@ -460,9 +376,16 @@ Enter the name to be given to the barcode score image.""",
             calledbarcodes,
         )
 
+        workspace.measurements.add_measurement(
+            self.input_object_name.value,
+            "_".join([C_CALL_BARCODES,"MeanQualityScore"]),
+            quality_scores)
+
         barcodes = self.barcodeset(
             self.metadata_field_barcode.value, self.metadata_field_tag.value
         )
+
+        cropped_barcode_dict = {y[:self.ncycles.value]:y for y in list(barcodes.keys())}
 
         scorelist = []
         matchedbarcode = []
@@ -475,11 +398,12 @@ Enter the name to be given to the barcode score image.""",
             pixel_data_score = objects.segmented
         count = 1
         for eachbarcode in calledbarcodes:
-            eachscore, eachmatch = self.queryall(barcodes, eachbarcode)
+            eachscore, eachmatch = self.queryall(cropped_barcode_dict, eachbarcode)
             scorelist.append(eachscore)
             matchedbarcode.append(eachmatch)
-            matchedbarcodeid.append(barcodes[eachmatch][0])
-            matchedbarcodecode.append(barcodes[eachmatch][1])
+            m_id, m_code = barcodes[eachmatch]
+            matchedbarcodeid.append(m_id)
+            matchedbarcodecode.append(m_code)
             if self.wants_call_image:
                 pixel_data_call = numpy.where(
                     labels == count, barcodes[eachmatch][0], pixel_data_call
@@ -489,6 +413,21 @@ Enter the name to be given to the barcode score image.""",
                     labels == count, 65535 * eachscore, pixel_data_score
                 )
             count += 1
+
+        imagemeanscore = numpy.mean(scorelist)
+
+        workspace.measurements.add_measurement(
+            "Image",
+            "_".join([C_CALL_BARCODES,"MeanBarcodeScore"]),
+            imagemeanscore)
+
+        imagemeanquality = numpy.mean(quality_scores)
+
+        workspace.measurements.add_measurement(
+            "Image",
+            "_".join([C_CALL_BARCODES,"MeanQualityScore"]),
+            imagemeanquality)
+
         workspace.measurements.add_measurement(
             self.input_object_name.value,
             "_".join([C_CALL_BARCODES, "MatchedTo_Barcode"]),
@@ -523,22 +462,11 @@ Enter the name to be given to the barcode score image.""",
                     pixel_data_score.astype("uint16"), convert=False
                 ),
             )
-        #
-        # We record some statistics which we will display later.
-        # We format them so that Matplotlib can display them in a table.
-        # The first row is a header that tells what the fields are.
-        #
-        statistics = [["Feature", "Mean", "Median", "SD"]]
 
-        #
-        # Put the statistics in the workspace display data so we
-        # can get at them when we display
-        #
-        workspace.display_data.statistics = statistics
+        if self.show_window:
+            workspace.display_data.col_labels = ("Image Mean Score", "Image Mean Quality Score")
+            workspace.display_data.statistics = [imagemeanscore, imagemeanquality]
 
-    #
-    # "display" lets you use matplotlib to display your results.
-    #
     def display(self, workspace, figure):
         statistics = workspace.display_data.statistics
 
@@ -563,9 +491,10 @@ Enter the name to be given to the barcode score image.""",
                         measurementdict[parsed_cycle].update({eachmeas: parsed_base})
         return measurementdict
 
-    def callonebarcode(self, measurementdict, measurements, object_name, ncycles):
+    def callonebarcode(self, measurementdict, measurements, object_name, ncycles, objectcount):
 
         master_cycles = []
+        score_array = numpy.zeros([ncycles,objectcount])
 
         for eachcycle in range(1, ncycles + 1):
             cycles_measures_perobj = []
@@ -578,12 +507,19 @@ Enter the name to be given to the barcode score image.""",
                 )
                 cyclecode.append(measurementdict[eachcycle][eachmeasure])
             cycle_measures_perobj = numpy.transpose(numpy.array(cycles_measures_perobj))
-            max_per_obj = numpy.argmax(cycle_measures_perobj, 1)
-            max_per_obj = list(max_per_obj)
-            max_per_obj = [cyclecode[x] for x in max_per_obj]
-            master_cycles.append(list(max_per_obj))
+            argmax_per_obj = numpy.argmax(cycle_measures_perobj,1)
+            max_per_obj = numpy.max(cycle_measures_perobj,1)
+            sum_per_obj = numpy.sum(cycle_measures_perobj,1)
+            score_per_obj = max_per_obj/sum_per_obj
+            argmax_per_obj = list(argmax_per_obj)
+            argmax_per_obj = [cyclecode[x] for x in argmax_per_obj]
 
-        return list(map("".join, list(zip(*master_cycles))))
+            master_cycles.append(list(argmax_per_obj))
+            score_array[eachcycle-1] = score_per_obj
+
+        mean_per_object = score_array.mean(axis=0)
+
+        return list(map("".join, zip(*master_cycles))), mean_per_object
 
     def barcodeset(self, barcodecol, genecol):
         fd = self.open_csv()
@@ -595,43 +531,46 @@ Enter the name to be given to the barcode score image.""",
                 barcodeset[row[barcodecol]] = (count, row[genecol])
                 count += 1
         fd.close()
+        if self.has_empty_vector_barcode:
+            barcodeset[self.empty_vector_barcode_sequence.value]=(count,"EmptyVector")
         return barcodeset
 
-    def queryall(self, barcodeset, query):
-        barcodelist = list(barcodeset.keys())
-        scoredict = {
-            sum([1 for x in range(len(query)) if query[x] == y[x]])
-            / float(len(query)): y
-            for y in barcodelist
-        }
-        scores = list(scoredict.keys())
-        scores.sort(reverse=True)
-        return scores[0], scoredict[scores[0]]
+    def queryall(self, cropped_barcode_dict, query):
 
-    #
-    # We have to tell CellProfiler about the measurements we produce.
-    # There are two parts: one that is for database-type modules and one
-    # that is for the UI. The first part gives a comprehensive list
-    # of measurement columns produced. The second is more informal and
-    # tells CellProfiler how to categorize its measurements.
-    #
-    # "get_measurement_columns" gets the measurements for use in the database
-    # or in a spreadsheet. Some modules need this because they
-    # might make measurements of measurements and need those names.
-    #
+        cropped_barcode_list = list(cropped_barcode_dict.keys())
+
+        if query in cropped_barcode_list:
+            #is a perfect match
+            return 1, cropped_barcode_dict[query]
+
+        else:
+            scoredict = {
+                sum([1 for x in range(len(query)) if query[x] == y[x]])
+                / float(len(query)): y
+                for y in cropped_barcode_list
+            }
+            scores = list(scoredict.keys())
+            scores.sort(reverse=True)
+            return scores[0], cropped_barcode_dict[scoredict[scores[0]]]
+
     def get_measurement_columns(self, pipeline):
-        #
-        # The first thing in the list is the object being measured. If it's
-        # the whole image, use cellprofiler.measurement.IMAGE as the name.
-        #
-        # The second thing is the measurement name.
-        #
-        # The third thing is the column type. See the COLTYPE constants
-        # in measurement.py for what you can use
-        #
+
         input_object_name = self.input_object_name.value
 
-        return [
+        result = [
+            (
+                "Image",
+                "_".join([C_CALL_BARCODES,"MeanBarcodeScore"]),
+                cellprofiler_core.constants.measurement.COLTYPE_FLOAT
+            ),
+            (
+                "Image",
+                "_".join([C_CALL_BARCODES,"MeanQualityScore"]),
+                cellprofiler_core.constants.measurement.COLTYPE_FLOAT
+            ),
+            ]
+
+        result += [
             (
                 input_object_name,
                 "_".join([C_CALL_BARCODES, "BarcodeCalled"]),
@@ -657,22 +596,21 @@ Enter the name to be given to the barcode score image.""",
                 "_".join([C_CALL_BARCODES, "MatchedTo_Score"]),
                 cellprofiler_core.constants.measurement.COLTYPE_FLOAT,
             ),
+            (
+                input_object_name,
+                "_".join([C_CALL_BARCODES, "MeanQualityScore"]),
+                cellprofiler_core.constants.measurement.COLTYPE_FLOAT,
+            ),
         ]
 
-    #
-    # "get_categories" returns a list of the measurement categories produced
-    # by this module. It takes an object name - only return categories
-    # if the name matches.
-    #
+        return result
+
     def get_categories(self, pipeline, object_name):
-        if object_name == self.input_object_name:
+        if object_name == self.input_object_name or object_name == "Image":
             return [C_CALL_BARCODES]
 
         return []
 
-    #
-    # Return the feature names if the object_name and category match
-    #
     def get_measurements(self, pipeline, object_name, category):
         if object_name == self.input_object_name and category == C_CALL_BARCODES:
             return [
@@ -681,6 +619,13 @@ Enter the name to be given to the barcode score image.""",
                 "MatchedTo_ID",
                 "MatchedTo_GeneCode",
                 "MatchedTo_Score",
+                "MeanQualityScore",
+            ]
+
+        elif object_name == object_name == "Image":
+            return [
+                "MeanBarcodeScore",
+                "MeanQualityScore",
             ]
 
         return []
