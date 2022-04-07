@@ -22,13 +22,14 @@ RunCellpose
 This module is useful for automating simple segmentation tasks in CellProfiler.
 The module accepts greyscale input images and produces an object set. Probabilities can also be captured as an image.
 
-Loading in a model will take slightly longer the first time you run it each session. When evaluating 
+Loading in a model will take slightly longer the first time you run it each session. When evaluating
 performance you may want to consider the time taken to predict subsequent images.
 
 Installation:
-You'll want to run `pip install cellpose` on your CellProfiler Python environment to setup Cellpose. 
-On the first time loading into CellProfiler, Cellpose will need to download some model files from the internet. This 
-may take some time. If you want to use a GPU to run the model, you'll need a compatible version of PyTorch and a 
+You'll want to run `pip install cellpose` (or if you want to upgrade to the most recent cellpose version:
+`python -m pip install cellpose --upgrade`) on your CellProfiler Python environment to setup Cellpose. 
+On the first time loading into CellProfiler, Cellpose will need to download some model files from the internet. This
+may take some time. If you want to use a GPU to run the model, you'll need a compatible version of PyTorch and a
 supported GPU. Instructions are avaiable at this link: {CUDA_LINK}
 
 |
@@ -64,8 +65,8 @@ class RunCellpose(ImageSegmentation):
 The average diameter of the objects to be detected. Setting this to 0 will attempt to automatically detect object size.
 Note that automatic diameter mode does not work when running on 3D images.
 
-Cellpose models come with a pre-defined object diameter. Your image will be resized during detection to attempt to 
-match the diameter expected by the model. The default models have an expected diameter of ~16 pixels, if trying to 
+Cellpose models come with a pre-defined object diameter. Your image will be resized during detection to attempt to
+match the diameter expected by the model. The default models have an expected diameter of ~16 pixels, if trying to
 detect much smaller objects it may be more efficient to resize the image first using the Resize module.
 """,
         )
@@ -75,7 +76,7 @@ detect much smaller objects it may be more efficient to resize the image first u
             choices=[MODE_NUCLEI, MODE_CELLS, MODE_CUSTOM],
             value=MODE_NUCLEI,
             doc="""\
-CellPose comes with models for detecting nuclei or cells. Alternatively, you can supply a custom-trained model 
+CellPose comes with models for detecting nuclei or cells. Alternatively, you can supply a custom-trained model
 generated using the command line or Cellpose GUI. Custom models can be useful if working with unusual cell types.
 """,
         )
@@ -84,15 +85,15 @@ generated using the command line or Cellpose GUI. Custom models can be useful if
             text="Use GPU",
             value=False,
             doc=f"""\
-If enabled, Cellpose will attempt to run detection on your system's graphics card (GPU). 
-Note that you will need a CUDA-compatible GPU and correctly configured PyTorch version, see this link for details: 
+If enabled, Cellpose will attempt to run detection on your system's graphics card (GPU).
+Note that you will need a CUDA-compatible GPU and correctly configured PyTorch version, see this link for details:
 {CUDA_LINK}
 
-If disabled or incorrectly configured, Cellpose will run on your CPU instead. This is much slower but more compatible 
+If disabled or incorrectly configured, Cellpose will run on your CPU instead. This is much slower but more compatible
 with different hardware setups.
 
-Note that, particularly when in 3D mode, lack of GPU memory can become a limitation. If a model crashes you may need to 
-re-start CellProfiler to release GPU memory. Resizing large images prior to running them through the model can free up 
+Note that, particularly when in 3D mode, lack of GPU memory can become a limitation. If a model crashes you may need to
+re-start CellProfiler to release GPU memory. Resizing large images prior to running them through the model can free up
 GPU memory.
 
 """
@@ -102,7 +103,7 @@ GPU memory.
             text="Use averaging",
             value=True,
             doc="""\
-If enabled, CellPose will run it's 4 inbuilt models and take a consensus to determine the results. If disabled, only a 
+If enabled, CellPose will run it's 4 inbuilt models and take a consensus to determine the results. If disabled, only a
 single model will be called to produce results. Disabling averaging is faster to run but less accurate."""
         )
 
@@ -110,7 +111,7 @@ single model will be called to produce results. Disabling averaging is faster to
             text="Supply nuclei image as well?",
             value=False,
             doc="""
-When detecting whole cells, you can provide a second image featuring a nuclear stain to assist 
+When detecting whole cells, you can provide a second image featuring a nuclear stain to assist
 the model with segmentation. This can help to split touching cells."""
         )
 
@@ -123,8 +124,8 @@ the model with segmentation. This can help to split touching cells."""
             text="Save probability image?",
             value=False,
             doc="""
-If enabled, the probability scores from the model will be recorded as a new image. 
-Probability >0 is considered as being part of a cell. 
+If enabled, the probability scores from the model will be recorded as a new image.
+Probability >0 is considered as being part of a cell.
 You may want to use a higher threshold to manually generate objects.""",
         )
 
@@ -169,7 +170,7 @@ This file can be generated by training a custom model withing the CellPose GUI o
             doc=f"""\
 Press this button to check whether a GPU is correctly configured.
 
-If you have a dedicated GPU, a failed test usually means that either your GPU does not support deep learning or the 
+If you have a dedicated GPU, a failed test usually means that either your GPU does not support deep learning or the
 required dependencies are not installed.
 
 If you have multiple GPUs on your system, this button will only test the first one.
