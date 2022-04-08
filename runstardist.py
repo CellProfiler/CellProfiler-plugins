@@ -27,22 +27,23 @@ RunStardist
 This module is useful for automating simple segmentation tasks in CellProfiler.
 The module takes in input images and produces an object set. Probabilities can also be captured as an image.
 
-Loading in a model will take slightly longer the first time you run it each session. When evaluating 
+Loading in a model will take slightly longer the first time you run it each session. When evaluating
 performance you may want to consider the time taken to predict subsequent images.
 
 Installation:
-This can be a little tricky because of some dependency issues. We need to take care to not break CellProfiler's 
+This can be a little tricky because of some dependency issues. We need to take care to not break CellProfiler's
 components when adding stardist to the environment.
 
-You'll want to run `pip install --no-deps csbdeep` first to grab the cbsdeep package without installing an invalid 
-version of h5py (CellProfiler needs h5py 3+). Following this run `pip install tensorflow stardist` to install other 
+You'll want to run `pip install --no-deps csbdeep` first to grab the cbsdeep package without installing an invalid
+version of h5py (CellProfiler needs h5py 3+). Following this run `pip install tensorflow stardist` to install other
 dependencies.
+
 For Windows you need to install Microsoft C++ Redistributable for Visual Studio 2015, 2017 and 2019 from
 https://support.microsoft.com/help/2977003/the-latest-supported-visual-c-downloads
 
 If using the pre-trained models, StarDist will download each when first used.
 
-The models will automatically run on a GPU if compatible hardware is available and you have the required software. 
+The models will automatically run on a GPU if compatible hardware is available and you have the required software.
 A guide to setting up Tensorflow GPU integration can be found at this link: https://www.tensorflow.org/install/gpu
 
 |
@@ -74,11 +75,11 @@ class RunStarDist(ImageSegmentation):
             choices=MODEL_OPTIONS,
             value=GREY_1,
             doc="""\
-StarDist comes with models for detecting nuclei. Alternatively, you can supply a custom-trained model 
+StarDist comes with models for detecting nuclei. Alternatively, you can supply a custom-trained model
 generated outside of CellProfiler within Python. Custom models can be useful if working with unusual cell types.
 
-The inbuilt fluorescent and DSB models expect greyscale images. The H&E model expects a color image as input (from 
-brightfield). Custom models will require images of the type they were trained with. It should be noted that the 
+The inbuilt fluorescent and DSB models expect greyscale images. The H&E model expects a color image as input (from
+brightfield). Custom models will require images of the type they were trained with. It should be noted that the
 models supplied with StarDist do not support 3D images, but it's possible to train and use your own.
 """,
         )
@@ -87,11 +88,11 @@ models supplied with StarDist do not support 3D images, but it's possible to tra
             text="Tile input image?",
             value=False,
             doc="""\
-If enabled, the input image will be broken down into overlapping tiles. 
+If enabled, the input image will be broken down into overlapping tiles.
 This can help to conserve memory when working with large images.
 
-The image is split into a set number of vertical and horizontal tiles. 
-The total number of tiles will be the result of multiplying the horizontal 
+The image is split into a set number of vertical and horizontal tiles.
+The total number of tiles will be the result of multiplying the horizontal
 and vertical tile number.""",
         )
 
@@ -115,8 +116,8 @@ Specify the number of tiles to break the image down into along the y-axis (verti
             text="Save probability image?",
             value=False,
             doc="""
-If enabled, the probability scores from the model will be recorded as a new image. 
-Probability scales from 0-1, with 1 representing absolute certainty of a pixel being in a cell. 
+If enabled, the probability scores from the model will be recorded as a new image.
+Probability scales from 0-1, with 1 representing absolute certainty of a pixel being in a cell.
 You may want to use a custom threshold to manually generate objects.""",
         )
 
@@ -131,7 +132,7 @@ You may want to use a custom threshold to manually generate objects.""",
             doc=f"""\
 *(Used only when using a custom pre-trained model)*
 
-Select the folder containing your StarDist model. This should have the config, threshold and weights files 
+Select the folder containing your StarDist model. This should have the config, threshold and weights files
 exported after training."""
         )
 
@@ -142,11 +143,11 @@ exported after training."""
             doc=f"""\
 Press this button to check whether a GPU is correctly configured.
 
-If you have a dedicated GPU, a failed test usually means that either your GPU does not support deep learning or the 
-required dependencies are not installed. 
+If you have a dedicated GPU, a failed test usually means that either your GPU does not support deep learning or the
+required dependencies are not installed.
 Make sure you followed the setup instructions here: https://www.tensorflow.org/install/gpu
 
-If you don't have a GPU or it's not configured, StarDist will instead run on the CPU. 
+If you don't have a GPU or it's not configured, StarDist will instead run on the CPU.
 This will be slower but should work on any system.
 """,
         )
