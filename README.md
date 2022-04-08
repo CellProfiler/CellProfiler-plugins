@@ -5,12 +5,14 @@ CellProfiler-plugins
 A home for community-contributed and experimental CellProfiler modules. 
 
 ## Beginner-level instructions
-Please see help here: https://github.com/CellProfiler/CellProfiler/blob/master/cellprofiler/data/help/other_plugins.rst
+[Beginner guidance for using plugins in CellProfiler](https://github.com/CellProfiler/CellProfiler/blob/master/cellprofiler/data/help/other_plugins.rst) 
+
 [Beginner instructions for installing runCellpose](https://github.com/CellProfiler/CellProfiler-plugins/blob/master/Instructions/Instructions_runCellpose.md)
+
 [Beginner instructions for installing runStardist](https://github.com/CellProfiler/CellProfiler-plugins/blob/master/Instructions/Instructions_runStardist.md)
 
 ## Use
-1. Clone this repository:
+1. Clone this repository into a folder (PLUGIN_DIRECTORY) on your local computer:
     ```
     cd PLUGIN_DIRECTORY
     git clone https://github.com/CellProfiler/CellProfiler-plugins.git
@@ -24,7 +26,7 @@ Please see help here: https://github.com/CellProfiler/CellProfiler/blob/master/c
 	pip install -r requirements.txt
 	```
 
-    To install CellProfiler-plugins on a windows machine with support for the deep learning module ClassifyPixels-UNet make sure you have Visual Studio 2017 installed then use
+    To install CellProfiler-plugins on a windows machine with support for the deep learning module ClassifyPixels-UNet make sure you have [Visual Studio](https://support.microsoft.com/help/2977003/the-latest-supported-visual-c-downloads) 2017 installed then use
     ```
     cd CellProfiler-plugins
     pip install -r requirements-windows.txt
