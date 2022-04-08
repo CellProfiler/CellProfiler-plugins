@@ -4,10 +4,10 @@ Updated April 7, 2022
 
 ## Setup your GPU (if you have one)
 
-If you want to use a GPU to run the model (this is recommended for speed), you'll need a compatible version of PyTorch and a supported GPU. Instructions are available at this link: (https://pytorch.org/get-started/locally/)
+If you want to use a GPU to run the model (this is recommended for speed), you'll need a compatible version of PyTorch and a supported GPU. General nstructions are available at [this link](https://pytorch.org/get-started/locally/): 
 
 1. Your GPU should be visible in Device Manager under Display Adaptors. If your GPU isn't there, you likely need to install drivers.
- - Here (https://www.nvidia.com/Download/Find.aspx) is where you can find NVIDIA GPU drivers if you need to install them.
+    * [Here](https://www.nvidia.com/Download/Find.aspx) is where you can find NVIDIA GPU drivers if you need to install them.
 
 
 2. To test whether the GPU is configured correctly:
@@ -18,7 +18,7 @@ If you want to use a GPU to run the model (this is recommended for speed), you'l
   torch.cuda.is_available()
   ```
   3. If this returns `True`, you're all set
-  4. If this returns `False`, you likely need to install/reinstall torch. See https://pytorch.org/get-started/locally/ for your exact command.
+  4. If this returns `False`, you likely need to install/reinstall torch. See [here](https://pytorch.org/get-started/locally/) for your exact command.
   ```
   pip3 install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu113
   ```
@@ -44,7 +44,7 @@ Then install stardist and tensorflow:
 pip install tensorflow stardist
 ```
 
-2. On Windows, install Visual Studio 2017 (https://support.microsoft.com/help/2977003/the-latest-supported-visual-c-downloads)
+2. On Windows, install [Visual Studio](https://support.microsoft.com/help/2977003/the-latest-supported-visual-c-downloads) 2017
 
 ## Point CellProfiler to the CellProfiler-plugins folder
 
@@ -52,7 +52,7 @@ pip install tensorflow stardist
 
 2. Close and reopen CellProfiler
 
-3. If using the pre-trained models, StarDist will download each when first used. The models will automatically run on a GPU if compatible hardware is available. A guide to setting up Tensorflow GPU integration can be found at this link: https://www.tensorflow.org/install/gpu
+3. If using the pre-trained models, StarDist will download each when first used. The models will automatically run on a GPU if compatible hardware is available. A guide to setting up Tensorflow GPU integration can be found at [this link](https://www.tensorflow.org/install/gpu).
 
 
 ### Note, if you have a GPU and use runCellpose with RunStardist, you may encounter difficulties with GPU memory if your pipeline has a RunStardist module followed by a runCellpose module.
