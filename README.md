@@ -6,6 +6,8 @@ A home for community-contributed and experimental CellProfiler modules.
 
 ## Beginner-level instructions
 Please see help here: https://github.com/CellProfiler/CellProfiler/blob/master/cellprofiler/data/help/other_plugins.rst
+[Beginner instructions for installing runCellpose](https://github.com/CellProfiler/CellProfiler-plugins/blob/master/Instructions/Instructions_runCellpose.md)
+[Beginner instructions for installing runStardist](https://github.com/CellProfiler/CellProfiler-plugins/blob/master/Instructions/Instructions_runStardist.md)
 
 ## Use
 1. Clone this repository:
