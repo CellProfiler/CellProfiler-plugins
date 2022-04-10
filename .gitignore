@@ -47,3 +47,6 @@ dist/
 frozen_version.py
 plugins/
 src/
+
+#mac
+.DS_Store
