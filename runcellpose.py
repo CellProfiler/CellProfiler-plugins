@@ -269,7 +269,7 @@ Minimum number of pixels per mask, can turn off by setting value to -1
 
         self.anisotropy = Float(
             text="Z rescaling factor (anisotropy)",
-            value=0.0,
+            value=1.0,
             doc=f"""\
 Volumetric stacks do not always have the same sampling in XY as they do in Z. You can set this parameter to allow for those differences
 (e.g. set to 2.0 if Z is sampled half as dense as X or Y)
@@ -477,7 +477,7 @@ Volumetric stacks do not always have the same sampling in XY as they do in Z. Yo
     def do_check_gpu(self):
         import importlib.util
         torch_installed = importlib.util.find_spec('torch') is not None
-        if core.use_gpu(istorch=torch_installed):
+        if core.use_gpu(use_torch=torch_installed):
             message = "GPU appears to be working correctly!"
         else:
             message = "GPU test failed. There may be something wrong with your configuration."
@@ -490,6 +490,6 @@ Volumetric stacks do not always have the same sampling in XY as they do in Z. Yo
             setting_values = setting_values+["0.4", "0.0"]
             variable_revision_number = 2
         if variable_revision_number == 2:
-            setting_values = setting_values + ["0.0", False, "15", "0.0", False, False]
+            setting_values = setting_values + ["0.0", False, "15", "1.0", False, False]
             variable_revision_number = 3
         return setting_values, variable_revision_number
