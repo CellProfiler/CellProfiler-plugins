@@ -1054,4 +1054,4 @@ class EnhancedMeasureTexture(cpm.Module):
             setting_values = new_setting_values
             variable_revision_number = 3
                 
-      return setting_values, variable_revision_number
+        return setting_values, variable_revision_number
