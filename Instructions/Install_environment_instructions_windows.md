@@ -12,7 +12,7 @@ Some of these download steps can take a while. The first 3 steps (as well as dow
 
    You may already have this installed on your computer. 
 
-   Select the version appropriate for your architecture. On windows, you can determine this by going to **Control Panel** then searching for **System** and looking next to "System type:" for your processor architecture.
+   Select the version appropriate for your architecture. On windows, you can determine this by going to **Control Panel** then searching for **System** and looking next to "System type:" for your processor architecture. Below is an example image:
    
    <img src="images/Install_environment_instructions_windows/Control_panel.png" width=600>
 
