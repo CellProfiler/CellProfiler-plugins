@@ -2,7 +2,9 @@
 
 Some of these download steps can take a while. The first 3 steps (as well as downloading Anaconda) can all be done simultaneously to save you time.
 
-1. **Download and install [Microsoft Visual Studio C++ build tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/){:target="_blank"}**
+1. **Download and install <a href="https://visualstudio.microsoft.com/visual-cpp-build-tools/" target="_blank">Microsoft Visual Studio C++ build tools</a>**
+
+
 
    **NOTE**: Make sure to check 'Desktop development with C++' under Desktop and Mobile in the installer:
 
