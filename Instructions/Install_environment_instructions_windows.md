@@ -1,18 +1,25 @@
 # How to install CellProfiler from source with all plugins on Windows
 
-1. **Install Microsoft Visual Studio C++ build tools downloadable [here](   https://visualstudio.microsoft.com/visual-cpp-build-tools/)**
+Some of these download steps can take a while. The first 3 steps (as well as downloading Anaconda) can all be done simultaneously to save you time.
+
+1. **Download and Install [Microsoft Visual Studio C++ build tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/)**
 
    **NOTE**: Make sure to check 'Desktop development with C++' under Desktop and Mobile in the installer:
 
    <img src="images/Install_environment_instructions_windows/2022-06-02T21-05-30.png" width="600"/>
 
-2. **Install Microsoft Visual C++ Redistributable 2015-2022 downloadable [here]( https://docs.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170)**
+2. **Download and Install [Microsoft Visual C++ Redistributable 2015-2022]( https://docs.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170)**
 
-   Select the version appropriate for your architecture. On windows, you can determine this by going to **Control Panel** then searching for **System** and the architecture of your processor will be included next to "System type:".
+   You may already have this installed on your computer. 
 
-3. **Install Java JDK 11**
+   Select the version appropriate for your architecture. On windows, you can determine this by going to **Control Panel** then searching for **System** and looking next to "System type:" for your processor architecture.
+   
+   <img src="images/Install_environment_instructions_windows/Control_panel.png" width=600>
 
-    Download [here](https://www.oracle.com/java/technologies/javase-jdk11-downloads.html) and install. Note that you may need to make a free Oracle account. You can also check the [JDK archive](https://jdk.java.net/archive/) for old versions of Java.
+
+3. **Download and Install [Java JDK 11](https://www.oracle.com/java/technologies/javase-jdk11-downloads.html)**
+
+    Note that you may need to make a free Oracle account. You can also check the [JDK archive](https://jdk.java.net/archive/) for old versions of Java.
 
 4. **Update your Windows Environment Variables for Java**
 
