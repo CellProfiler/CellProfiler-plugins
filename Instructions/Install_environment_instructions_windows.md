@@ -26,7 +26,7 @@ Some of these download steps can take a while. The first 3 steps (as well as dow
     Go to **Control Panel** then search for **System**, then click on **Advanced System Settings**
     <img src="images/Install_environment_instructions_windows/Control_panel_ev.png" width="500"/>
 
-    Type 'Environment variables' into your computer's search bar to access the **Windows Environment Variables**. From here, add a new variable by selecting **New...** under 'System Variables':
+    From the System Properties window that pops up, select **Environment Variables...** Then add a new System variable by selecting **New...** under 'System Variables':
 
    <img src="images/Install_environment_instructions_windows/2022-06-02T20-56-38.png" width="400"/>
 
