@@ -2,13 +2,13 @@
 
 Some of these download steps can take a while. The first 3 steps (as well as downloading Anaconda) can all be done simultaneously to save you time.
 
-1. **Download and Install [Microsoft Visual Studio C++ build tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/)**
+1. **Download and install [Microsoft Visual Studio C++ build tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/)**
 
    **NOTE**: Make sure to check 'Desktop development with C++' under Desktop and Mobile in the installer:
 
    <img src="images/Install_environment_instructions_windows/2022-06-02T21-05-30.png" width="600"/>
 
-2. **Download and Install [Microsoft Visual C++ Redistributable 2015-2022]( https://docs.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170)**
+2. **Download and install [Microsoft Visual C++ Redistributable 2015-2022]( https://docs.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170)**
 
    You may already have this installed on your computer. 
 
@@ -17,7 +17,7 @@ Some of these download steps can take a while. The first 3 steps (as well as dow
    <img src="images/Install_environment_instructions_windows/Control_panel.png" width=600>
 
 
-3. **Download and Install [Java JDK 11](https://www.oracle.com/java/technologies/javase-jdk11-downloads.html)**
+3. **Download and install [Java JDK 11](https://www.oracle.com/java/technologies/javase-jdk11-downloads.html)**
 
     Note that you may need to make a free Oracle account. You can also check the [JDK archive](https://jdk.java.net/archive/) for old versions of Java.
 
@@ -33,9 +33,9 @@ Some of these download steps can take a while. The first 3 steps (as well as dow
 
     Also add a system variable called `JDK_HOME` and set it equal to the same path as `JAVA_HOME`
 
-5. **Download and Install or update conda**
+5. **Download and install or update conda**
 
-   For beginners, we recommend you use Anaconda Navigator since it is more beginner-friendly. Download Anaconda from the website [here](https://www.anaconda.com/products/distribution) and install.
+   For beginners, we recommend you use Anaconda Navigator since it is more beginner-friendly. [Download Anaconda](https://www.anaconda.com/products/distribution) from the website and install.
 
    **NOTE**: if you already have conda, you can get the command to update conda by typing `conda update` on your command line. The command will generally look like:
 
