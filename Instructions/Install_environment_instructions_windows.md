@@ -33,7 +33,7 @@ Some of these download steps can take a while. The first 3 steps (as well as dow
 
     Also add a system variable called `JDK_HOME` and set it equal to the same path as `JAVA_HOME`
 
-5. **Install or update conda**
+5. **Download and Install or update conda**
 
    For beginners, we recommend you use Anaconda Navigator since it is more beginner-friendly. Download Anaconda from the website [here](https://www.anaconda.com/products/distribution) and install.
 
