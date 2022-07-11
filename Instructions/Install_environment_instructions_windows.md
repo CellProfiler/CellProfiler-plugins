@@ -47,7 +47,7 @@ Some of these download steps can take a while. The first 3 steps (as well as dow
 
 6. **Download the environment file [CellProfiler_plugins_windows.yml](https://github.com/CellProfiler/CellProfiler-plugins/blob/master/Instructions/cellprofiler_plugins_windows.yml)**
 
-   You can download the whole repo by cloning it with git or simply clicking the green **Code** button on [the repo page](https://github.com/CellProfiler/CellProfiler-plugins.git) and selecting **Download ZIP** (see below) and then extract the ZIP folder contents.
+   You can download the whole repo by cloning it with git or simply clicking the green **Code** button on [the repo page](https://github.com/CellProfiler/CellProfiler-plugins.git) and selecting **Download ZIP** (see below) and then extract the ZIP folder contents. The environment file is in the `Instructions` subfolder.
 
    Alternatively, you can copy and paste the contents of the .yml file into a text editor like Notepad. If you do this, make sure you save it as "CellProfiler_plugins_windows.yml" and as type "All Files" and **NOT** "Text file".
 
