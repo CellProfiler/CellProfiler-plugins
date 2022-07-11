@@ -30,15 +30,14 @@ Some of these download steps can take a while. The first 3 steps (as well as dow
 
    <img src="images/Install_environment_instructions_windows/2022-06-02T20-56-38.png" width="400"/>
 
-    Add (or if you already have it, modify) a system variable called `JAVA_HOME` and set its value to the location of your JDK installation (i.e., the location of the folder beginning with 'jdk11'). You can do this by clicking the **Browse Directory...** button. Usually this is in your 'Program Files' in a folder called 'Java'. Here is an example path:
+    Add (or if you already have it, modify) two system variables: `JAVA_HOME` and `JDK_HOME`. For each new variable, set its value to the location of your JDK installation (i.e., the location of the folder beginning with 'jdk11'). You can do this by clicking the **Browse Directory...** button. Usually this is in your 'Program Files' in a folder called 'Java'. Here is an example path:
 
    <img src="images/Install_environment_instructions_windows/2022-06-02T21-00-53.png" width="500"/>
 
-    Also add a system variable called `JDK_HOME` and set it equal to the same path as `JAVA_HOME`
 
 5. **Download and install or update conda**
 
-   For beginners, we recommend you use Anaconda Navigator since it is more beginner-friendly. [Download Anaconda](https://www.anaconda.com/products/distribution) from the website and install.
+   For beginners, we recommend you use Anaconda Navigator since it is more beginner-friendly, but you can also use miniconda. [Download Anaconda](https://www.anaconda.com/products/distribution) from the website and install.
 
    **NOTE**: if you already have conda, you can get the command to update conda by typing `conda update` on your command line. The command will generally look like:
 
