@@ -17,9 +17,9 @@ Some of these download steps can take a while. The first 3 steps (as well as dow
    <img src="images/Install_environment_instructions_windows/Control_panel.png" width=600>
 
 
-3. **Download and install [Java JDK 11](https://www.oracle.com/java/technologies/javase-jdk11-downloads.html)**
-
-    Note that you will need to make a free Oracle account. You can also check the [JDK archive](https://jdk.java.net/archive/) for old versions of Java.
+3. **Download and install [Java JDK 11](https://adoptopenjdk.net/)**
+   
+   You can alternatively install from [oracle.com](https://www.oracle.com/java/technologies/javase-jdk11-downloads.html) if you'd like, though you will need to make an Oracle account. 
 
 4. **Update your Windows Environment Variables for Java**
 
