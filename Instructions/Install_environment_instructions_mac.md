@@ -1,14 +1,11 @@
 # How to install CellProfiler from source with all plugins on Mac OS
 
-1. Install Java 11 [here](   https://visualstudio.microsoft.com/visual-cpp-build-tools/)
+1. Install Java 11 [here](https://adoptopenjdk.net/)
 
    **NOTE**:Make sure to check 'Desktop development with C++' under Desktop and Mobile in the installer.
 
-2. Install Microsoft Visual C++ Redistributable 2015-2022 downloadable [here]( https://docs.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170)
 
-   Select the version appropriate for your architecture. 
-
-3. Install or update conda
+2. Install or update conda
 
    * Note: you can get the command to update conda by typing `conda update` on your command line. The command will generally look like:
 
@@ -16,7 +13,7 @@
 
    For beginners, we recommend you use Anaconda Navigator since it is more beginner-friendly. Download Anaconda from the website [here](https://www.anaconda.com/products/distribution), then open Anaconda Navigator
 
-4. Download the environment file
+3. Download the environment file
 
    You can download the whole repo by cloning it with git or simply clicking the green **Code** button on [the repo page](https://github.com/CellProfiler/CellProfiler-plugins.git) and selecting **Download ZIP** (see below) and then extract the ZIP folder contents.
 
@@ -24,7 +21,7 @@
 
    ![](images/Install_environment_instructions_windows/2022-06-02T21-39-05.png)
 
-5. Try to create a new environment from the included .yml file
+4. Try to create a new environment from the included .yml file
 
    **Warning, this step may take a while**
 
@@ -38,15 +35,15 @@
    ```
    conda env create -f CellProfiler_plugins_mac.yml
    ```
- 6. Activate your environment
+ 5. Activate your environment
 
     In your terminal, enter `conda activate Cellprofiler_plugins` to activate your environment
 
- 7. Verify that cellprofiler is installed correctly by running it from the command line.
+ 6. Verify that cellprofiler is installed correctly by running it from the command line.
 
     In your terminal, type in `cellprofiler` and hit Enter. this will open CellProfiler or will give you an error message.
 
- 8. Install other packages for other plugins (just for RunStarDist)
+ 7. Install other packages for other plugins (just for RunStarDist)
 
     In terminal with your environment activated, enter:
     ```
@@ -57,13 +54,13 @@
     pip install omnipose
     ```
 
- 9. Clone the CellProfiler-plugins Repo
+ 8. Clone the CellProfiler-plugins Repo
 
     If you have not already downloaded the repo, download it from [here](https://github.com/CellProfiler/CellProfiler-plugins.git).
 
     You can also use git or GitHub Desktop to clone the repo if you prefer.
 
- 10. Connect CellProfiler and the plugins repo
+ 9. Connect CellProfiler and the plugins repo
 
     With your environment active, type `cellprofiler` in terminal to open CellProfiler if it is not open already.
 
@@ -81,7 +78,7 @@
   ```
   If you don't have a GPU, this is not a problem. If you do, your configuration is incorrect and you need to try reinstalling drivers and the correct version of CUDA for your system.
 
- 13. Verify that the installation worked
+ 10. Verify that the installation worked
 
     Add a module to your pipeline by hitting the **+** button in the pipeline panel (bottom left)
 
