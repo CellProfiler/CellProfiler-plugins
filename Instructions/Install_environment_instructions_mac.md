@@ -65,7 +65,7 @@
   * Scroll down and look for "CellProfiler Plugins Directory" on the left.
   * Select the **Browse** button and choose the folder where you extracted the CellProfiler plugins files. It is probably called "CellProfiler-plugins-master" unless you have renamed it.
   * Select **Save** at the bottom of the Preferences window
-  * Close CellProfiler and reopen it by typing `cellprofiler` on the command line
+  * Close CellProfiler and reopen it by typing `pythonw -m cellprofiler` on the command line
 
 
   **NOTE**: You might get a warning like this:
@@ -89,13 +89,23 @@
 
 1. My wheels are failing to build
 
-- If you get a message like "ERROR: Failed building wheel for pyzmq" this usually means that you do not have the Microsoft Visual Studio tools installed. See Step # above and ensure that you have "Desktop development with C++" selected under the install configuration options
+- If you get a message like "ERROR: Failed building wheel for pyzmq" this usually means that you do not have pyzmq installed. Try to reinstall pyzmq.
 
 2. Java virtual machine cannot be found
 
 - If you're getting errors about Java, it means that java is not being configured properly on your system.
-- Make sure you have installed The Java Development Kit 11 (link). Note that newer versions may not work.
-- Make sure you've added environment variables at the **System** level and not at the **User** level. You need to add both `JAVA_HOME` and `JDK_HOME` and both need to point to the folder that holds your jdk installation. Typically this path would look something like `C:\Program Files\Java\jdk-11.0.15.1` but it might be different on your machine depending on where you've installed Java.
+- Make sure you have installed The Java Development Kit 11 [here](https://adoptopenjdk.net/). Note that newer versions may not work.
+- Make sure you've added environment variables at the **System** level and not at the **User** level. 
+```
+brew install java
+
+# For the system Java wrappers to find this JDK, symlink it with
+sudo ln -sfn /opt/homebrew/opt/openjdk/libexec/openjdk.jdk /Library/Java/JavaVirtualMachines/openjdk.jdk
+
+# Set version in zshrc
+echo export JAVA_HOME=$(/usr/libexec/java_home -v 1.8) >> ~/.zshrc
+source ~/.zshrc
+```
 
 3. Installing pyzmq failed
 
@@ -111,17 +121,6 @@ Fatal: Cython-generated file 'zmq\backend\cython\_device.c' not found.
 ```
 
   To fix this, `conda install cython`       
-
-- You might also get an error like:
-```
-AttributeError: 'MSVCCompiler' object has no attribute '_vcruntime_redist'
-```
-
-  Generally, this error means that you don't have the right Microsoft Visual Studio C compiler. You can try two things:
-
-  1. Look below in the code. Even if the wheel fails, pyzmq will still attempt to install. Look below for `Running setup.py install for pyzmq ... done`
-  2. You can try using an older version of the Microsoft Visual C++ Redistributable Package. The install is verified for 2008 specifically, which can be downloaded here: https://www.microsoft.com/en-us/download/details.aspx?id=11895 though newer versions can still be used.
-
 
 
 ---

@@ -1,6 +1,7 @@
 name: CellProfiler_plugins
 channels:
   - defaults
+  - conda-forge
 dependencies:
   - cython=0.29.28
   - sqlite=3.38.3
@@ -13,6 +14,8 @@ dependencies:
   - setuptools=61.2.0
   - python.app
   - jpype1
+  - python-javabridge
+  - mysqlclient=1.4.6
   - pip:
     - cellpose==1.0.2
     - cellprofiler==4.2.1
