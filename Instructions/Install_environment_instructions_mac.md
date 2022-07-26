@@ -46,7 +46,11 @@
     ```
     pip install stardist csbdeep --no-deps
     ```
+    
+    
+    
     If you would like to use the omnipose models in cellpose, ensure you have cellpose 1.0.2 (you should by default if you've used our environment yml) and enter on the command line (in your activated environment):
+
     ```
     pip install omnipose
     ```
