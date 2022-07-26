@@ -38,7 +38,7 @@
 
  6. Verify that cellprofiler is installed correctly by running it from the command line.
 
-    In your terminal, type in `cellprofiler` and hit Enter. this will open CellProfiler or will give you an error message.
+    In your terminal, type in `pythonw -m cellprofiler` and hit Enter. this will open CellProfiler or will give you an error message.
 
  7. Install other packages for other plugins (just for RunStarDist)
 
@@ -59,7 +59,7 @@
 
  9. Connect CellProfiler and the plugins repo
 
-    With your environment active, type `cellprofiler` in terminal to open CellProfiler if it is not open already.
+    With your environment active, type `pythonw -m cellprofiler` in terminal to open CellProfiler if it is not open already.
 
   * In CellProfiler, go to **File** then **Preferences...**
   * Scroll down and look for "CellProfiler Plugins Directory" on the left.
