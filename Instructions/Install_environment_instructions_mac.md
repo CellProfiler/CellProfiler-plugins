@@ -2,9 +2,6 @@
 
 1. Install Java 11 [here](https://adoptopenjdk.net/)
 
-   **NOTE**:Make sure to check 'Desktop development with C++' under Desktop and Mobile in the installer.
-
-
 2. Install or update conda
 
    * Note: you can get the command to update conda by typing `conda update` on your command line. The command will generally look like:
