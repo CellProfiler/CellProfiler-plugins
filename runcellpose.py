@@ -27,12 +27,12 @@ RunCellpose
 This module is useful for automating simple segmentation tasks in CellProfiler.
 The module accepts greyscale input images and produces an object set. Probabilities can also be captured as an image.
 
-Loading in a model will take slightly longer the first time you run it each session. When evaluating 
+Loading in a model will take slightly longer the first time you run it each session. When evaluating
 performance you may want to consider the time taken to predict subsequent images.
 
-This module now also supports Ominpose. Omnipose builds on Cellpose, for the purpose of **RunCellpose** it adds 2 additional 
-features: additional models; bact-omni and cyto2-omni which were trained using the Omnipose architechture, and bact 
-and the mask reconstruction algorithm for Omnipose that was created to solve over-segemnation of large cells; useful for bacterial cells, 
+This module now also supports Ominpose. Omnipose builds on Cellpose, for the purpose of **RunCellpose** it adds 2 additional
+features: additional models; bact-omni and cyto2-omni which were trained using the Omnipose architechture, and bact
+and the mask reconstruction algorithm for Omnipose that was created to solve over-segemnation of large cells; useful for bacterial cells,
 but can be used for other arbitrary and anisotropic shapes. You can mix and match Omnipose models with Cellpose style masking or vice versa.
 
 The module has been updated to be compatible with the latest release of Cellpose. From the old version of the module the 'cells' model corresponds to 'cyto2' model.
@@ -46,8 +46,8 @@ run 'python -m pip install cellpose --upgrade'.
 
 To use Omnipose models, and mask reconstruction method you'll want to install Omnipose 'pip install omnipose' and Cellpose version 1.0.2 'pip install cellpose==1.0.2'.
 
-On the first time loading into CellProfiler, Cellpose will need to download some model files from the internet. This 
-may take some time. If you want to use a GPU to run the model, you'll need a compatible version of PyTorch and a 
+On the first time loading into CellProfiler, Cellpose will need to download some model files from the internet. This
+may take some time. If you want to use a GPU to run the model, you'll need a compatible version of PyTorch and a
 supported GPU. Instructions are avaiable at this link: {CUDA_LINK}
 
 Stringer, C., Wang, T., Michaelos, M. et al. Cellpose: a generalist algorithm for cellular segmentation. Nat Methods 18, 100–106 (2021). {Cellpose_link}
@@ -73,7 +73,7 @@ class RunCellpose(ImageSegmentation):
 
     variable_revision_number = 3
 
-    doi = {"Please cite the following when using RunCellPose:": 'https://doi.org/10.1038/s41592-020-01018-x', 
+    doi = {"Please cite the following when using RunCellPose:": 'https://doi.org/10.1038/s41592-020-01018-x',
     "If you are using Omnipose also cite the following:": 'https://doi.org/10.1101/2021.11.03.467199' }
 
 
@@ -103,7 +103,7 @@ CellPose comes with models for detecting nuclei or cells. Alternatively, you can
 generated using the command line or Cellpose GUI. Custom models can be useful if working with unusual cell types.
 """,
         )
-        
+
         self.omni= Binary(
             text="Use Omnipose for mask reconstruction",
             value=False,
@@ -222,8 +222,8 @@ If you have multiple GPUs on your system, this button will only test the first o
             value=0.4,
             minval=0,
             doc="""\
-The flow_threshold parameter is the maximum allowed error of the flows for each mask. The default is flow_threshold=0.4. 
-Increase this threshold if cellpose is not returning as many masks as you’d expect. 
+The flow_threshold parameter is the maximum allowed error of the flows for each mask. The default is flow_threshold=0.4.
+Increase this threshold if cellpose is not returning as many masks as you’d expect.
 Similarly, decrease this threshold if cellpose is returning too many ill-shaped masks
 """,
         )
@@ -235,8 +235,8 @@ Similarly, decrease this threshold if cellpose is returning too many ill-shaped 
             minval=-6.0,
             maxval=6.0,
             doc=f"""\
-Cell probability threshold (all pixels with probability above threshold kept for masks). Recommended default is 0.0. 
-Values vary from -6 to 6 
+Cell probability threshold (all pixels with probability above threshold kept for masks). Recommended default is 0.0.
+Values vary from -6 to 6
 """,
         )
 
@@ -250,14 +250,14 @@ Fraction of the GPU memory share available to each worker. Value should be set s
 of workers in each copy of CellProfiler times the number of copies of CellProfiler running (if applicable) is <1
 """,
         )
-        
+
         self.stitch_threshold = Float(
             text="Stitch Threshold",
             value=0.0,
             minval=0,
             doc=f"""\
-There may be additional differences in YZ and XZ slices that make them unable to be used for 3D segmentation. 
-In those instances, you may want to turn off 3D segmentation (do_3D=False) and run instead with stitch_threshold>0. 
+There may be additional differences in YZ and XZ slices that make them unable to be used for 3D segmentation.
+In those instances, you may want to turn off 3D segmentation (do_3D=False) and run instead with stitch_threshold>0.
 Cellpose will create masks in 2D on each XY slice and then stitch them across slices if the IoU between the mask on the current slice and the next slice is greater than or equal to the stitch_threshold.
 """,
         )
@@ -358,17 +358,17 @@ Minimum number of pixels per mask, can turn off by setting value to -1
             # CellPose expects RGB, we'll have a blank red channel, cells in green and nuclei in blue.
             if self.do_3D.value:
                 x_data = numpy.stack((numpy.zeros_like(x_data), x_data, nuc_image.pixel_data), axis=1)
-                
+
             else:
                 x_data = numpy.stack((numpy.zeros_like(x_data), x_data, nuc_image.pixel_data), axis=-1)
-                
+
             channels = [2, 3]
         else:
             channels = [0, 0]
 
         diam = self.expected_diameter.value if self.expected_diameter.value > 0 else None
-        
-        try: 
+
+        try:
             if float(cellpose_ver[0:3]) >= 0.7 and int(cellpose_ver[0])<2:
                 y_data, flows, *_ = model.eval(
                     x_data,
@@ -383,7 +383,7 @@ Minimum number of pixels per mask, can turn off by setting value to -1
                     min_size=self.min_size.value,
                     omni=self.omni.value,
                     invert=self.invert.value,
-            ) 
+            )
             else:
                 y_data, flows, *_ = model.eval(
                     x_data,
@@ -481,7 +481,7 @@ Minimum number of pixels per mask, can turn off by setting value to -1
     def do_check_gpu(self):
         import importlib.util
         torch_installed = importlib.util.find_spec('torch') is not None
-        if core.use_gpu(istorch=torch_installed):
+        if core.use_gpu(use_torch=torch_installed):
             message = "GPU appears to be working correctly!"
         else:
             message = "GPU test failed. There may be something wrong with your configuration."
@@ -494,6 +494,6 @@ Minimum number of pixels per mask, can turn off by setting value to -1
             setting_values = setting_values+["0.4", "0.0"]
             variable_revision_number = 2
         if variable_revision_number == 2:
-            setting_values = setting_values + ["0.0", False, "15", "0.0", False, False]
+            setting_values = setting_values + ["0.0", False, "15", "1.0", False, False]
             variable_revision_number = 3
         return setting_values, variable_revision_number
