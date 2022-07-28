@@ -10,7 +10,7 @@ the option to find the optimal window size from a predetermied range to obtain t
 ============ ============ ===============
 Supports 2D? Supports 3D? Respects masks?
 ============ ============ ===============
-YES          NO           NO
+YES          YES           NO
 ============ ============ ===============
 
 """
@@ -86,6 +86,7 @@ Select "*No*" to give the window size used to obtain the image variance.""",
             self.window_size,
             self.window_min,
             self.window_max,
+
         ]
 
 
@@ -111,7 +112,7 @@ Select "*No*" to give the window size used to obtain the image variance.""",
         if self.calculate_maximal.value:
             maxvar_dic = {}
             for i in window_range:
-                result = scipy.ndimage.uniform_filter(image_pixels**2, size=i, output=numpy.float64)-(scipy.ndimage.uniform_filter(image_pixels, size=i, output=numpy.float64)**2)
+                result = abs(scipy.ndimage.uniform_filter(image_pixels**2, size=i, output=numpy.float64)-(scipy.ndimage.uniform_filter(image_pixels, size=i, output=numpy.float64)**2))
                 maxvar_dic[i] = {}
                 maxvar_dic[i]["window_size"] = i
                 maxvar_dic[i]["max_variance"] = result.max()
@@ -119,9 +120,9 @@ Select "*No*" to give the window size used to obtain the image variance.""",
             df = df.transpose()
             max_size= int(df["window_size"].loc[df["max_variance"] == df["max_variance"].max()])
             size = max_size
-
-        output_pixels = scipy.ndimage.uniform_filter(image_pixels**2, size=size, output=numpy.float64) 
-        - (scipy.ndimage.uniform_filter(image_pixels, size=size, output=numpy.float64)**2)
+     
+        output_pixels = abs(scipy.ndimage.uniform_filter(image_pixels**2, size=size, output=numpy.float64) 
+        - (scipy.ndimage.uniform_filter(image_pixels, size=size, output=numpy.float64)**2))
 
         new_image = Image(output_pixels, parent_image=image, dimensions=image.dimensions)
         
@@ -135,17 +136,24 @@ Select "*No*" to give the window size used to obtain the image variance.""",
             workspace.display_data.dimensions = image.dimensions
 
     def display(self, workspace, figure):
-        figure.set_subplots((2, 1))
-        figure.subplot_imshow_grayscale(
-            0,
-            0,
-            workspace.display_data.pixel_data,
-            "Original: %s" % self.image_name.value,
+        layout = (2, 1)
+        figure.set_subplots(
+            dimensions=workspace.display_data.dimensions, subplots=layout
         )
-        figure.subplot_imshow_grayscale(
-            1,
-            0,
-            workspace.display_data.output_pixels,
-            "Filtered: %s" % self.output_image_name.value,
-            sharexy=figure.subplot(0, 0),
+
+        figure.subplot_imshow(
+            colormap="gray",
+            image = workspace.display_data.pixel_data,
+            title = self.image_name.value,
+            x=0,
+            y=0,
         )
+
+        figure.subplot_imshow(
+            colormap="gray",
+            image = workspace.display_data.output_pixels,
+            title = self.output_image_name.value,
+            x=1,
+            y=0,
+        )
+

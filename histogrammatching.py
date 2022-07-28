@@ -16,6 +16,7 @@ YES          YES          NO
 References
 ^^^^^^^^^^
 (`link <http://paulbourke.net/miscellaneous/equalisation/>`__)
+https://scikit-image.org/docs/stable/auto_examples/color_exposure/plot_histogram_matching.html
 """
 
 import cellprofiler_core.image

@@ -92,33 +92,6 @@ input for a measurement module.""",
     def volumetric(self):
         return True
  
-# def display(self, workspace, figure):
-#       image = workspace.display_data.image
-        
-#        pixel_data = workspace.display_data.pixel_data
-#        figure.set_subplots((2, 1))
-#        if pixel_data.dtype.kind == "b":
-#            figure.subplot_imshow_bw(
-#                   0, 0, image, "Original image: %s" % self.image_name.value
-#            )
-#            figure.subplot_imshow_bw(
-#                1,
-#                0,
-#                pixel_data,
-#                self.output_image_name.value,
-#                sharexy=figure.subplot(0, 0),
-#            )
-#        else:
-#            figure.subplot_imshow_grayscale(
-#                0, 0, image, "Original image: %s" % self.image_name.value
-#            )
-#            figure.subplot_imshow_grayscale(
-#                1,
-#                0,
-#                pixel_data,
-#                self.output_image_name.value,
-#                sharexy=figure.subplot(0, 0),
-#            )
 
     
     
