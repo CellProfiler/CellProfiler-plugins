@@ -73,6 +73,10 @@ class RunCellpose(ImageSegmentation):
 
     variable_revision_number = 3
 
+    doi = {"Please cite the following when using RunCellPose:": 'https://doi.org/10.1038/s41592-020-01018-x', 
+    "If you are using Omnipose also cite the following:": 'https://doi.org/10.1101/2021.11.03.467199' }
+
+
     def create_settings(self):
         super(RunCellpose, self).create_settings()
 
@@ -267,14 +271,6 @@ Minimum number of pixels per mask, can turn off by setting value to -1
 """,
         )
 
-        self.anisotropy = Float(
-            text="Z rescaling factor (anisotropy)",
-            value=0.0,
-            doc=f"""\
-Volumetric stacks do not always have the same sampling in XY as they do in Z. You can set this parameter to allow for those differences
-(e.g. set to 2.0 if Z is sampled half as dense as X or Y)
-""",
-        )
     def settings(self):
         return [
             self.x_name,
@@ -295,13 +291,12 @@ Volumetric stacks do not always have the same sampling in XY as they do in Z. Yo
             self.stitch_threshold,
             self.do_3D,
             self.min_size,
-            self.anisotropy,
             self.omni,
             self.invert,
         ]
 
     def visible_settings(self):
-        if float(cellpose_ver[0:3]) >= 0.7 and int(cellpose_ver[0])<2:
+        if float(cellpose_ver[0:3]) >= 0.6 and int(cellpose_ver[0])<2:
             vis_settings = [self.mode, self.omni, self.x_name]
         else:
             vis_settings = [self.mode, self.x_name]
@@ -319,8 +314,6 @@ Volumetric stacks do not always have the same sampling in XY as they do in Z. Yo
 
         if self.do_3D.value:
             vis_settings.remove( self.stitch_threshold)
-            vis_settings += [ self.anisotropy]
-
 
         if self.save_probabilities.value:
             vis_settings += [self.probabilities_name]
@@ -352,6 +345,10 @@ Volumetric stacks do not always have the same sampling in XY as they do in Z. Yo
         x = images.get_image(x_name)
         dimensions = x.dimensions
         x_data = x.pixel_data
+        anisotropy = 0.0
+
+        if self.do_3D.value:
+            anisotropy = x.spacing[0]/x.spacing[1]
 
         if x.multichannel:
             raise ValueError("Color images are not currently supported. Please provide greyscale images.")
@@ -361,43 +358,51 @@ Volumetric stacks do not always have the same sampling in XY as they do in Z. Yo
             # CellPose expects RGB, we'll have a blank red channel, cells in green and nuclei in blue.
             if self.do_3D.value:
                 x_data = numpy.stack((numpy.zeros_like(x_data), x_data, nuc_image.pixel_data), axis=1)
+                
             else:
                 x_data = numpy.stack((numpy.zeros_like(x_data), x_data, nuc_image.pixel_data), axis=-1)
+                
             channels = [2, 3]
         else:
             channels = [0, 0]
 
         diam = self.expected_diameter.value if self.expected_diameter.value > 0 else None
-
+        
         try: 
-            y_data, flows, *_ = model.eval(
-                x_data,
-                channels=channels,
-                diameter=diam,
-                net_avg=self.use_averaging.value,
-                do_3D=self.do_3D.value,
-                anisotropy=self.anisotropy.value,
-                flow_threshold=self.flow_threshold.value,
-                cellprob_threshold=self.cellprob_threshold.value,
-                stitch_threshold=self.stitch_threshold.value,
-                min_size=self.min_size.value,
-                invert=self.invert.value,
+            if float(cellpose_ver[0:3]) >= 0.7 and int(cellpose_ver[0])<2:
+                y_data, flows, *_ = model.eval(
+                    x_data,
+                    channels=channels,
+                    diameter=diam,
+                    net_avg=self.use_averaging.value,
+                    do_3D=self.do_3D.value,
+                    anisotropy=anisotropy,
+                    flow_threshold=self.flow_threshold.value,
+                    cellprob_threshold=self.cellprob_threshold.value,
+                    stitch_threshold=self.stitch_threshold.value,
+                    min_size=self.min_size.value,
+                    omni=self.omni.value,
+                    invert=self.invert.value,
+            ) 
+            else:
+                y_data, flows, *_ = model.eval(
+                    x_data,
+                    channels=channels,
+                    diameter=diam,
+                    net_avg=self.use_averaging.value,
+                    do_3D=self.do_3D.value,
+                    anisotropy=anisotropy,
+                    flow_threshold=self.flow_threshold.value,
+                    cellprob_threshold=self.cellprob_threshold.value,
+                    stitch_threshold=self.stitch_threshold.value,
+                    min_size=self.min_size.value,
+                    invert=self.invert.value,
             )
-        except float(cellpose_ver[0:3]) >= 0.7 and int(cellpose_ver[0])<2:
-            y_data, flows, *_ = model.eval(
-                x_data,
-                channels=channels,
-                diameter=diam,
-                net_avg=self.use_averaging.value,
-                do_3D=self.do_3D.value,
-                anisotropy=self.anisotropy.value,
-                flow_threshold=self.flow_threshold.value,
-                cellprob_threshold=self.cellprob_threshold.value,
-                stitch_threshold=self.stitch_threshold.value,
-                min_size=self.min_size.value,
-                omni=self.omni.value,
-                invert=self.invert.value,
-            )
+
+            y.segmented = y_data
+
+        except Exception as a:
+                    print(f"Unable to create masks. Check your module settings. {a}")
         finally:
             if self.use_gpu.value and model.torch:
                 # Try to clear some GPU memory for other worker processes.
@@ -407,7 +412,6 @@ Volumetric stacks do not always have the same sampling in XY as they do in Z. Yo
                     print(f"Unable to clear GPU memory. You may need to restart CellProfiler to change models. {e}")
 
         y = Objects()
-        y.segmented = y_data
         y.parent_image = x.parent_image
         objects = workspace.object_set
         objects.add_objects(y, y_name)
