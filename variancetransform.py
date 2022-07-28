@@ -10,7 +10,7 @@ the option to find the optimal window size from a predetermied range to obtain t
 ============ ============ ===============
 Supports 2D? Supports 3D? Respects masks?
 ============ ============ ===============
-YES          YES           NO
+YES          YES           YES
 ============ ============ ===============
 
 """

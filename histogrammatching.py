@@ -114,8 +114,8 @@ class HistogramMatching(cellprofiler_core.module.ImageProcessing):
                 for index, plane in enumerate(x_data):
                     y_data = skimage.exposure.match_histograms(plane, reference_image)
         else:
-            reference_image = images.get_image(self.reference_image)
-            y_data = skimage.exposure.match_histograms(plane, reference_image)
+            reference_image = images.get_image(self.reference_image).pixel_data
+            y_data = skimage.exposure.match_histograms(x_data, reference_image)
 
         y = cellprofiler_core.image.Image(
             dimensions=dimensions,

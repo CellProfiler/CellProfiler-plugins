@@ -11,7 +11,7 @@ resulting image is then scaled so that the largest distance is 1.
 ============ ============ ===============
 Supports 2D? Supports 3D? Respects masks?
 ============ ============ ===============
-YES          YES          NO
+YES          YES          YES
 ============ ============ ===============
 
 """

@@ -9,7 +9,7 @@ are more distinct.
 ============ ============ ===============
 Supports 2D? Supports 3D? Respects masks?
 ============ ============ ===============
-YES          YES          YES
+YES          YES          NO
 ============ ============ ===============
 
 Technical notes
