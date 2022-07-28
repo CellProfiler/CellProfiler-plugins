@@ -399,6 +399,7 @@ Minimum number of pixels per mask, can turn off by setting value to -1
                     invert=self.invert.value,
             )
 
+            y = Objects()
             y.segmented = y_data
 
         except Exception as a:
@@ -411,7 +412,6 @@ Minimum number of pixels per mask, can turn off by setting value to -1
                 except Exception as e:
                     print(f"Unable to clear GPU memory. You may need to restart CellProfiler to change models. {e}")
 
-        y = Objects()
         y.parent_image = x.parent_image
         objects = workspace.object_set
         objects.add_objects(y, y_name)
