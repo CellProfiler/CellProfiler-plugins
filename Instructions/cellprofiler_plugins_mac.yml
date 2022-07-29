@@ -1,0 +1,26 @@
+name: CellProfiler_plugins
+channels:
+  - defaults
+  - conda-forge
+dependencies:
+  - cython=0.29.28
+  - sqlite=3.38.3
+  - openssl
+  - certifi
+  - pip=21.2.2
+  - python=3.8.13
+  - ca-certificates
+  - wheel=0.37.1
+  - setuptools=61.2.0
+  - python.app
+  - jpype1
+  - python-javabridge
+  - mysqlclient=1.4.6
+  - pip:
+    - cellpose==1.0.2
+    - cellprofiler==4.2.1
+    - imagej==0.3.1
+    - pyjnius==1.4.1
+    - tensorflow==2.9.1
+
+prefix: /Users/rsenft/opt/anaconda3/envs/CellProfiler_plugins
