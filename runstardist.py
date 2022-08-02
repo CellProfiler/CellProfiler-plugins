@@ -67,10 +67,10 @@ GREY_2 = 'DSB 2018 (from StarDist 2D paper)'
 COLOR_1 = 'Versatile (H&E nuclei)'
 
 
-class RunStarDist2(ImageSegmentation):
+class RunStarDist(ImageSegmentation):
     category = "Object Processing"
 
-    module_name = "RunStarDist2"
+    module_name = "RunStarDist"
 
     variable_revision_number = 1
 
@@ -78,7 +78,7 @@ class RunStarDist2(ImageSegmentation):
     "If you are using 3D also cite the following:": 'https://doi.org/10.1109/WACV45572.2020.9093435' }
 
     def create_settings(self):
-        super(RunStarDist2, self).create_settings()
+        super(RunStarDist, self).create_settings()
 
         self.model = Choice(
             text="Model Type",
