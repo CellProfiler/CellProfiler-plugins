@@ -2,7 +2,9 @@
 * On a WINDOWS computer, download the zip folder called Install_CellProfiler_with_plugins
 * Put the folder on your desktop
 * Extract the contents
-* Double click the file called "install_cellprofiler_plugins.bat" and it will handle installation for you (see below). This takes 15-20 minutes depending on your internet connection.
+* Double click the file called "install_cellprofiler_plugins.bat" 
+  * It will do some checks for you. Once chocolatey is ready, it will prompt you to hit a key to proceed. 
+  * They it will handle installation for you (see below). This takes 15-20 minutes depending on your internet connection.
 
 # How the batch file works:
 * The beginning checks if you're in administrator mode (necessary for chocolatey)
