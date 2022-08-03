@@ -30,6 +30,8 @@ You can also always open CellProfiler by going to your start menu or list of pro
 
 # Potential errors
 When you try to run CellProfiler, you might see an error. Here are common errors and solutions: 
+
+## Can't find the Java virtual machine
 ```
 Traceback (most recent call last):
   File "C:\tools\miniconda3\envs\CP_plugins\lib\runpy.py", line 194, in _run_module_as_main
@@ -50,4 +52,4 @@ Traceback (most recent call last):
 javabridge.jutil.JVMNotFoundError: Can't find the Java Virtual Machine
 ```
 
-If you see this error, first verify that Java is installed. There should be a folder in C:/Program Files called **Java-jdk-11**. If not, the installation has failed. Also check your Environment Variables (Windows 10 or below, type "Environment variable" into the search bar. Windows 11: Go to Control Panel > System > Advanced system settings > Environment Variables) and ensure that JAVA_HOME and JDK_HOME are in the System Variables (second box) and both are set to the location of the Java-jdk-11 folder. You can always manually download java jdk 11 from [Adoptium's website](https://adoptium.net/temurin/releases/?version=11). Assuming you have java installed and you still get this error, the solution is to install javabridge, which appears to be necessary for some Windows computers. Go to your start menu or list of programs and search for "Anaconda Prompt (miniconda3)" and then type in `conda activate CP_plugins` then `pip install javabridge` and this will perform the installation. Then you can type in `cellprofiler` and it will open CellProfiler. 
+If you see this error, first verify that Java is installed. There should be a folder in C:/Program Files called **Java-jdk-11**. If not, the installation has failed. Also check your Environment Variables (Windows 10 or below, type "Environment variable" into the search bar. Windows 11: Go to Control Panel > System > Advanced system settings > Environment Variables) and ensure that JAVA_HOME and JDK_HOME are in the System Variables (second box) and both are set to the location of the Java-jdk-11 folder. You can always manually download java jdk 11 from [Adoptium's website](https://adoptium.net/temurin/releases/?version=11). Assuming you have java installed and you still get this error, the solution is to install javabridge, which appears to be necessary for some Windows computers. Go to your start menu or list of programs and search for "Anaconda Prompt (miniconda3)" and then type in `conda activate CP_plugins` then press Enter to activate the environment. Then enter `pip install javabridge`and this will perform the installation. Then you can enter `cellprofiler` and it will open CellProfiler. 
