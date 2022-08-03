@@ -1,10 +1,10 @@
-How to use the batch file: 
+# How to use the batch file: 
 * On a WINDOWS computer, download the zip folder called Install_CellProfiler_with_plugins
 * Put the folder on your desktop
 * Extract the contents
 * Double click the file called "install_cellprofiler_plugins.bat" and it will handle installation for you (see below). This takes 15-20 minutes depending on your internet connection.
 
-How the batch file works:
+# How the batch file works:
 * The beginning checks if you're in administrator mode (necessary for chocolatey)
 * The next part uses powershell to download chocolatey and install it (if it isn't already installed)
 * Then packages are installed the same way as from the command line with `choco install package-name`
