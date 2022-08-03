@@ -2,7 +2,7 @@
 * On a WINDOWS computer, download the zip folder called **Install_CellProfiler_with_plugins.zip**
 * Put the folder on your desktop
 * Extract the contents
-* Double click the file called "install_cellprofiler_plugins.bat" 
+* Right click file called "install_cellprofiler_plugins.bat" and select "Run as Administrator"
   * It will do some checks for you. Once chocolatey is ready, it will prompt you to hit a key to proceed. Press any key.
   * Then it will handle installation for you (see below). This takes 15-20 minutes depending on your internet connection.
 * After installation finishes, you can open CellProfiler by double clicking the batch file run_cellprofiler.bat
