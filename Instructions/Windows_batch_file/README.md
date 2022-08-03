@@ -52,4 +52,11 @@ Traceback (most recent call last):
 javabridge.jutil.JVMNotFoundError: Can't find the Java Virtual Machine
 ```
 
-If you see this error, first verify that Java is installed. There should be a folder in C:/Program Files called **Java-jdk-11**. If not, the installation has failed. Also check your Environment Variables (Windows 10 or below, type "Environment variable" into the search bar. Windows 11: Go to Control Panel > System > Advanced system settings > Environment Variables) and ensure that JAVA_HOME and JDK_HOME are in the System Variables (second box) and both are set to the location of the Java-jdk-11 folder. You can always manually download java jdk 11 from [Adoptium's website](https://adoptium.net/temurin/releases/?version=11). Assuming you have java installed and you still get this error, the solution is to install javabridge, which appears to be necessary for some Windows computers. Go to your start menu or list of programs and search for "Anaconda Prompt (miniconda3)" and then type in `conda activate CP_plugins` then press Enter to activate the environment. Then enter `pip install javabridge`and this will perform the installation. Then you can enter `cellprofiler` and it will open CellProfiler. 
+If you see this error, first verify that Java is installed. 
+* There should be a folder in C:/Program Files called **Java-jdk-11**. If not, the installation has failed. 
+* Also check your Environment Variables and ensure that JAVA_HOME and JDK_HOME are in the System Variables (second box) and both are set to the location of the Java-jdk-11 folder. If they are not set, you can click Edit and then Browse Directory and choose the Java-jdk-11 folder in Program Files.
+   * Windows 10 or below, type "Environment variable" into the search bar. 
+   * Windows 11: Go to Control Panel > System > Advanced system settings > Environment Variables
+* You can always manually download java jdk 11 from [Adoptium's website](https://adoptium.net/temurin/releases/?version=11). 
+
+* Assuming you have java installed and your environment variables set and you still get this error, the solution is to install javabridge, which appears to be necessary for some Windows computers. Go to your start menu or list of programs and search for "Anaconda Prompt (miniconda3)" and then type in `conda activate CP_plugins` then press Enter to activate the environment. Then enter `pip install javabridge` and this will perform the installation. Then you can enter `cellprofiler` and it will open CellProfiler. 
