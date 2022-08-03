@@ -3,8 +3,8 @@
 * Put the folder on your desktop
 * Extract the contents
 * Double click the file called "install_cellprofiler_plugins.bat" 
-  * It will do some checks for you. Once chocolatey is ready, it will prompt you to hit a key to proceed. 
-  * They it will handle installation for you (see below). This takes 15-20 minutes depending on your internet connection.
+  * It will do some checks for you. Once chocolatey is ready, it will prompt you to hit a key to proceed. Press any key.
+  * Then it will handle installation for you (see below). This takes 15-20 minutes depending on your internet connection.
 * After installation finishes, you can open CellProfiler by double clicking the batch file run_cellprofiler.bat
 * The only thing you have to configure is in CellProfiler, go to **File** > **Preferences** and scroll down to the **CellProfiler plugins folder** option and set this to the location of your CellProflier-plugins folder (it should be in your Downloads folder). See below: 
 <p align="center">
