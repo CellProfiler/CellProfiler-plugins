@@ -1,5 +1,5 @@
 # How to use the batch file: 
-* On a WINDOWS computer, download the zip folder called Install_CellProfiler_with_plugins
+* On a WINDOWS computer, download the zip folder called **Install_CellProfiler_with_plugins.zip**
 * Put the folder on your desktop
 * Extract the contents
 * Double click the file called "install_cellprofiler_plugins.bat" 
