@@ -67,7 +67,7 @@ Some of these download steps can take a while. The first 3 steps (as well as dow
 
 8. **Activate your environment**
 
-   In your terminal, enter `conda activate Cellprofiler_plugins` to activate your environment
+   In your terminal, enter `conda activate CP_plugins` to activate your environment
 
 9. **Verify that cellprofiler is installed correctly by running it from the command line.**
 
