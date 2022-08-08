@@ -1,6 +1,8 @@
 # How to install CellProfiler from source with all plugins on Windows
 
-Some of these download steps can take a while. The first 3 steps (as well as downloading Anaconda) can all be done simultaneously to save you time. Please close all open programs and save your work before starting this, as your computer may require a restart. Alternatively, if you have administrator permissions on your computer, we also have a batch file that you can run that will perform this process automatically for you. To get the file and see instructions for the automatic install, look [here](https://github.com/CellProfiler/CellProfiler-plugins/tree/master/Instructions/Windows_batch_file). 
+Outlined here is the manual process for installing CellProfiler and plugins from source. Please close all open programs and save your work before starting this, as your computer may require a restart. Note that some of these download steps can take a while; the first 3 steps (as well as downloading Anaconda) can all be done simultaneously to save you time. Also note that for steps like changing the system-level environment variables, you may need admin permissions on your computer.
+
+**NEW:** We now have an automated install available for this workflow (requires administrator permissions on your computer) that will perform these steps for you. To get the necessary files and see instructions for the automatic install, look [here](https://github.com/CellProfiler/CellProfiler-plugins/tree/master/Instructions/Windows_batch_file). 
 
 1. **Download and install [Microsoft Visual Studio C++ build tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/)**
    
