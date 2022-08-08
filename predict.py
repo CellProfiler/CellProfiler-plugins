@@ -11,9 +11,7 @@ from cellprofiler_core.module import Module
 import cellprofiler_core.setting
 from cellprofiler_core.setting.choice import Choice
 from cellprofiler_core.setting.text import Pathname
-#import cellprofiler.image
-#import cellprofiler.module
-#import cellprofiler.setting
+
 
 logger = logging.getLogger(__name__)
 
@@ -164,10 +162,6 @@ Select the project type which matches the project file specified by
             with h5py.File(fin.name, "w") as f:
                 shape = x_data.shape
 
-               # if x_data.ndim == 2:
-                  # ilastik appears to add a channel dimension
-                  # even if the image is grayscale
-                #  shape += (1,)
                 
                 f.create_dataset("data", shape, data=x_data)
 
