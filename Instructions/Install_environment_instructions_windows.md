@@ -3,10 +3,14 @@
 Some of these download steps can take a while. The first 3 steps (as well as downloading Anaconda) can all be done simultaneously to save you time.
 
 1. **Download and install [Microsoft Visual Studio C++ build tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/)**
-
+   
+   <img src="https://user-images.githubusercontent.com/28116530/183429716-8ddfd8d7-5845-42d2-91b4-d8ed4933be60.png" width="600"/>
+   
    **NOTE**: Make sure to check 'Desktop development with C++' under Desktop and Mobile in the installer:
 
    <img src="images/Install_environment_instructions_windows/2022-06-02T21-05-30.png" width="600"/>
+   
+   &nbsp;
 
 2. **Download and install [Microsoft Visual C++ Redistributable 2015-2022]( https://docs.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170)**
 
@@ -16,24 +20,41 @@ Some of these download steps can take a while. The first 3 steps (as well as dow
    
    <img src="images/Install_environment_instructions_windows/Control_panel.png" width=600>
 
+   &nbsp;
 
-3. **Download and install [Java JDK 11](https://adoptopenjdk.net/)**
+
+3. **Download and install [Java JDK 11](https://adoptium.net/temurin/releases/?version=11)**
    
+   Make sure you select the right version for your processor and operating system (see previous step). You can filter by operating system and processor Architecture. 
+   
+   <img src="https://user-images.githubusercontent.com/28116530/183430452-52aff4b2-a56d-4187-9db9-05e5711b07ac.png" width=600>
+
    You can alternatively install from [oracle.com](https://www.oracle.com/java/technologies/javase-jdk11-downloads.html) if you'd like, though you will need to make an Oracle account. 
+   
+   &nbsp;
+
 
 4. **Update your Windows Environment Variables for Java**
 
-    Go to **Control Panel** then search for **System**, then click on **Advanced System Settings**
+    Go to **Control Panel** then search for **System**, then click on **Advanced System Settings**. Alternatively, for some versions of Windows, you can use the search bar to search for "Environment" and "Edit the system environment variables" will come up as an option. 
+    
     <img src="images/Install_environment_instructions_windows/Control_panel_ev.png" width="500"/>
 
     From the System Properties window that pops up, select **Environment Variables...** Then add a new System variable by selecting **New...** under 'System Variables':
 
    <img src="images/Install_environment_instructions_windows/2022-06-02T20-56-38.png" width="400"/>
 
-    Add (or if you already have it, modify) two system variables: `JAVA_HOME` and `JDK_HOME`. For each new variable, set its value to the location of your JDK installation (i.e., the location of the folder beginning with 'jdk11'). You can do this by clicking the **Browse Directory...** button. Usually this is in your 'Program Files' in a folder called 'Java'. Here is an example path:
+    Add (or if you already have it, modify) two system variables: `JAVA_HOME` and `JDK_HOME`. For each new variable, set its value to the location of your JDK installation (i.e., the location of the folder beginning with 'jdk11'). You can do this by clicking the **Browse Directory...** button. Usually this is in your 'Program Files' in a folder called 'Java'. Here is an example path for `JAVA_HOME`:
 
+   <img width="500" alt="image" src="https://user-images.githubusercontent.com/28116530/183437395-1e81f6ba-366a-4f31-a23e-b05b2122552f.png">
+
+   Repeat the same for `JDK_HOME`:
+   
    <img src="images/Install_environment_instructions_windows/2022-06-02T21-00-53.png" width="500"/>
 
+
+
+   &nbsp;
 
 5. **Download and install or update conda**
 
@@ -43,14 +64,22 @@ Some of these download steps can take a while. The first 3 steps (as well as dow
 
    `conda update --prefix /Users/USERNAME/opt/anaconda3 anaconda`
 
+   &nbsp;
 
-6. **Download the environment file [CellProfiler_plugins_windows.yml](https://github.com/CellProfiler/CellProfiler-plugins/blob/master/Instructions/cellprofiler_plugins_windows.yml)**
+   
+6. **Clone the CellProfiler-plugins Repo**
 
-   You can download the whole repo by cloning it with git or simply clicking the green **Code** button on [the repo page](https://github.com/CellProfiler/CellProfiler-plugins.git) and selecting **Download ZIP** (see below) and then extract the ZIP folder contents. The environment file is in the `Instructions` subfolder.
-
-   Alternatively, you can copy and paste the contents of the .yml file into a text editor like Notepad. If you do this, make sure you save it as "CellProfiler_plugins_windows.yml" and as type "All Files" and **NOT** "Text file".
+    Download a copy of (aka "clone") the CellProfiler-plugins repo from [here](https://github.com/CellProfiler/CellProfiler-plugins.git). You can download the whole repo by cloning it with git or simply clicking the green **Code** button on [the repo page](https://github.com/CellProfiler/CellProfiler-plugins.git) and selecting **Download ZIP** (see below).
 
    <img src="images/Install_environment_instructions_windows/2022-06-02T21-39-05.png" width="500"/>
+   
+   If you download the ZIP file, be sure to extract the file contents by selecting **Extract All** in File Explorer:
+
+    <img src="images/Install_environment_instructions_windows/2022-06-02T21-30-10.png" width="500"/>
+
+    You can also use git or GitHub Desktop to clone the repo if you prefer.
+    
+   &nbsp;
 
 7. **Create the environment from the .yml file**
 
@@ -58,20 +87,34 @@ Some of these download steps can take a while. The first 3 steps (as well as dow
 
    <img src="images/Install_environment_instructions_windows/2022-06-02T21-11-49.png" width="500"/>
 
-   In the terminal, navigate to where your environment file is located with `cd PATH_TO_FOLDER` where `PATH_TO_FOLDER` is the path to the directory containing your yml file (e.g., `C:/Users/USER/Desktop`).
+   A black box should pop up with a blinking cursor. This is your terminal. You now need to navigate to where the **cellprofiler_plugins_windows.yml** file is inside of the CellProfiler-plugins folder you downloaded in the last step. This file is in the `Instructions` subfolder. Here is how we recommend you do this:
+   
+   1) In File Explorer, open the folder you downloaded in the previous step (usually called "CellProfiler-plugins-master") and then open the **Instructions** subfolder). 
+   2) Click in the address bar area and this should highlight an address to where the folder is on your computer. **Copy this address**: 
+  
+      <img src="https://user-images.githubusercontent.com/28116530/183435503-f8f28349-50bb-4e3e-8640-713dbd138d19.png" width="500"/>
 
-   Then in the terminal window that pops up, enter the following command:
+   3) Go back to your terminal and type `cd PATH_TO_FOLDER` where `PATH_TO_FOLDER` is the address you copied in the previous step. Press Enter.
+  
+   &nbsp;
+   
+   Now that you're in the right place, copy and paste this command into the terminal and press Enter.
    ```
    conda env create -f CellProfiler_plugins_windows.yml
    ```
+   &nbsp;
 
 8. **Activate your environment**
 
    In your terminal, enter `conda activate CP_plugins` to activate your environment
+   
+   &nbsp;
 
 9. **Verify that cellprofiler is installed correctly by running it from the command line.**
 
    In your terminal, type in `cellprofiler` and hit Enter. this will open CellProfiler or will give you an error message.
+
+   &nbsp;
 
 10. **Install other packages for other plugins (just for RunStarDist)**
 
@@ -84,15 +127,11 @@ Some of these download steps can take a while. The first 3 steps (as well as dow
     pip install omnipose
     ```
 
-11. **Clone the CellProfiler-plugins Repo**
+   &nbsp;
 
-    If you have not already downloaded the repo, download it from [here](https://github.com/CellProfiler/CellProfiler-plugins.git). If you download the ZIP file, be sure to extract the file contents by selecting **Extract All** in File Explorer:
 
-    <img src="images/Install_environment_instructions_windows/2022-06-02T21-30-10.png" width="500"/>
 
-    You can also use git or GitHub Desktop to clone the repo if you prefer.
-
-12. **Connect CellProfiler and the plugins repo**
+12. **Connect CellProfiler and the plugins folder**
 
     With your environment active, type `cellprofiler` in terminal to open CellProfiler if it is not open already.
 
@@ -110,6 +149,8 @@ Some of these download steps can take a while. The first 3 steps (as well as dow
     ```
     If you don't have a GPU, this is not a problem. If you do, your configuration is incorrect and you need to try reinstalling drivers and the correct version of CUDA for your system.
 
+   &nbsp;
+
 13. **Verify that the installation worked**
 
     Add a module to your pipeline by hitting the **+** button in the pipeline panel (bottom left)
@@ -117,6 +158,8 @@ Some of these download steps can take a while. The first 3 steps (as well as dow
     In the "Add Modules" window that pops up, type "run" into the search bar. You should be able to see plugins like RunCellpose and RunStarDist if the installation was successful:
     
     <img src="images/Install_environment_instructions_windows/2022-06-02T21-43-56.png" width="600"/>
+
+  &nbsp;
 
 ---
 
