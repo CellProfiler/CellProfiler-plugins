@@ -40,6 +40,7 @@
     2) There should be a folder called **Instructions**. Right click or ctrl+click that folder. Then hold down the option key (or Alt) on your keyboard. An option to **Copy "Instructions" as Pathname** should appear. Select this option. (see below)
 
     <img width="509" alt="image" src="https://user-images.githubusercontent.com/28116530/184949743-901ada5e-dbe5-40d6-99c2-ad0877bddc31.png">
+    
 
    3) Go back to your terminal and type `cd PATH_TO_FOLDER` where `PATH_TO_FOLDER` is the address you copied in the previous step. Press Enter.
   
@@ -55,6 +56,7 @@
  5. **Activate your environment**
 
     In your terminal, enter `conda activate CellProfiler_plugins` to activate your environment
+    
     &nbsp;
 
 
