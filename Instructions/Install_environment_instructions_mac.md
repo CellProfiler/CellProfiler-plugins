@@ -1,40 +1,60 @@
 # How to install CellProfiler from source with all plugins on Mac OS
 
-1. Install Java 11 [here](https://adoptopenjdk.net/)
+1. **Download and install [Java JDK 11](https://adoptium.net/temurin/releases/?version=11)**
+   
+   <img src="https://user-images.githubusercontent.com/28116530/184950214-ca9d8d07-ab66-45f2-9a18-fb220bd0a8ec.png" width=500px/>
 
-2. Install or update conda
+   After you download the file, open the installer and proceed through the steps to install Java 11.
+   
+    &nbsp;
 
-   * Note: you can get the command to update conda by typing `conda update` on your command line. The command will generally look like:
+
+2. **Download and install or update conda**
+
+   For beginners, we recommend you use Anaconda Navigator since it is more beginner-friendly, but you can also use miniconda. [Download Anaconda](https://www.anaconda.com/products/distribution) from the website and install.
+
+   **NOTE**: if you already have conda, you can get the command to update conda by typing `conda update` on your command line. The command will generally look like:
 
    `conda update --prefix /Users/USERNAME/opt/anaconda3 anaconda`
 
-   For beginners, we recommend you use Anaconda Navigator since it is more beginner-friendly. Download Anaconda from the website [here](https://www.anaconda.com/products/distribution), then open Anaconda Navigator
+   &nbsp;
+   
+3. **Clone the CellProfiler-plugins Repo**
 
-3. Download the environment file
+    Download a copy of (aka "clone") the CellProfiler-plugins repo from [here](https://github.com/CellProfiler/CellProfiler-plugins.git). You can download the whole repo by cloning it with git or simply clicking the green **Code** button on [the repo page](https://github.com/CellProfiler/CellProfiler-plugins.git) and selecting **Download ZIP** (see below).
 
-   You can download the whole repo by cloning it with git or simply clicking the green **Code** button on [the repo page](https://github.com/CellProfiler/CellProfiler-plugins.git) and selecting **Download ZIP** (see below) and then extract the ZIP folder contents.
+   <img src="images/Install_environment_instructions_windows/2022-06-02T21-39-05.png" width="500"/>
 
-   Alternatively, you can copy and paste the contents of the .yml file into a text editor like Notepad. If you do this, make sure you save it as "CellProfiler_plugins_windows.yml" and as type "All Files" and **NOT** "Text file".
+    You can also use git or GitHub Desktop to clone the repo if you prefer.
+    
+   &nbsp;
 
-   ![](images/Install_environment_instructions_windows/2022-06-02T21-39-05.png)
-
-4. Try to create a new environment from the included .yml file
-
-   **Warning, this step may take a while**
+4. **Create the environment from the .yml file**
 
    Open Anaconda Navigator and select the **Environments** tab on the left. We recommend you create the environment from the command line. To do this, Select the play button next to your base (root) environment and select **Open Terminal**:
 
-   ![](images/Install_environment_instructions_windows/2022-06-02T21-11-49.png)
+   <img src="images/Install_environment_instructions_windows/2022-06-02T21-11-49.png" width="500"/>
 
-   In the terminal, navigate to where your environment file is located with `cd PATH_TO_FOLDER` where `PATH_TO_FOLDER` is the path to the directory containing your yml file (e.g., `/Users/USER/Desktop`).
+   A black box should pop up with a blinking cursor. This is your terminal. You now need to navigate to where the **cellprofiler_plugins_mac.yml** file is inside of the CellProfiler-plugins folder you downloaded in the last step. This file is in the `Instructions` subfolder. Here is how we recommend you do this:
+    1) In Finder, open the folder you downloaded in the previous step (usually called "CellProfiler-plugins-master") 
+    2) There should be a folder called **Instructions**. Right click or ctrl+click that folder. Then hold down the option key (or Alt) on your keyboard. An option to **Copy "Instructions" as Pathname** should appear. Select this option
 
-   Then in the terminal window that pops up, enter the following command:
+    <img width="509" alt="image" src="https://user-images.githubusercontent.com/28116530/184949743-901ada5e-dbe5-40d6-99c2-ad0877bddc31.png">
+
+   3) Go back to your terminal and type `cd PATH_TO_FOLDER` where `PATH_TO_FOLDER` is the address you copied in the previous step. Press Enter.
+  
+   &nbsp;
+   
+   Now that you're in the right place, copy and paste this command into the terminal and press Enter.
    ```
    conda env create -f CellProfiler_plugins_mac.yml
    ```
+   &nbsp;
+   
+
  5. Activate your environment
 
-    In your terminal, enter `conda activate Cellprofiler_plugins` to activate your environment
+    In your terminal, enter `conda activate CellProfiler_plugins` to activate your environment
 
  6. Verify that cellprofiler is installed correctly by running it from the command line.
 
@@ -55,13 +75,7 @@
     pip install omnipose
     ```
 
- 8. Clone the CellProfiler-plugins Repo
-
-    If you have not already downloaded the repo, download it from [here](https://github.com/CellProfiler/CellProfiler-plugins.git).
-
-    You can also use git or GitHub Desktop to clone the repo if you prefer.
-
- 9. Connect CellProfiler and the plugins repo
+ 8. Connect CellProfiler and the plugins repo
 
     With your environment active, type `pythonw -m cellprofiler` in terminal to open CellProfiler if it is not open already.
 
@@ -79,7 +93,7 @@
   ```
   If you don't have a GPU, this is not a problem. If you do, your configuration is incorrect and you need to try reinstalling drivers and the correct version of CUDA for your system.
 
- 10. Verify that the installation worked
+ 9. Verify that the installation worked
 
     Add a module to your pipeline by hitting the **+** button in the pipeline panel (bottom left)
 
