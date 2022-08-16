@@ -37,7 +37,7 @@
 
    A black box should pop up with a blinking cursor. This is your terminal. You now need to navigate to where the **cellprofiler_plugins_mac.yml** file is inside of the CellProfiler-plugins folder you downloaded in the last step. This file is in the `Instructions` subfolder. Here is how we recommend you do this:
     1) In Finder, open the folder you downloaded in the previous step (usually called "CellProfiler-plugins-master") 
-    2) There should be a folder called **Instructions**. Right click or ctrl+click that folder. Then hold down the option key (or Alt) on your keyboard. An option to **Copy "Instructions" as Pathname** should appear. Select this option
+    2) There should be a folder called **Instructions**. Right click or ctrl+click that folder. Then hold down the option key (or Alt) on your keyboard. An option to **Copy "Instructions" as Pathname** should appear. Select this option. (see below)
 
     <img width="509" alt="image" src="https://user-images.githubusercontent.com/28116530/184949743-901ada5e-dbe5-40d6-99c2-ad0877bddc31.png">
 
@@ -52,21 +52,26 @@
    &nbsp;
    
 
- 5. Activate your environment
+ 5. **Activate your environment**
 
     In your terminal, enter `conda activate CellProfiler_plugins` to activate your environment
+    &nbsp;
 
- 6. Verify that cellprofiler is installed correctly by running it from the command line.
+
+ 6. **Verify that cellprofiler is installed correctly by running it from the command line.**
 
     In your terminal, type in `pythonw -m cellprofiler` and hit Enter. this will open CellProfiler or will give you an error message.
+    
+    &nbsp;
 
- 7. Install other packages for other plugins (just for RunStarDist)
+ 7. **Install other packages for other plugins**
 
-    In terminal with your environment activated, enter:
+    Certain packages cannot easily installed when importing the environment. 
+    
+    For StarDist: In terminal with your environment activated, enter:
     ```
     pip install stardist csbdeep --no-deps
     ```
-    
     
     
     If you would like to use the omnipose models in cellpose, ensure you have cellpose 1.0.2 (you should by default if you've used our environment yml) and enter on the command line (in your activated environment):
@@ -74,16 +79,19 @@
     ```
     pip install omnipose
     ```
+    
+    &nbsp;
 
- 8. Connect CellProfiler and the plugins repo
+
+ 8. **Connect CellProfiler and the plugins repo**
 
     With your environment active, type `pythonw -m cellprofiler` in terminal to open CellProfiler if it is not open already.
 
-  * In CellProfiler, go to **File** then **Preferences...**
-  * Scroll down and look for "CellProfiler Plugins Directory" on the left.
-  * Select the **Browse** button and choose the folder where you extracted the CellProfiler plugins files. It is probably called "CellProfiler-plugins-master" unless you have renamed it.
-  * Select **Save** at the bottom of the Preferences window
-  * Close CellProfiler and reopen it by typing `pythonw -m cellprofiler` on the command line
+     * In CellProfiler, go to **File** then **Preferences...**
+     * Scroll down and look for "CellProfiler Plugins Directory" on the left.
+     * Select the **Browse** button and choose the folder where you extracted the CellProfiler plugins files. It is probably called "CellProfiler-plugins-master" unless you have renamed it.
+     * Select **Save** at the bottom of the Preferences window
+     * Close CellProfiler and reopen it by typing `pythonw -m cellprofiler` on the command line
 
 
   **NOTE**: You might get a warning like this:
@@ -93,7 +101,9 @@
   ```
   If you don't have a GPU, this is not a problem. If you do, your configuration is incorrect and you need to try reinstalling drivers and the correct version of CUDA for your system.
 
- 9. Verify that the installation worked
+&nbsp;
+
+ 9. **Verify that the installation worked**
 
     Add a module to your pipeline by hitting the **+** button in the pipeline panel (bottom left)
 
