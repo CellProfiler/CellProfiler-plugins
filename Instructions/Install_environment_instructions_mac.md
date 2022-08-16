@@ -3,6 +3,13 @@
 1. **Download and install [Java JDK 11](https://adoptium.net/temurin/releases/?version=11)**
    
    <img src="https://user-images.githubusercontent.com/28116530/184950214-ca9d8d07-ab66-45f2-9a18-fb220bd0a8ec.png" width=500px/>
+   
+   &nbsp;
+   
+   **NOTE**: For M1/M2 Macs, which use the ARM 64-bit architecture, use [this link](https://www.azul.com/downloads/?version=java-11-lts&os=macos&architecture=arm-64-bit&package=jdk) to get Java 11.
+   
+   <img src = "https://user-images.githubusercontent.com/28116530/184956441-26ded1ac-0f8f-4bc2-93d9-e6c8554a0018.png" width=500px/>
+
 
    After you download the file, open the installer and proceed through the steps to install Java 11.
    
