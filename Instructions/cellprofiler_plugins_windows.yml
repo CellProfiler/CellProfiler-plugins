@@ -26,7 +26,7 @@ dependencies:
   - wincertstore=0.2=py38haa95532_2
   - zlib=1.2.12=h8cc25b3_2
   - pip:
-    - cellpose==2.1.0
+    - cellpose==1.0.2
     - cellprofiler==4.2.1
     - cellprofiler-core==4.2.1
     - imagej==0.3.1
