@@ -41,9 +41,9 @@
     brew install hdf5@1.12
     ```
 
-9. **Make sure to get the version directory correct for the version of HDF5 installed**
+9. Make sure to get the version directory correct for the version installed. Find with `ls /opt/homebrew/Cellar/hdf5/`
     ```
-    export HDF5_DIR=$(ls /opt/homebrew/Cellar/hdf5/)
+    export HDF5_DIR=/opt/homebrew/Cellar/hdf5/1.12.1_1/
     ```
 10. **Create a folder and download cellprofiler, cellprofiler-core, cellprofiler-plugins and wxPython**
 
@@ -61,8 +61,8 @@
 13. Then, extract wxPython.
 
 14. **Modify the **setup.py** in the cloned CellProfiler repo.**
-
-   - Comment out cellprofiler-core and wxpython from the **install_requires** section, since we are installing our own versions from source:
+    
+    Comment out cellprofiler-core and wxpython from the **install_requires** section, since we are installing our own versions from source:
 
     ```
     ...
