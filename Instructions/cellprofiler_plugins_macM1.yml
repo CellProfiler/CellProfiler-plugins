@@ -1,0 +1,24 @@
+name: cpcellpose3
+
+channels:
+- conda-forge
+- anaconda
+- bioconda
+- defaults
+- apple
+
+dependencies:
+- python=3.8
+- pip
+- h5py
+- mysqlclient
+# - numpy==1.21
+- imagecodecs
+- python.app
+- pandas
+- pip:
+    - cellpose==1.0.2
+    - omnipose
+    - attrdict
+    - sip==5.5.0
+    # - cellprofiler
