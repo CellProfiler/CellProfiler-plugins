@@ -1,10 +1,5 @@
  Installation instructions for CellProfiler + plugins using a conda environment on Macs using the new Apple M1/2 processor. 
 
-
- Install CellProfiler inside a conda environment
-   - For less conflict problems, it is recommended to follow the conda installation
-
-
 1. **Install brew**
     ```
     /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
@@ -66,7 +61,6 @@
 13. Then, extract wxPython.
 
 14. **Modify the **setup.py** in the cloned CellProfiler repo.**
-
 
    - Comment out cellprofiler-core and wxpython from the **install_requires** section, since we are installing our own versions from source:
 
@@ -148,7 +142,8 @@
     ```
 
 21. **Open CellProfiler**
-    - Execute this command from within the downloaded CellProfiler repo (get there with `cd CellProfiler`)
+
+    Execute this command from within the downloaded CellProfiler repo (get there with `cd CellProfiler`)
 
     ```
     pythonw -m cellprofiler
@@ -166,11 +161,13 @@
 
 23. **Verify that the installation worked**
 
-    - Execute this command from within the downloaded CellProfiler repo (get there with `cd CellProfiler`)
+    Execute this command from within the downloaded CellProfiler repo (get there with `cd CellProfiler`)
 
     ```
     pythonw -m cellprofiler
     ```
+
+### Test your installation
 
 Add a module to your pipeline by hitting the **+** button in the pipeline panel (bottom left)
 
