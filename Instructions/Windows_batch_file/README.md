@@ -4,9 +4,9 @@
 * Extract the contents
 * Right click file called "install_cellprofiler_plugins.bat" and select "Run as Administrator"
   * You may get a security warning when running the batch file. Press More Info, then Run Anyway to proceed.
-  * The script will run through a series of checks and steps. After it finishes each step, it will prompt you to press a key to continue. If it quits before reaching the end, the script has encountered an error. The steps are summarized below in "How the batch file works"
-* After installation finishes, you can open CellProfiler by double clicking the batch file run_cellprofiler.bat
-* The only thing you have to configure is in CellProfiler, go to **File** > **Preferences** and scroll down to the **CellProfiler plugins folder** option and set this to the location of your CellProflier-plugins folder (it should be in your Downloads folder). See below: 
+  * The script will run through a series of checks and steps. After it finishes each step, it will prompt you to press a key to continue. Before you press a key, please look at the text on the screen and see if there are any errors or warnings present. In general, the bat file will try to continue through most warnings and non-fatal errors and it's up to you to observe if one of these steps did not work. Also, if the script quits before reaching the end, the script has encountered an error. The steps are summarized below in "How the batch file works"
+* After installation finishes, you can open CellProfiler by double clicking the batch file run_cellprofiler.bat. If this does nothing, it also means that somewhere along the way, your install failed. 
+* The only thing you should have to configure is in CellProfiler, go to **File** > **Preferences** and scroll down to the **CellProfiler plugins folder** option and set this to the location of your CellProflier-plugins folder (it should be in your Downloads folder). See below: 
 <p align="center">
 <img width="500" alt="image" src="https://user-images.githubusercontent.com/28116530/182713252-d1403ace-a70a-400a-8f34-7e80f7cf172e.png">
 </p>
