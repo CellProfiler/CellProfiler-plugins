@@ -11,7 +11,7 @@
 <img width="500" alt="image" src="https://user-images.githubusercontent.com/28116530/182713252-d1403ace-a70a-400a-8f34-7e80f7cf172e.png">
 </p>
 
-* Close and re-open CellProfiler and you should have plugins available. 
+* Close and re-open CellProfiler and you should have plugins available. If you can add runCellpose or runStarDist to your pipeline, then the installation was a success!
 
 
 # How the batch file works:
