@@ -325,6 +325,20 @@ Minimum number of pixels per mask, can turn off by setting value to -1
 
         return vis_settings
 
+    def validate_module(self, pipeline):
+        """If using custom model, validate the model file opens"""
+        if self.mode.value == 'custom':
+            model_file = self.model_file_name.value
+            model_directory = self.model_directory.get_absolute_path()
+            model_path = os.path.join(model_directory, model_file)
+            try:
+                open(model_path)
+            except:
+                raise ValidationError(
+                    "Failed to load custom file: %s "
+                    % model_path, self.model_file_name,
+                )
+
     def run(self, workspace):
         if self.mode.value != 'custom':
             model = models.Cellpose(model_type= self.mode.value,
