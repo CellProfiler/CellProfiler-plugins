@@ -6,7 +6,7 @@ from cellprofiler_core.setting.text.alphanumeric.name.image_name import ImageNam
 from cellprofiler_core.setting.text import Filename, Directory, Alphanumeric, Integer, Float
 from cellprofiler_core.setting.subscriber import ImageSubscriber
 from cellprofiler_core.setting import ValidationError
-import jpype, imagej, multiprocessing, socket, threading, time
+import scyjava, imagej, multiprocessing, socket, threading, time
 import skimage.io
 
 
@@ -132,7 +132,7 @@ def _convert_java_to_python_type(ij, return_value):
     return_class = return_value.getClass()
     type_string = str(return_class.toString()).split()[1]
 
-    image_classes = (jpype.JClass('ij.ImagePlus'), jpype.JClass('net.imagej.Dataset'), jpype.JClass('net.imagej.ImgPlus'))
+    image_classes = (scyjava.jimport('ij.ImagePlus'), scyjava.jimport('net.imagej.Dataset'), scyjava.jimport('net.imagej.ImgPlus'))
 
     if type_string == "java.lang.String" or type_string == "java.lang.Character":
         return str(return_value)
@@ -149,7 +149,7 @@ def _convert_java_to_python_type(ij, return_value):
         return bytes(return_value)
     elif bool((img_class for img_class in image_classes if issubclass(return_class, img_class))):
         # TODO actualize changes in a virtual ImagePlus. Remove this when pyimagej does this innately
-        if issubclass(return_class, jpype.JClass('ij.ImagePlus')):
+        if issubclass(return_class, scyjava.jimport('ij.ImagePlus')):
             ij.py.synchronize_ij1_to_ij2(return_value)
         return ij.py.from_java(return_value)
 
@@ -286,10 +286,10 @@ def _start_imagej_process():
                 else:
                     script_service = ij.script()
                     output_queue.put(PYIMAGEJ_STATUS_STARTUP_COMPLETE)
-            except jpype.JException as ex:
+            except Exception as ex:
                 # Initialization failed
                 output_queue.put(PYIMAGEJ_STATUS_STARTUP_FAILED)
-                jpype.shutdownJVM()
+                scyjava.shutdown_jvm()
         elif cmd == PYIMAGEJ_CMD_GET_INIT_METHOD:
             output_queue.put({PYIMAGEJ_KEY_OUTPUT: init_string})
         elif cmd == PYIMAGEJ_CMD_SCRIPT_PARSE:
@@ -327,7 +327,7 @@ def _start_imagej_process():
     # Shut down the imagej process
     if ij:
         ij.dispose()
-        jpype.shutdownJVM()
+        scyjava.shutdown_jvm()
     output_queue.put(PYIMAGEJ_STATUS_SHUTDOWN_COMPLETE)
 
 
