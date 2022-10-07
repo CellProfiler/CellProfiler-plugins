@@ -13,13 +13,13 @@ dependencies:
   - wheel=0.37.1
   - setuptools=61.2.0
   - python.app
-  - jpype1
+  - scyjava>=1.6.0
+  - pyimagej>=1.2.1
   - python-javabridge
   - mysqlclient=1.4.6
   - pip:
     - cellpose==1.0.2
     - cellprofiler==4.2.1
-    - imagej==0.3.1
     - pyjnius==1.4.1
     - tensorflow==2.9.1
 

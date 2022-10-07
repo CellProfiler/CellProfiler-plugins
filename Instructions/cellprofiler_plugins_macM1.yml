@@ -13,6 +13,8 @@ dependencies:
 - h5py
 - mysqlclient
 # - numpy==1.21
+- scyjava>=1.6.0
+- pyimagej>=1.2.1
 - imagecodecs
 - python.app
 - pandas
