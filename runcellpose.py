@@ -1,6 +1,6 @@
 import numpy
 import os
-from cellpose import models, io, core
+from cellpose import models, io, core, utils
 from skimage.transform import resize
 import importlib.metadata
 
@@ -271,6 +271,15 @@ Minimum number of pixels per mask, can turn off by setting value to -1
 """,
         )
 
+        self.remove_edge_masks = Binary(
+            text="Remove objects that are touching the edge?",
+            value=True,
+            doc="""
+If you do not want to include any object masks that are not in full view in the image, you can have the masks that have pixels touching the the edges removed.
+The default is set to "Yes".
+""",
+        )
+
     def settings(self):
         return [
             self.x_name,
@@ -293,6 +302,7 @@ Minimum number of pixels per mask, can turn off by setting value to -1
             self.min_size,
             self.omni,
             self.invert,
+            self.remove_edge_masks
         ]
 
     def visible_settings(self):
@@ -310,7 +320,7 @@ Minimum number of pixels per mask, can turn off by setting value to -1
 
         vis_settings += [self.expected_diameter, self.cellprob_threshold, self.min_size, self.flow_threshold, self.y_name, self.invert, self.save_probabilities]
 
-        vis_settings += [self.do_3D, self.stitch_threshold]
+        vis_settings += [self.do_3D, self.stitch_threshold, self.remove_edge_masks]
 
         if self.do_3D.value:
             vis_settings.remove( self.stitch_threshold)
@@ -419,6 +429,9 @@ Minimum number of pixels per mask, can turn off by setting value to -1
                     min_size=self.min_size.value,
                     invert=self.invert.value,
             )
+
+            if self.remove_edge_masks:
+                y_data = utils.remove_edge_masks(y_data)
 
             y = Objects()
             y.segmented = y_data
