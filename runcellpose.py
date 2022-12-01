@@ -347,14 +347,25 @@ Minimum number of pixels per mask, can turn off by setting value to -1
                 )
 
     def run(self, workspace):
-        if self.mode.value != 'custom':
-            model = models.Cellpose(model_type= self.mode.value,
-                                    gpu=self.use_gpu.value)
+        if float(cellpose_ver[0:3]) >= 0.6 and int(cellpose_ver[0])<2:
+            if self.mode.value != 'custom':
+                model = models.Cellpose(model_type= self.mode.value,
+                                        gpu=self.use_gpu.value)
+            else:
+                model_file = self.model_file_name.value
+                model_directory = self.model_directory.get_absolute_path()
+                model_path = os.path.join(model_directory, model_file)
+                model = models.CellposeModel(pretrained_model=model_path, gpu=self.use_gpu.value)
+
         else:
-            model_file = self.model_file_name.value
-            model_directory = self.model_directory.get_absolute_path()
-            model_path = os.path.join(model_directory, model_file)
-            model = models.CellposeModel(pretrained_model=model_path, gpu=self.use_gpu.value)
+            if self.mode.value != 'custom':
+                model = models.CellposeModel(model_type= self.mode.value,
+                                        gpu=self.use_gpu.value)
+            else:
+                model_file = self.model_file_name.value
+                model_directory = self.model_directory.get_absolute_path()
+                model_path = os.path.join(model_directory, model_file)
+                model = models.CellposeModel(pretrained_model=model_path, gpu=self.use_gpu.value)
 
         if self.use_gpu.value and model.torch:
             from torch import cuda
