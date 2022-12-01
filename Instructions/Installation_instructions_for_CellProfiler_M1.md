@@ -45,7 +45,7 @@
     ```
     export HDF5_DIR=/opt/homebrew/Cellar/hdf5/1.12.1_1/
     ```
-10. **Create a folder and download cellprofiler, cellprofiler-core, cellprofiler-plugins and wxPython**
+10. **Create a folder and download cellprofiler, cellprofiler-core, and cellprofiler-plugins**
 
     ```
     mkdir cp_plugins
@@ -55,14 +55,9 @@
     git clone https://github.com/CellProfiler/CellProfiler-plugins
     ```
 
-11. Download dev build of wxPython here: https://wxpython.org/Phoenix/snapshot-builds/
-12. Download the latest build with the filename format: wxPython-4.1.2a1.devXXXX+XXXXXXXX.tar.gz
-      - Ignore the `.whl` files
-13. Then, extract wxPython.
-
-14. **Modify the **setup.py** in the cloned CellProfiler repo.**
+11. **Modify the **setup.py** in the cloned CellProfiler repo.**
     
-    Comment out cellprofiler-core and wxpython from the **install_requires** section, since we are installing our own versions from source:
+    Comment out cellprofiler-core and wxpython from the **install_requires** section, since we are installing our own versions:
 
     ```
     ...
@@ -74,7 +69,7 @@
     # "wxPython==4.1.0",
     ```
 
-15. **Download and install miniconda**
+12. **Download and install miniconda**
 
    ```
     wget https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-arm64.sh -O ~/miniconda.sh
@@ -89,10 +84,8 @@
     ├── cp_plugins
         ├── CellProfiler/
         ├── CellProfiler-plugins
-        ├── wxPython-4.2.0a1.dev5470+b33b012b/
-        ├── wxPython-4.2.0a1.dev5470+b33b012b.tar.gz
         ├── core
-        └── cpcellpose2.yml
+        └── cellprofiler_plugins_macM1.yml
 
     ```
 
@@ -108,14 +101,11 @@
     conda activate cp_plugins
     ```
 
-18. **Install wxPython, core and cellprofiler**
+18. **Install Cellprofiler core and cellprofiler**
 
     In the terminal with your environment activate, navigate to the folder where you download the softwares and enter:
-
-    Remeber to change the wxPython-name to mach your folder.
         
-    ```
-    pip install ./wxPython-4.2.1a1.dev5486+98871b69 
+    ``` 
     pip install ./core
     pip install ./CellProfiler
     ```
@@ -149,7 +139,7 @@
     pythonw -m cellprofiler
     ```
 
-22. **Connect CellProfiler and the plugins repo**
+22. **Connect CellProfiler with the plugins folder**
 
     With your environment active, type pythonw -m cellprofiler in terminal to open CellProfiler if it is not open already.
 
@@ -159,13 +149,6 @@
     *Select Save at the bottom of the Preferences window
     *Close CellProfiler and reopen it by typing pythonw -m cellprofiler on the command line
 
-23. **Verify that the installation worked**
-
-    Execute this command from within the downloaded CellProfiler repo (get there with `cd CellProfiler`)
-
-    ```
-    pythonw -m cellprofiler
-    ```
 
 ### Test your installation
 

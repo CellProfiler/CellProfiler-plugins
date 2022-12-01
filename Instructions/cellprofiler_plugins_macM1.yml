@@ -1,4 +1,4 @@
-name: cpcellpose3
+name: cpcellpose
 
 channels:
 - conda-forge
@@ -21,4 +21,5 @@ dependencies:
     - omnipose
     - attrdict
     - sip==5.5.0
+    - wxPython==4.2
     # - cellprofiler
