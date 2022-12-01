@@ -45,46 +45,27 @@
     ```
     export HDF5_DIR=/opt/homebrew/Cellar/hdf5/1.12.1_1/
     ```
-10. **Create a folder and download cellprofiler, cellprofiler-core, and cellprofiler-plugins**
+10. **Create a folder and download cellprofiler-plugins**
 
     ```
     mkdir cp_plugins
     cd cp_plugins
-    git clone https://github.com/CellProfiler/core
-    git clone https://github.com/CellProfiler/CellProfiler
     git clone https://github.com/CellProfiler/CellProfiler-plugins
     ```
 
-11. **Modify the **setup.py** in the cloned CellProfiler repo.**
-    
-    Comment out cellprofiler-core and wxpython from the **install_requires** section, since we are installing our own versions:
-
-    ```
-    ...
-    "boto3>=1.12.28",
-    # "cellprofiler-core==4.2.1",
-    "centrosome==1.2.0",
-    ...
-    "six",
-    # "wxPython==4.1.0",
-    ```
-
-12. **Download and install miniconda**
+11. **Download and install miniconda**
 
    ```
     wget https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-arm64.sh -O ~/miniconda.sh
    ```
 
-
-16. **Create a conda environment using the cellprofiler_plugins_macM1.yml file**
+12. **Create a conda environment using the cellprofiler_plugins_macM1.yml file**
 
     At this stage, your folder/file structure should look like this:
 
     ```
     ├── cp_plugins
-        ├── CellProfiler/
         ├── CellProfiler-plugins
-        ├── core
         └── cellprofiler_plugins_macM1.yml
 
     ```
@@ -95,22 +76,49 @@
     conda env create -n cp_plugins --file cellprofiler_plugins_macM1.yml
     ```
 
-17. **Activate the conda environment**
+13. **Activate the conda environment**
 
     ```
     conda activate cp_plugins
     ```
 
-18. **Install Cellprofiler core and cellprofiler**
+14. **Install Cellprofiler core and cellprofiler**
 
     In the terminal with your environment activate, navigate to the folder where you download the softwares and enter:
         
     ``` 
-    pip install ./core
-    pip install ./CellProfiler
+    pip install cellprofiler --no-deps
     ```
 
-19. **Resolving dependencies conflits**
+15. **Install other packages for other plugins (just for runStardist)**
+
+    In the terminal with your environment activate, enter:
+    ```
+    conda install -c apple tensorflow-deps
+    python -m pip install tensorflow-macos
+    pip install stardist csbdeep --no-deps
+    ```
+
+16. **Open CellProfiler**
+
+    Execute this command from within the downloaded CellProfiler repo (get there with `cd CellProfiler`)
+
+    ```
+    pythonw -m cellprofiler
+    ```
+
+17. **Connect CellProfiler with the plugins folder**
+
+    With your environment active, type pythonw -m cellprofiler in terminal to open CellProfiler if it is not open already.
+
+    *In CellProfiler, go to File then Preferences...
+    *Scroll down and look for "CellProfiler Plugins Directory" on the left.
+    *Select the Browse button and choose the folder where you extracted the CellProfiler plugins files. It is probably called "CellProfiler-plugins-master" unless you have renamed it.
+    *Select Save at the bottom of the Preferences window
+    *Close CellProfiler and reopen it by typing pythonw -m cellprofiler on the command line
+
+
+### Resolving dependencies conflits
 
     In the terminal with your environment activate, enter:
     ```
@@ -121,34 +129,6 @@
     pip uninstall mahotas -y
     pip install mahotas
     ```
-
-20. **Install other packages for other plugins (just for runStardist)**
-
-    In the terminal with your environment activate, enter:
-    ```
-    conda install -c apple tensorflow-deps
-    python -m pip install tensorflow-macos
-    pip install stardist csbdeep --no-deps
-    ```
-
-21. **Open CellProfiler**
-
-    Execute this command from within the downloaded CellProfiler repo (get there with `cd CellProfiler`)
-
-    ```
-    pythonw -m cellprofiler
-    ```
-
-22. **Connect CellProfiler with the plugins folder**
-
-    With your environment active, type pythonw -m cellprofiler in terminal to open CellProfiler if it is not open already.
-
-    *In CellProfiler, go to File then Preferences...
-    *Scroll down and look for "CellProfiler Plugins Directory" on the left.
-    *Select the Browse button and choose the folder where you extracted the CellProfiler plugins files. It is probably called "CellProfiler-plugins-master" unless you have renamed it.
-    *Select Save at the bottom of the Preferences window
-    *Close CellProfiler and reopen it by typing pythonw -m cellprofiler on the command line
-
 
 ### Test your installation
 
