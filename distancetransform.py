@@ -71,7 +71,7 @@ input for a measurement module.""",
 
         x_data = x.pixel_data
     
-        y_data = scipy.ndimage.distance_transform_edt(x_data)
+        y_data = scipy.ndimage.distance_transform_edt(x_data, sampling=x.spacing)
 
         if self.rescale_values.value:
             y_data = y_data / numpy.max(y_data)
