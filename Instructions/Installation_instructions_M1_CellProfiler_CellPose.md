@@ -1,4 +1,4 @@
-Installation instructions for CellProfiler, CellProfiler plugins, CellPose and StarDist in a conda environment on Apple silicon.
+Installation instructions for CellProfiler, CellProfiler plugins and CellPose in a conda environment on Apple silicon (eg M1).
 
 1. **Install brew**
     ```
@@ -85,7 +85,6 @@ Installation instructions for CellProfiler, CellProfiler plugins, CellPose and S
         - attrdict
         - sip==5.5.0
         - boto3>=1.12.28
-        - cellprofiler-core
         - centrosome==1.2.1
         - docutils==0.15.2
         - h5py~=3.6.0
@@ -119,11 +118,11 @@ Installation instructions for CellProfiler, CellProfiler plugins, CellPose and S
 
     ```
     ├── cp_plugins
-        ├── CellProfiler-plugins
-        └── cellprofiler_plugins_macM1.yml
+        ├── CellProfiler-plugins
+        └── cellprofiler_plugins_macM1.yml
     ```
 
-    In the terminal, make sure you are in the `cp_plugins` folder mentioned above.
+    In the terminal, make sure you are in the `cp_plugins` folder mentioned above (run `cd cp_plugins` to get there).
 
     ```
     conda env create -n cp_plugins --file cellprofiler_plugins_macM1.yml
@@ -135,45 +134,34 @@ Installation instructions for CellProfiler, CellProfiler plugins, CellPose and S
     conda activate cp_plugins
     ```
 
-15. **Install Cellprofiler core and cellprofiler**
-
-    In the terminal with your environment activate, navigate to the folder where you download the software and enter:
-        
+15. **Install CellProfiler and CellProfiler-core**
     ``` 
-    pip install cellprofiler --no-deps
+    pip install cellprofiler-core
+
+    # We install CellProfiler with no dependencies here since we installed them with the conda yml file
+    # This allows us to have some dependencies for M1 that are not the default for CellProfiler (eg wxPython)
+    git clone https://github.com/CellProfiler/CellProfiler
+
+    pip install --no-deps cellprofiler
     ```
 
-16. **Install other packages for other plugins (just for runStardist)**
-
-    In the terminal with your environment activate, enter:
-    ```
-    conda install -c apple tensorflow-deps
-    python -m pip install tensorflow-macos
-    pip install stardist csbdeep --no-deps
-    ```
-
-17. **Open CellProfiler**
-
-    Execute this command from within the downloaded CellProfiler repo (get there with `cd CellProfiler`)
-
+16. **Open CellProfiler**
     ```
     pythonw -m cellprofiler
     ```
 
-18. **Connect CellProfiler with the plugins folder**
+17. **Connect CellProfiler with the plugins folder**
 
-    With your environment active, type pythonw -m cellprofiler in terminal to open CellProfiler if it is not open already.
-
-    *In CellProfiler, go to File then Preferences...
-    *Scroll down and look for "CellProfiler Plugins Directory" on the left.
-    *Select the Browse button and choose the folder where you extracted the CellProfiler plugins files. It is probably called "CellProfiler-plugins-master" unless you have renamed it.
-    *Select Save at the bottom of the Preferences window
-    *Close CellProfiler and reopen it by typing pythonw -m cellprofiler on the command line
+    1. In CellProfiler, go to `File` then `Preferences...`
+    2. Scroll down and look for `CellProfiler Plugins Directory` on the left.
+    3. Select the Browse button and choose the folder where you extracted the CellProfiler plugins files. It is probably called `CellProfiler-plugins` unless you have renamed it.
+    4. Select Save at the bottom of the Preferences window
+    5. Close CellProfiler and reopen it by typing `pythonw -m cellprofiler` in the command line
 
 
-### Resolving dependencies conflits
+### Resolving dependencies conflicts
 
-    In the terminal with your environment activate, enter:
+    There can be some strange dependency conflicts that can arise with python-javabridge. In the terminal with your environment activate, enter:
     ```
     pip uninstall -y centrosome python-javabridge
     pip install --no-cache-dir --no-deps --no-build-isolation python-javabridge centrosome
@@ -182,6 +170,8 @@ Installation instructions for CellProfiler, CellProfiler plugins, CellPose and S
     pip uninstall mahotas -y
     pip install mahotas
     ```
+
+    The latest version of CellProfiler available on github removes the python-javabridge requirement and instead uses ScyJava.
 
 ### Test your installation
 
