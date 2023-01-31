@@ -349,7 +349,7 @@ The default is set to "Yes".
                     % model_path, self.model_file_name,
                 )
             try:
-                model = models.CellposeModel(pretrained_model=model_path, gpu=self.use_gpu.value)
+                model = models.Cellpose(pretrained_model=model_path, gpu=self.use_gpu.value)
             except:
                 raise ValidationError(
                     "Failed to load custom model: %s "
@@ -365,17 +365,17 @@ The default is set to "Yes".
                 model_file = self.model_file_name.value
                 model_directory = self.model_directory.get_absolute_path()
                 model_path = os.path.join(model_directory, model_file)
-                model = models.CellposeModel(pretrained_model=model_path, gpu=self.use_gpu.value)
+                model = models.Cellpose(pretrained_model=model_path, gpu=self.use_gpu.value)
 
         else:
             if self.mode.value != 'custom':
-                model = models.CellposeModel(model_type= self.mode.value,
+                model = models.Cellpose(model_type= self.mode.value,
                                         gpu=self.use_gpu.value)
             else:
                 model_file = self.model_file_name.value
                 model_directory = self.model_directory.get_absolute_path()
                 model_path = os.path.join(model_directory, model_file)
-                model = models.CellposeModel(pretrained_model=model_path, gpu=self.use_gpu.value)
+                model = models.Cellpose(pretrained_model=model_path, gpu=self.use_gpu.value)
 
         if self.use_gpu.value and model.torch:
             from torch import cuda
