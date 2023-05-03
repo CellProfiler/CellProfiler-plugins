@@ -105,16 +105,16 @@ Select "*No*" to give the window size used to obtain the image variance.""",
 
         if self.calculate_maximal.value:
             max_variance = -1
-            variance = -1
-            for i in window_range:
-                result = abs(scipy.ndimage.uniform_filter(image_pixels**2, size=i, output=numpy.float64)-(scipy.ndimage.uniform_filter(image_pixels, size=i, output=numpy.float64)**2))
+            for window in window_range:
+                result = abs(scipy.ndimage.uniform_filter(image_pixels**2, size=window, output=numpy.float64) - 
+                            (scipy.ndimage.uniform_filter(image_pixels, size=window, output=numpy.float64)**2))
                 variance = result.max()
-                if size > max_variance:
+                if variance > max_variance:
                     max_variance = variance
-                    size = i
+                    size = window
      
         output_pixels = abs(scipy.ndimage.uniform_filter(image_pixels**2, size=size, output=numpy.float64) 
-        - (scipy.ndimage.uniform_filter(image_pixels, size=size, output=numpy.float64)**2))
+                         - (scipy.ndimage.uniform_filter(image_pixels, size=size, output=numpy.float64)**2))
 
         new_image = Image(output_pixels, parent_image=image, dimensions=image.dimensions)
         
