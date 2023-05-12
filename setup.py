@@ -2,7 +2,6 @@ from setuptools import setup
 import setuptools
 
 install_deps = [
-    "numpy>=1.20.1",
     "cellprofiler~=4.2.5",
     "cellprofiler-core~=4.2.5",
             ]

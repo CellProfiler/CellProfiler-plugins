@@ -13,11 +13,6 @@ jobs:
       fail-fast: false
     runs-on: ${{ matrix.os }}
     if: github.event.pull_request.draft == false
-    env:
-      CP_MYSQL_TEST_HOST: "127.0.0.1"
-      CP_MYSQL_TEST_DB: "cellprofiler_test"
-      CP_MYSQL_TEST_USER: "root"
-      CP_MYSQL_TEST_PASSWORD: "None"
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v2
@@ -39,17 +34,16 @@ jobs:
           java-version: '14.0.1' # The JDK version to make available on the path.
           java-package: jdk
           architecture: x64
-      - name: Initial installs
-        run: |
-          pip install --upgrade pip
-      - name: Mac - setup mysql
+      - name: Mac - install mysql
         if: startsWith(matrix.os, 'macos')
         env:
           LC_ALL: "en_US.UTF-8"
         run: |
           brew install mysql
-          mysql.server start
-          mysql --host=$CP_MYSQL_TEST_HOST --user=$CP_MYSQL_TEST_USER --execute="CREATE DATABASE $CP_MYSQL_TEST_DB;" --skip-password
+      - name: Initial installs
+        run: |
+          pip install --upgrade pip
+          pip install setuptools numpy
       - name: Install CellProfiler
         run: |
           pip install -e .
