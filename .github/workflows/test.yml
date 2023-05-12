@@ -39,7 +39,7 @@ jobs:
         env:
           LC_ALL: "en_US.UTF-8"
         run: |
-          brew install mysql
+          brew install mysql mysql-connector-c
       - name: Initial installs
         run: |
           pip install --upgrade pip setuptools wheel
