@@ -1,59 +1,33 @@
-# Set plugins dir:  cellprofiler -c -r -p /Users/ctromans/Downloads/CPJUMP1_analysis_without_batchfile_406.cppipe -o . s --plugins-directory=/Users/ctromans/image-analysis/CellProfiler-plugins/root_plugins
+name: Install CellProfiler
 
-# cellprofiler -c -r -p ./tests/headless_test/4.2.5_plugins_test_pipeline_BASIC.cppipe -i ./tests/headless_test/test_pipeline_img -o . --plugins-directory=.
-
-name: run-cp-plugins
-jobs:
-  test:
-    name: Install CellProfiler and run a plugin pipeline
-    strategy:
-      matrix:
-        os: [macos-11]
-        python-version: [ 3.8, 3.9 ]
-      fail-fast: false
-    runs-on: ${{ matrix.os }}
-    if: github.event.pull_request.draft == false
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
-        with:
-          architecture: x64
-          python-version: ${{ matrix.python-version }}
-      # - name: Get pip cache dir
-      #   id: pip-cache-dir
-      #   run: |
-      #     echo "::set-output name=dir::$(pip cache dir)"
-      # - name: Cache pip
-      #   uses: actions/cache@v3
-      #   id: cache-pip
-      #   with:
-      #     path: ${{ steps.pip-cache-dir.outputs.dir }}
-      #     key: ${{ runner.os }}-${{ env.pythonLocation }}-${{ hashFiles('**/setup.py') }}
-      - uses: actions/setup-java@v1
-        with:
-          java-version: '14.0.1' # The JDK version to make available on the path.
-          java-package: jdk
-          architecture: x64
-      - name: Mac - install mysql
-        if: startsWith(matrix.os, 'macos')
-        env:
-          LC_ALL: "en_US.UTF-8"
-        run: |
-          brew install mysql mysql-connector-c
-      - name: Initial installs
-        run: |
-          pip install --upgrade pip setuptools wheel
-          pip install numpy
-      - name: Install CellProfiler
-        run: |
-          pip install -e .
-      - name: Run plugin pipeline
-        run: |
-          cellprofiler -c -r -p ./tests/headless_test/4.2.5_plugins_test_pipeline_BASIC.cppipe -i ./tests/headless_test/test_pipeline_img -o . --plugins-directory=.
 on:
-  pull_request:
-    types: [opened, reopened, synchronize, ready_for_review, review_requested]
   push:
     branches:
-      - 'master'
-  workflow_dispatch:
+      - main
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.x
+
+      - name: Install CellProfiler dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libx11-dev libgl1-mesa-glx
+
+      - name: Install CellProfiler
+        run: |
+          pip install cellprofiler
+
+      - name: Verify installation
+        run: |
+          cellprofiler --version
