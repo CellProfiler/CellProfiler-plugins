@@ -42,8 +42,8 @@ jobs:
           brew install mysql
       - name: Initial installs
         run: |
-          pip install --upgrade pip
-          pip install setuptools numpy
+          pip install --upgrade pip setuptools wheel
+          pip install numpy
       - name: Install CellProfiler
         run: |
           pip install -e .
