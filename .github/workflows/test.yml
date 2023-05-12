@@ -39,7 +39,7 @@ jobs:
           java-version: '14.0.1' # The JDK version to make available on the path.
           java-package: jdk
           architecture: x64
-      - name: Python installs
+      - name: Initial installs
         run: |
           pip install --upgrade pip
           pip install numpy>=1.20.1
