@@ -19,16 +19,16 @@ jobs:
         with:
           architecture: x64
           python-version: ${{ matrix.python-version }}
-      - name: Get pip cache dir
-        id: pip-cache-dir
-        run: |
-          echo "::set-output name=dir::$(pip cache dir)"
-      - name: Cache pip
-        uses: actions/cache@v3
-        id: cache-pip
-        with:
-          path: ${{ steps.pip-cache-dir.outputs.dir }}
-          key: ${{ runner.os }}-${{ env.pythonLocation }}-${{ hashFiles('**/setup.py') }}
+      # - name: Get pip cache dir
+      #   id: pip-cache-dir
+      #   run: |
+      #     echo "::set-output name=dir::$(pip cache dir)"
+      # - name: Cache pip
+      #   uses: actions/cache@v3
+      #   id: cache-pip
+      #   with:
+      #     path: ${{ steps.pip-cache-dir.outputs.dir }}
+      #     key: ${{ runner.os }}-${{ env.pythonLocation }}-${{ hashFiles('**/setup.py') }}
       - uses: actions/setup-java@v1
         with:
           java-version: '14.0.1' # The JDK version to make available on the path.
