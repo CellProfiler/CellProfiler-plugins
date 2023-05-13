@@ -38,8 +38,4 @@ jobs:
           pip install -e .
       - name: Run plugin pipeline
         run: |
-          cellprofiler -c -r -p ./tests/headless_test/4.2.5_plugins_test_pipeline_BASIC.cppipe -i ./tests/headless_test/test_pipeline_img -o . --plugins-directory=.
-
-      - name: Verify installation
-        run: |
-          cellprofiler --version
+          python -m cellprofiler -c -r -p ./tests/headless_test/4.2.5_plugins_test_pipeline_BASIC.cppipe -i ./tests/headless_test/test_pipeline_img -o . --plugins-directory=.
