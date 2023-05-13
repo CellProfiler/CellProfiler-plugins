@@ -33,7 +33,12 @@ jobs:
           pip install wxPython-4.1.0-cp38-cp38-linux_x86_64.whl
           pip install --upgrade pip setuptools wheel
           pip install numpy
-          pip install cellprofiler
+      - name: Install CellProfiler plugins
+        run: |
+          pip install -e .
+      - name: Run plugin pipeline
+        run: |
+          cellprofiler -c -r -p ./tests/headless_test/4.2.5_plugins_test_pipeline_BASIC.cppipe -i ./tests/headless_test/test_pipeline_img -o . --plugins-directory=.
 
       - name: Verify installation
         run: |
