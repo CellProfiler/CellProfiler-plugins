@@ -36,6 +36,15 @@ jobs:
       - name: Install CellProfiler plugins
         run: |
           pip install -e .
+      - name: Move plugins
+        run: |
+          mkdir basic
+          mv compensatecolors.py basic/compensatecolors.py
+          mv distancetransform.py basic/distancetransform.py
+          mv enhancedmeasuretexture.py basic/enhancedmeasuretexture.py
+          mv histogramequalization.py basic/histogramequalization.py
+          mv histogrammatching.py basic/histogrammatching.py
+          mv pixelshuffle.py basic/pixelshuffle.py
       - name: Run plugin pipeline
         run: |
-          python -m cellprofiler -c -r -p ./tests/headless_test/4.2.5_plugins_test_pipeline_BASIC.cppipe -i ./tests/headless_test/test_pipeline_img -o . --plugins-directory=/home/runner/work/CellProfiler-plugins/CellProfiler-plugins/
+          python -m cellprofiler -c -r -p ./tests/headless_test/4.2.5_plugins_test_pipeline_BASIC.cppipe -i ./tests/headless_test/test_pipeline_img -o . --plugins-directory=/home/runner/work/CellProfiler-plugins/CellProfiler-plugins/basic
