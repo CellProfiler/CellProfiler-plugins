@@ -47,4 +47,4 @@ jobs:
           mv pixelshuffle.py basic/pixelshuffle.py
       - name: Run plugin pipeline
         run: |
-          python -m cellprofiler -c -r -p ./tests/headless_test/4.2.5_plugins_test_pipeline_BASIC.cppipe -i ./tests/headless_test/test_pipeline_img -o . --plugins-directory=/home/runner/work/CellProfiler-plugins/CellProfiler-plugins/basic
+          python -m cellprofiler -c -r -p ./tests/headless_test/4.2.5_plugins_test_pipeline_BASIC.cppipe -i ./tests/headless_test/test_pipeline_img -o . --plugins-directory=./basic
