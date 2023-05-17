@@ -70,6 +70,6 @@ jobs:
           python -m cellprofiler -c -r -p ./tests/headless_test/4.2.5_plugins_test_pipeline_CELLPOSE.cppipe -i ./tests/headless_test/test_pipeline_img -o . --plugins-directory=./cellpose
       - name: Run stardist plugin pipeline
         run: |
-          pip uninstall cellpose pytorch
+          pip uninstall -y cellpose pytorch
           pip install -e .[stardist]
           python -m cellprofiler -c -r -p ./tests/headless_test/4.2.5_plugins_test_pipeline_STARDIST.cppipe -i ./tests/headless_test/test_pipeline_img -o . --plugins-directory=./stardist
