@@ -12,8 +12,21 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
-
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          architecture: x64
+          python-version: ${{ matrix.python-version }}
+      - name: Get pip cache dir
+        id: pip-cache-dir
+        run: |
+          echo "::set-output name=dir::$(pip cache dir)"
+      - name: Cache pip
+        uses: actions/cache@v3
+        id: cache-pip
+        with:
+          path: ${{ steps.pip-cache-dir.outputs.dir }}
+          key: ${{ runner.os }}-${{ env.pythonLocation }}-${{ hashFiles('**/setup.py') }}
       - name: Set up Python
         uses: actions/setup-python@v2
         with:
@@ -45,6 +58,12 @@ jobs:
           mv histogramequalization.py basic/histogramequalization.py
           mv histogrammatching.py basic/histogrammatching.py
           mv pixelshuffle.py basic/pixelshuffle.py
-      - name: Run plugin pipeline
+          mkdir cellpose
+          mv runcellpose.py cellpose/runcellpose.py
+      - name: Run basic plugin pipeline
         run: |
           python -m cellprofiler -c -r -p ./tests/headless_test/4.2.5_plugins_test_pipeline_BASIC.cppipe -i ./tests/headless_test/test_pipeline_img -o . --plugins-directory=./basic
+      - name: Run cellpose plugin pipeline
+        run: |
+          pip install -e .[cellpose]
+          python -m cellprofiler -c -r -p ./tests/headless_test/4.2.5_plugins_test_pipeline_cellpose.cppipe -i ./tests/headless_test/test_pipeline_img -o . --plugins-directory=./cellpose
