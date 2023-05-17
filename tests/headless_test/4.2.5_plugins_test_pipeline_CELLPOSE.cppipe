@@ -70,7 +70,7 @@ RunCellpose:[module_num:5|svn_version:'Unknown'|variable_revision_number:3|show_
     Cell probability threshold:0.0
     GPU memory share for each worker:0.1
     Stitch Threshold:0.0
-    Use 3D:Yes
+    Use 3D:No
     Minimum size:10
     Z rescaling factor (anisotropy):1.0
     Use Omnipose for mask reconstruction:No
