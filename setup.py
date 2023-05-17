@@ -15,6 +15,7 @@ omnipose_deps = [
 ]
 
 stardist_deps = [
+    "tensorflow",
     "stardist"
 ]
 

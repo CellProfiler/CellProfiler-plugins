@@ -59,6 +59,8 @@ jobs:
           mv pixelshuffle.py basic/pixelshuffle.py
           mkdir cellpose
           mv runcellpose.py cellpose/runcellpose.py
+          mkdir stardist
+          mv runstardist.py cellpose/runstardist.py
       - name: Run basic plugin pipeline
         run: |
           python -m cellprofiler -c -r -p ./tests/headless_test/4.2.5_plugins_test_pipeline_BASIC.cppipe -i ./tests/headless_test/test_pipeline_img -o . --plugins-directory=./basic
@@ -66,3 +68,7 @@ jobs:
         run: |
           pip install -e .[cellpose]
           python -m cellprofiler -c -r -p ./tests/headless_test/4.2.5_plugins_test_pipeline_CELLPOSE.cppipe -i ./tests/headless_test/test_pipeline_img -o . --plugins-directory=./cellpose
+      - name: Run stardist plugin pipeline
+        run: |
+          pip install -e .[stardist]
+          python -m cellprofiler -c -r -p ./tests/headless_test/4.2.5_plugins_test_pipeline_STARDIST.cppipe -i ./tests/headless_test/test_pipeline_img -o . --plugins-directory=./stardist
