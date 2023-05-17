@@ -2,15 +2,15 @@ CellProfiler Pipeline: http://www.cellprofiler.org
 Version:5
 DateRevision:425
 GitHash:
-ModuleCount:13
+ModuleCount:11
 HasImagePlaneDetails:False
 
-Images:[module_num:1|svn_version:'Unknown'|variable_revision_number:2|show_window:False|notes:['To begin creating your project, use the Images module to compile a list of files and/or folders that you want to analyze. You can also specify a set of rules to include only the desired files in your selected folders.']|batch_state:array([], dtype=uint8)|enabled:True|wants_pause:False]
+Images:[module_num:1|svn_version:'Unknown'|variable_revision_number:2|show_window:True|notes:['To begin creating your project, use the Images module to compile a list of files and/or folders that you want to analyze. You can also specify a set of rules to include only the desired files in your selected folders.']|batch_state:array([], dtype=uint8)|enabled:True|wants_pause:False]
     :
     Filter images?:Images only
     Select the rule criteria:and (extension does isimage) (directory doesnot containregexp "[\\\\/]\\.")
 
-Metadata:[module_num:2|svn_version:'Unknown'|variable_revision_number:6|show_window:False|notes:['The Metadata module optionally allows you to extract information describing your images (i.e, metadata) which will be stored along with your measurements. This information can be contained in the file name and/or location, or in an external file.']|batch_state:array([], dtype=uint8)|enabled:True|wants_pause:False]
+Metadata:[module_num:2|svn_version:'Unknown'|variable_revision_number:6|show_window:True|notes:['The Metadata module optionally allows you to extract information describing your images (i.e, metadata) which will be stored along with your measurements. This information can be contained in the file name and/or location, or in an external file.']|batch_state:array([], dtype=uint8)|enabled:True|wants_pause:False]
     Extract metadata?:No
     Metadata data type:Text
     Metadata types:{}
@@ -27,7 +27,7 @@ Metadata:[module_num:2|svn_version:'Unknown'|variable_revision_number:6|show_win
     Metadata file name:None
     Does cached metadata exist?:No
 
-NamesAndTypes:[module_num:3|svn_version:'Unknown'|variable_revision_number:8|show_window:False|notes:['The NamesAndTypes module allows you to assign a meaningful name to each image by which other modules will refer to it.']|batch_state:array([], dtype=uint8)|enabled:True|wants_pause:False]
+NamesAndTypes:[module_num:3|svn_version:'Unknown'|variable_revision_number:8|show_window:True|notes:['The NamesAndTypes module allows you to assign a meaningful name to each image by which other modules will refer to it.']|batch_state:array([], dtype=uint8)|enabled:True|wants_pause:False]
     Assign a name to:All images
     Select the image type:Grayscale image
     Name to assign these images:DNA
@@ -48,7 +48,7 @@ NamesAndTypes:[module_num:3|svn_version:'Unknown'|variable_revision_number:8|sho
     Set intensity range from:Image metadata
     Maximum intensity:255.0
 
-Groups:[module_num:4|svn_version:'Unknown'|variable_revision_number:2|show_window:False|notes:['The Groups module optionally allows you to split your list of images into image subsets (groups) which will be processed independently of each other. Examples of groupings include screening batches, microtiter plates, time-lapse movies, etc.']|batch_state:array([], dtype=uint8)|enabled:True|wants_pause:False]
+Groups:[module_num:4|svn_version:'Unknown'|variable_revision_number:2|show_window:True|notes:['The Groups module optionally allows you to split your list of images into image subsets (groups) which will be processed independently of each other. Examples of groupings include screening batches, microtiter plates, time-lapse movies, etc.']|batch_state:array([], dtype=uint8)|enabled:True|wants_pause:False]
     Do you want to group your images?:No
     grouping metadata count:1
     Metadata category:None
@@ -89,29 +89,7 @@ IdentifyPrimaryObjects:[module_num:5|svn_version:'Unknown'|variable_revision_num
     # of deviations:2.0
     Thresholding method:Minimum Cross-Entropy
 
-CalculateMoments:[module_num:6|svn_version:'Unknown'|variable_revision_number:1|show_window:True|notes:[]|batch_state:array([], dtype=uint8)|enabled:False|wants_pause:False]
-    Hidden:1
-    Hidden:1
-    Select an image to measure:DNA
-    Select objects to measure:IdentifyPrimaryObjects
-    Moments to compute:Mean,Standard Deviation,Skewness,Kurtosis
-
-CallBarcodes:[module_num:7|svn_version:'Unknown'|variable_revision_number:1|show_window:True|notes:[]|batch_state:array([], dtype=uint8)|enabled:False|wants_pause:False]
-    Number of cycles:8
-    Input object name:IdentifyPrimaryObjects
-    Select one of the measures from Cycle 1 to use for calling:Location_Center_X
-    Input data file location:Elsewhere...|
-    Name of the file:None
-    Select the column of barcodes to match against:No CSV file
-    Select the column with gene/transcript barcode names:No CSV file
-    Retain an image of the barcodes color coded by call?:No
-    Enter the called barcode image name:None
-    Retain an image of the barcodes color coded by score match?:No
-    Enter the barcode score image name:None
-    Do you have an empty vector barcode you would like to add to the barcode list?:No
-    What is the empty vector sequence?:AAAAAAAAAAAAAAA
-
-CompensateColors:[module_num:8|svn_version:'Unknown'|variable_revision_number:1|show_window:False|notes:[]|batch_state:array([], dtype=uint8)|enabled:True|wants_pause:False]
+CompensateColors:[module_num:6|svn_version:'Unknown'|variable_revision_number:1|show_window:True|notes:[]|batch_state:array([], dtype=uint8)|enabled:True|wants_pause:False]
     Hidden:2
     Hidden:1
     Select an image to measure:DNA
@@ -137,12 +115,12 @@ CompensateColors:[module_num:8|svn_version:'Unknown'|variable_revision_number:1|
     What size sigma should be used for the DoG low sigma?:3
     What size radius should be used for the DoG low sigma?:5
 
-DistanceTransform:[module_num:9|svn_version:'Unknown'|variable_revision_number:1|show_window:True|notes:[]|batch_state:array([], dtype=uint8)|enabled:True|wants_pause:False]
+DistanceTransform:[module_num:7|svn_version:'Unknown'|variable_revision_number:1|show_window:True|notes:[]|batch_state:array([], dtype=uint8)|enabled:True|wants_pause:False]
     Select the input image:DNA
     Name the output image:DistanceTransform
     Rescale values from 0 to 1?:Yes
 
-EnhancedMeasureTexture:[module_num:10|svn_version:'Unknown'|variable_revision_number:3|show_window:False|notes:[]|batch_state:array([], dtype=uint8)|enabled:True|wants_pause:False]
+EnhancedMeasureTexture:[module_num:8|svn_version:'Unknown'|variable_revision_number:3|show_window:True|notes:[]|batch_state:array([], dtype=uint8)|enabled:True|wants_pause:False]
     Hidden:1
     Hidden:1
     Hidden:1
@@ -155,7 +133,7 @@ EnhancedMeasureTexture:[module_num:10|svn_version:'Unknown'|variable_revision_nu
     Measure Tamura features?:Yes
     Features to compute:Coarseness,Contrast,Directionality
 
-HistogramEqualization:[module_num:11|svn_version:'Unknown'|variable_revision_number:1|show_window:True|notes:[]|batch_state:array([], dtype=uint8)|enabled:True|wants_pause:False]
+HistogramEqualization:[module_num:9|svn_version:'Unknown'|variable_revision_number:1|show_window:True|notes:[]|batch_state:array([], dtype=uint8)|enabled:True|wants_pause:False]
     Select the input image:DNA
     Name the output image:HistogramEqualization
     Bins:256
@@ -167,7 +145,7 @@ HistogramEqualization:[module_num:11|svn_version:'Unknown'|variable_revision_num
     Do framewise calculation?:No
     Tile Size (Z):5
 
-HistogramMatching:[module_num:12|svn_version:'Unknown'|variable_revision_number:1|show_window:True|notes:[]|batch_state:array([], dtype=uint8)|enabled:True|wants_pause:False]
+HistogramMatching:[module_num:10|svn_version:'Unknown'|variable_revision_number:1|show_window:True|notes:[]|batch_state:array([], dtype=uint8)|enabled:True|wants_pause:False]
     Select the input image:DNA
     Name the output image:HistogramMatching
     Is you image 3D?:No
@@ -175,6 +153,6 @@ HistogramMatching:[module_num:12|svn_version:'Unknown'|variable_revision_number:
     Image to use as reference :None
     Frame number:5
 
-PixelShuffle:[module_num:13|svn_version:'Unknown'|variable_revision_number:1|show_window:True|notes:[]|batch_state:array([], dtype=uint8)|enabled:True|wants_pause:False]
+PixelShuffle:[module_num:11|svn_version:'Unknown'|variable_revision_number:1|show_window:True|notes:[]|batch_state:array([], dtype=uint8)|enabled:True|wants_pause:False]
     Select the input image:DNA
     Name the output image:PixelShuffle
