@@ -65,4 +65,4 @@ jobs:
       - name: Run cellpose plugin pipeline
         run: |
           pip install -e .[cellpose]
-          python -m cellprofiler -c -r -p ./tests/headless_test/4.2.5_plugins_test_pipeline_cellpose.cppipe -i ./tests/headless_test/test_pipeline_img -o . --plugins-directory=./cellpose
+          python -m cellprofiler -c -r -p ./tests/headless_test/4.2.5_plugins_test_pipeline_CELLPOSE.cppipe -i ./tests/headless_test/test_pipeline_img -o . --plugins-directory=./cellpose
