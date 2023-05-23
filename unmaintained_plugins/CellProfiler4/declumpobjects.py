@@ -1,17 +1,14 @@
 # coding=utf-8
 
-"""
+__doc__ = """\
 DeclumpObjects
 ==============
 
-**DeclumpObjects** will split objects based on a seeded watershed method
+**DeclumpObjects** will split objects based on a seeded watershed method.
 
-#. Compute the `local maxima`_ (either through the `Euclidean distance transformation`_
-of the segmented objects or through the intensity values of a reference image
-
-#. Dilate the seeds as specified
-
-#. Use these seeds as markers for watershed
+It computes the `local maxima`_ (either through the `Euclidean distance transformation`_
+of the segmented objects or through the intensity values of a reference image), dilates the seeds as specified, 
+and uses these seeds as markers for watershed.
 
 NOTE: This implementation is based off of the **IdentifyPrimaryObjects** declumping implementation.
 For more information, see the aforementioned module.

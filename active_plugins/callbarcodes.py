@@ -1,5 +1,52 @@
 # coding=utf-8
 
+__doc__ = """\
+CallBarcodes
+============
+**CallBarcodes** is used for assigning a barcode to an object based on the channel with the strongest intensity for a given number of cycles.
+It is used for optical sequencing by synthesis (SBS).
+
+What do I need as input?
+^^^^^^^^^^^^^^^^^^^^^^^^
+You need to input a .csv file that contains at least two columns.
+One column contains the known barcodes that you will be matching against.
+One column contains the corresponding gene/transcript names.
+All other columns in the .csv will be ignored.
+
+Before running this module in your pipeline, you need to identify the objects in which you will be calling your barcodes and you will need to have measured the intensities of each object in four channels corresponding to nucleotides A,C,T, and G.
+If the background intensities of your four channels are not very well matched, you might want to run the **CompensateColors** module before measuring the object intensities.
+
+What do I get as output?
+^^^^^^^^^^^^^^^^^^^^^^^^
+To be added
+
+Measurements made by this module
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Within the InputObject.csv, this module outputs the following measurements:
+- Barcode_BarcodeCalled is the n-cycle string of the barcode sequence that was read by the module
+- Barcode_MatchedTo_Barcode is the known barcode that the module best matched to the called barcode
+- Barcode_MatchedTo_ID is an ID number assigned to each known barcode
+- Barcode_MatchedTo_GeneCode is the known gene/transcript name that corresponds to the known barcode
+- Barcode_MatchedTo_Score is the quality of the called barcode to known barcode match, reported as (matching nucleotides)/(total nucleotides) where 1 is a perfect match
+
+Note that CellProfiler cannot create a per-parent mean measurement of a string so 
+
+References
+^^^^^^^^^^
+Optical Pooled Screens in Human Cells.
+Feldman D, Singh A, Schmid-Burgk JL, Carlson RJ, Mezger A, Garrity AJ, Zhang F, Blainey PC.
+Cell. 2019 Oct 17;179(3):787-799.e17. doi: 10.1016/j.cell.2019.09.016.
+
+|
+
+============ ============ ===============
+Supports 2D? Supports 3D? Respects masks?
+============ ============ ===============
+YES          YES           YES
+============ ============ ===============
+
+"""
+
 #################################
 #
 # Imports from useful Python libraries
@@ -37,39 +84,6 @@ import cellprofiler_core.utilities.image
 import cellprofiler_core.preferences
 import cellprofiler_core.constants.measurement
 
-__doc__ = """\
-CallBarcodes
-============
-
-**CallBarcodes** - This module calls barcodes.
-
-|
-
-============ ============ ===============
-Supports 2D? Supports 3D? Respects masks?
-============ ============ ===============
-YES          Yes           YES
-============ ============ ===============
-
-
-What do I need as input?
-^^^^^^^^^^^^^^^^^^^^^^^^
-To be added
-
-What do I get as output?
-^^^^^^^^^^^^^^^^^^^^^^^^
-To be added
-
-Measurements made by this module
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-To be added
-
-References
-^^^^^^^^^^
-Optical Pooled Screens in Human Cells.
-Feldman D, Singh A, Schmid-Burgk JL, Carlson RJ, Mezger A, Garrity AJ, Zhang F, Blainey PC.
-Cell. 2019 Oct 17;179(3):787-799.e17. doi: 10.1016/j.cell.2019.09.016.
-"""
 
 C_CALL_BARCODES = "Barcode"
 
@@ -133,7 +147,7 @@ This measurement should be """,
             "Select the column of barcodes to match against",
             ["No CSV file"],
             choices_fn=self.get_choices,
-            doc="""\
+            doc="""\Select the column of barcodes to match against.
 """,
         )
 
@@ -141,7 +155,7 @@ This measurement should be """,
             "Select the column with gene/transcript barcode names",
             ["No CSV file"],
             choices_fn=self.get_choices,
-            doc="""\
+            doc="""\Select the column with gene/transcript barcode names.
 """,
         )
 

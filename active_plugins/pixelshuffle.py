@@ -1,10 +1,10 @@
 __doc__ ="""\
 PixelShuffle
-===========
+============
 
-**PixelShuffle** 
-Takes the intensity of each pixel in an image and it shuffles its position 
+**PixelShuffle** takes the intensity of each pixel in an image and it randomly shuffles its position.
 
+|
 
 ============ ============ ===============
 Supports 2D? Supports 3D? Respects masks?

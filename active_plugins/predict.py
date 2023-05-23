@@ -1,20 +1,3 @@
-import os
-import subprocess
-import tempfile
-
-import h5py  # HDF5 is ilastik's preferred file format
-import logging
-import skimage
-
-from cellprofiler_core.image import Image
-from cellprofiler_core.module import Module
-import cellprofiler_core.setting
-from cellprofiler_core.setting.choice import Choice
-from cellprofiler_core.setting.text import Pathname
-
-
-logger = logging.getLogger(__name__)
-
 __doc__ = """\
 Predict
 =======
@@ -64,8 +47,32 @@ trained on RGB images, use **NamesAndTypes** to load images as RGB by
 selecting "*Color image*" from the *Select the image type* dropdown. If
 your classifier expects grayscale images, use **NamesAndTypes** to load
 images as "*Grayscale image*".
+
+|
+
+============ ============ ===============
+Supports 2D? Supports 3D? Respects masks?
+============ ============ ===============
+YES          NO           NO
+============ ============ ===============
 """
 
+import os
+import subprocess
+import tempfile
+
+import h5py  # HDF5 is ilastik's preferred file format
+import logging
+import skimage
+
+from cellprofiler_core.image import Image
+from cellprofiler_core.module import Module
+import cellprofiler_core.setting
+from cellprofiler_core.setting.choice import Choice
+from cellprofiler_core.setting.text import Pathname
+
+
+logger = logging.getLogger(__name__)
 
 class Predict(cellprofiler_core.module.ImageProcessing):
     module_name = "Predict"

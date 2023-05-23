@@ -1,12 +1,12 @@
 __doc__ = """\
 DistanceTransform
-===========
+=================
 
-**DistanceTransform** 
-Computes the distance transform of a binary image. The distance of each
-foreground pixel is computed to the nearest background pixel. The
-resulting image is then scaled so that the largest distance is 1. 
+**DistanceTransform** computes the distance transform of a binary image. 
+The distance of each foreground pixel is computed to the nearest background pixel. 
+The resulting image is then scaled so that the largest distance is 1. 
 
+|
 
 ============ ============ ===============
 Supports 2D? Supports 3D? Respects masks?

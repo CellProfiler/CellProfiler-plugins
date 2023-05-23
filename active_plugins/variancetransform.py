@@ -1,9 +1,11 @@
 __doc__ ="""\
 VarianceTransform
 =================
-**VarianceTransform** 
-This module allows you to calculate the variance of an image, using a determined window size. It also has
-the option to find the optimal window size from a predetermied range to obtain the maximum variance of an image.
+**VarianceTransform** allows you to calculate the variance of an image using a set window size. It also has
+the option to find the optimal window size to obtain the maximum variance of an image within a given range.
+
+|
+
 ============ ============ ===============
 Supports 2D? Supports 3D? Respects masks?
 ============ ============ ===============

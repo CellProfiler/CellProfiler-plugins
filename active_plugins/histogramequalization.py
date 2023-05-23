@@ -1,21 +1,23 @@
 __doc__ = """\
 HistogramEqualization 
-================
-**HistogramEqualization** is a module to Increase the global contrast of 
+=====================
+**HistogramEqualization** increases the global contrast of 
 a low-contrast image or volume. Histogram equalization redistributes intensities 
 to utilize the full range of intensities, such that the most common frequencies 
 are more distinct.
 
+|
+
 ============ ============ ===============
 Supports 2D? Supports 3D? Respects masks?
 ============ ============ ===============
-YES          YES          NO
+YES          YES          YES
 ============ ============ ===============
 
 Technical notes
 ^^^^^^^^^^^^^^^
 This module can perform two types of histogram equalization; a global method (HE) and 
-a local method (Adaptive Histogram Equalization - AHE). A local method might perfom 
+a local method (Adaptive Histogram Equalization - AHE). A local method might perform 
 better in some cases but it might increase the background noise. The clipping limit 
 setting can help limit noise amplification (Contrast Limited AHE - CLAHE). 
 Look at the references for more information.
@@ -54,9 +56,8 @@ class HistogramEqualization(cellprofiler_core.module.ImageProcessing):
             u"Tile Size",
             value=50,
             minval=1,
-            doc="""The image is partitioned into tiles of the specified size. Choose a tile
-                size that will fit at least one object of interest.
-                """
+            doc="""The image is partitioned into tiles of the specified size. Choose a tile size that will fit at least one object of interest.
+            """
         )
 
         self.mask = ImageSubscriber(
@@ -78,13 +79,12 @@ class HistogramEqualization(cellprofiler_core.module.ImageProcessing):
             value=0.01,
             minval=0,
             maxval=1,
-            doc="""normalized between 0 and 1 (higher values give more contrast but will also result in overamplification of background in areas of 
-            low or no signal).
-                """
+            doc="""Normalized between 0 and 1. Higher values give more contrast but will also result in over-amplification of background in areas of low or no signal.
+            """
         )
 
         self.do_3D= cellprofiler_core.setting.Binary(
-            text="Is you image 3D?",
+            text="Is your image 3D?",
             value=False,
             doc="""
             If enabled, 3D specific settings will be available."""
@@ -94,14 +94,14 @@ class HistogramEqualization(cellprofiler_core.module.ImageProcessing):
             text="Do framewise calculation?",
             value=False,
             doc="""
-            If enabled, the histogram equalization will be calculated framewise instead of using the image volume"""
+            If enabled, the histogram equalization will be calculated frame-wise instead of using the image volume"""
         )
         
         self.tile_z_size = cellprofiler_core.setting.text.Integer(
             u"Tile Size (Z)",
             value=5,
             minval=1,
-            doc="""for 3D image you have the option of performing histagram equalization one z-frame at a time or using a 3D tile
+            doc="""For 3D image you have the option of performing histogram equalization one z-frame at a time or using a 3D tile
                 """
         )
 

@@ -1,35 +1,27 @@
-"""
-<b>CalculateMoments</b> extracts moments statistics from a given distribution of pixel values.
-<hr>
-This module extracts a collection of quantitative measures of the shape of a distribution of pixel values. The user can use all pixels to compute the moments or can restrict to pixels within objects. If the image has a mask, only unmasked pixels will be used.
+__doc__ = """\
+CalculateMoments
+================
 
-<p>This module can also </p>
+**CalculateMoments** extracts moments statistics from a given distribution of pixel values.
 
-<h4>Available measurements</h4>
-<ul>
-<li><i>Mean:</i> </li>
-<li><i>Standard deviation:</i> </li>
-<li><i>Skewness:</i> </li>
-<li><i>Kurtosis:</i> </li>
-</ul>
-</li>
+This module extracts a collection of quantitative measures of the shape of a distribution of pixel values. 
+The user can use all pixels to compute the moments or can restrict to pixels within objects. 
+If the image has a mask, only unmasked pixels will be used.
 
-<h3>Technical notes</h3>
-<p><b>CalculateMoments</b> computes the sample mean, standard deviation, skewness and kurtosis of a collection of N pixel values denoted by x<sub>i</sub>, i=1...N as follows.
-<ul>
-<li>The mean is computed according to the usual definition and is denoted by &mu.</li>
-<li>The standard deviation is computed using the unbiased estimator, which is defined as <sup>1</sup>&frasl<sub>N</sub> (&sum<sub>i=1...N</sub>  (x<sub>i</sub> - &mu)<sup>2</sup> )<sup><sup>1</sup>&frasl<sub>2</sub></sup>, where &mu is the mean. It is denoted by &sigma.</li>
-<li>The skewness is computed as the third moment about the mean, scaled by the standard deviation to the third power. Formally, <sup>&mu<sub>3</sub></sup>&frasl<sub>&sigma<sup>3</sup></sub>, where &sigma is the unbiased estimator of the standard deviation and &mu<sup>3</sup> is the third central moment defined as <sup>1</sup>&frasl<sub>N</sub> &sum<sub>i=1...N</sub>  (x<sub>i</sub> - &mu)<sup>3</sup>.</li>
-<li>The kurtosis is computed as the fourth moment about the mean, scaled by the standard deviation to the fourth power. Formally, <sup>&mu<sub>4</sub></sup>&frasl<sub>&sigma<sup>4<sup></sub>, where &sigma is the unbiased estimator of the standard deviation and &mu<sup>4</sup> is the fourth central moment defined as <sup>1</sup>&frasl<sub>N</sub> &sum<sub>i=1...N</sub>  (x<sub>i</sub> - &mu)<sup>4</sup>.</li>
-</ul>
+Available measurements:  
+- Mean  
+- Standard deviation (computed using the unbiased estimator)
+- Skewness (the third moment about the mean, scaled by the standard deviation to the third power)
+- Kurtosis (the fourth moment about the mean, scaled by the standard deviation to the fourth power)
 
-References
-<ul>
-<li>Doe, J. et al. (0000), "A very wonderful article," <i>an awesome journal</i>,
-0:00-00.</li>
-<li>The Frog, K. (0000). "It's not easy, being green,"
-<i>Journal of the Depressed Amphibians</i> 0:00-00.</li>
-</ul>
+|
+
+============ ============ ===============
+Supports 2D? Supports 3D? Respects masks?
+============ ============ ===============
+YES          ?            ?
+============ ============ ===============
+
 """
 
 import numpy as np
@@ -133,12 +125,12 @@ class CalculateMoments(cpm.Module):
         self.moms=MultiChoice(
             "Moments to compute", MOM_ALL, MOM_ALL,
             doc = """Moments are statistics describing the distribution of values in the set of pixels of interest:
-                <p><ul>
-                <li><i>%(MOM_1)s</i> - the first image moment, which corresponds to the central value of the collection of pixels of interest.</li>
-                <li><i>%(MOM_2)s</i> - the second image moment, which measures the amount of variation or dispersion of pixel values about its mean.</li>
-                <li><i>%(MOM_3)s</i> - a scaled version of the third moment, which measures the asymmetry of the pixel values distribution about its mean.</li>
-                <li><i>%(MOM_4)s</i> - a scaled version of the fourth moment, which measures the "peakedness" of the pixel values distribution.</li>
-                </ul><p>
+                
+                - %(MOM_1)s - the first image moment, which corresponds to the central value of the collection of pixels of interest.
+                - %(MOM_2)s - the second image moment, which measures the amount of variation or dispersion of pixel values about its mean.
+                - %(MOM_3)s - a scaled version of the third moment, which measures the asymmetry of the pixel values distribution about its mean.
+                - %(MOM_4)s - a scaled version of the fourth moment, which measures the "peakedness" of the pixel values distribution.
+                
                 Choose one or more moments to measure.""" % globals())
 
     def settings(self):
@@ -203,12 +195,12 @@ class CalculateMoments(cpm.Module):
         group.append('object_name',
                      LabelSubscriber("Select objects to measure","None", doc="""
                      What did you call the objects from which you want to calculate moments?
-                     If you only want to calculat moments of
+                     If you only want to calculate moments of
                      the image overall, you can remove all objects using the "Remove this object" button.
-                     <p>Objects specified here will have moments computed against <i>all</i> images specfied above, which
-                     may lead to image-object combinations that are unneccesary. If you
-                     do not want this behavior, use multiple <b>CalculateMoments</b>
-                     modules to specify the particular image-object measures that you want.</p>"""))
+                     Objects specified here will have moments computed against *all* images specified above, which
+                     may lead to image-object combinations that are unnecessary. If you
+                     do not want this behavior, use multiple CalculateMoments
+                     modules to specify the particular image-object measures that you want."""))
         if can_remove:
             group.append("remover", cps.do_something.RemoveSettingButton("", "Remove this object", self.object_groups, group))
         self.object_groups.append(group)

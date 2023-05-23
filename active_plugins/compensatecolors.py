@@ -1,4 +1,37 @@
 # coding=utf-8
+__doc__ = """\
+CompensateColors
+================
+
+**CompensateColors** is a module to deconvolve spectral overlap between at least two sets of images. 
+It can optionally be done within an object set.
+
+|
+
+============ ============ ===============
+Supports 2D? Supports 3D? Respects masks?
+============ ============ ===============
+YES          YES          YES
+============ ============ ===============
+
+
+What do I need as input?
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+At least two sets of images from which you want to remove spectral overlap.
+
+What do I get as output?
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+An equal number of images which have been treated with color compensation.
+
+Technical notes
+^^^^^^^^^^^^^^^
+
+Compensation will be performed between compensation classes so you need to assign your images to at least 2 compensation classes.
+Often, each compensation class is a separate channel used during image acquisition. 
+
+"""
 
 #################################
 #
@@ -23,62 +56,6 @@ import skimage.morphology
 import cellprofiler_core.image
 import cellprofiler_core.module
 import cellprofiler_core.setting
-
-__doc__ = """\
-CompensateColors
-================
-
-**CompensateColors** is a module to deconvolve spectral overlap between two sets
-of images; optionally, this can be done within an object set.
-
-|
-
-============ ============ ===============
-Supports 2D? Supports 3D? Respects masks?
-============ ============ ===============
-YES          YES          YES
-============ ============ ===============
-
-See also
-^^^^^^^^
-
-Is there another **Module** that is related to this one? If so, refer
-to that **Module** in this section. Otherwise, this section can be omitted.
-
-What do I need as input?
-^^^^^^^^^^^^^^^^^^^^^^^^
-
-Two sets of images you want to remove spectral overlap from.
-
-What do I get as output?
-^^^^^^^^^^^^^^^^^^^^^^^^
-
-An equal number of images which have been treated with color compensation.
-As this module can end up running many dozens of images, the output images
-will be named by the input name + a user designated suffix, rather than 
-manual assignment of each name.
-
-
-Technical notes
-^^^^^^^^^^^^^^^
-
-Include implementation details or notes here. Additionally provide any 
-other background information about this module, including definitions
-or adopted conventions. Information which may be too specific to fit into
-the general description should be provided here.
-
-Omit this section if there is no technical information to mention.
-
-References
-^^^^^^^^^^
-
-Provide citations here, if appropriate. Citations are formatted as a list and,
-wherever possible, include a link to the original work. For example,
-
--  Meyer F, Beucher S (1990) “Morphological segmentation.” *J Visual
-   Communication and Image Representation* 1, 21-46.
-   (`link <http://dx.doi.org/10.1016/1047-3203(90)90014-M>`__)
-"""
 
 
 COMPENSATE_SUFFIX = "Compensated"
@@ -269,14 +246,19 @@ applied before rescaling or any other enhancements (except tophat filtering and/
             "class_num",
             cellprofiler_core.setting.text.Integer(
                 'What compensation class does this image belong to?',
-                1
+                1,
+                doc="""\
+What compensation class does this image belong to?
+You need to divide your images into at least two compensation classes.
+Often, each imaging channel is a separate compensation class."""
             )
         )
         group.append(
             "output_name",
             cellprofiler_core.setting.text.ImageName(
                 'Select an output image name',
-                "None"
+                "None",
+                doc='What would you like the compensated image to be named?'
             )
         )
         if len(self.image_groups) == 0:  # Insert space between 1st two images for aesthetics

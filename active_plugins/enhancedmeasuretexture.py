@@ -1,108 +1,97 @@
-"""
-<b>Enhanced Measure Texture</b> measures the degree and nature of textures within objects (versus smoothness)
-<hr>
+__doc__ = """\
+EnhancedMeasureTexture
+======================
+
+**EnhancedMeasureTexture** measures the degree and nature of textures within an image or objects.
 
 This module measures the variations in grayscale images.  An object (or 
 entire image) without much texture has a smooth appearance; an
 object or image with a lot of texture will appear rough and show a wide 
 variety of pixel intensities.
 
-<p>This module can also measure textures of objects against grayscale images. 
-Any input objects specified will have their texture measured against <i>all</i> input
-images specfied, which may lead to image-object texture combinations that are unneccesary. 
-If you do not want this behavior, use multiple <b>EnhancedMeasureTexture</b> modules to 
-specify the particular image-object measures that you want.</p>
-                        
+This module can also measure textures of objects against grayscale images. 
+Any input objects specified will have their texture measured against *all* input
+images specified, which may lead to image-object texture combinations that are unnecessary. 
+If you do not want this behavior, use multiple **EnhancedMeasureTexture** modules to 
+specify the particular image-object measures that you want.
 
-<h4>Available measurements</h4>
-<ul>
-<li><i>Haralick Features:</i> Haralick texture features are derived from the 
+Available measurements:
+
+**Haralick Features**: Haralick texture features are derived from the 
 co-occurrence matrix, which contains information about how image intensities in pixels with a 
-certain position in relation to each other occur together. <b>EnhancedMeasureTexture</b>
+certain position in relation to each other occur together. **EnhancedMeasureTexture**
 can measure textures at different scales; the scale you choose determines
 how the co-occurrence matrix is constructed.
 For example, if you choose a scale of 2, each pixel in the image (excluding
 some border pixels) will be compared against the one that is two pixels to
-the right. <b>EnhancedMeasureTexture</b> quantizes the image into eight intensity
+the right. **EnhancedMeasureTexture** quantizes the image into eight intensity
 levels. There are then 8x8 possible ways to categorize a pixel with its
-scale-neighbor. <b>EnhancedMeasureTexture</b> forms the 8x8 co-occurrence matrix
+scale-neighbor. **EnhancedMeasureTexture** forms the 8x8 co-occurrence matrix
 by counting how many pixels and neighbors have each of the 8x8 intensity
 combinations. Thirteen features are then calculated for the image by performing
-mathematical operations on the co-occurrence matrix (the forumulas can be found 
-<a href="http://murphylab.web.cmu.edu/publications/boland/boland_node26.html">here</a>):
-<ul>
-<li><i>H1:</i> Angular Second Moment</li>
-<li><i>H2:</i> Contrast</li>
-<li><i>H3:</i> Correlation</li>
-<li><i>H4:</i> Sum of Squares: Variation</li>
-<li><i>H5:</i> Inverse Difference Moment</li>
-<li><i>H6:</i> Sum Average</li>
-<li><i>H7:</i> Sum Variance</li>
-<li><i>H8:</i> Sum Entropy</li>
-<li><i>H9:</i> Entropy</li>
-<li><i>H10:</i> Difference Variance</li>
-<li><i>H11:</i> Difference Entropy</li>
-<li><i>H12:</i> Information Measure of Correlation 1</li>
-<li><i>H13:</i> Information Measure of Correlation 2</li>
-</ul>
-</li>
-<li>
-<i>Gabor "wavelet" features:</i> These features are similar to wavelet features, 
+mathematical operations on the co-occurrence matrix (the formulas can be found `here`_):
+
+- Angular Second Moment
+- Contrast
+- Correlation
+- Sum of Squares: Variation
+- Inverse Difference Moment
+- Sum Average
+- Sum Variance
+- Sum Entropy
+- Entropy
+- Difference Variance
+- Difference Entropy
+- Information Measure of Correlation 1
+- Information Measure of Correlation 2
+
+**Gabor "wavelet" features**: These features are similar to wavelet features, 
 and they are obtained by applying so-called Gabor filters to the image. The Gabor 
 filters measure the frequency content in different orientations. They are very 
 similar to wavelets, and in the current context they work exactly as wavelets, but
 they are not wavelets by a strict mathematical definition. The Gabor
 features detect correlated bands of intensities, for instance, images of
-Venetian blinds would have high scores in the horizontal orientation.</li>
-</ul>
+Venetian blinds would have high scores in the horizontal orientation.
 
-<h3>Technical notes</h3> 
-<p><b>EnhancedMeasureTexture</b> performs the following algorithm to compute a score
+
+Technical notes
+^^^^^^^^^^^^^^^  
+**EnhancedMeasureTexture** performs the following algorithm to compute a score
 at each scale using the Gabor filter:
-<ul>
-<li>Divide the half-circle from 0 to 180&deg; by the number of desired
-angles. For instance, if the user chooses two angles, EnhancedMeasureTexture
-uses 0 and 90 &deg; (horizontal and vertical) for the filter
-orientations. This is the Theta value from the reference paper.</li>
-<li>For each angle, compute the Gabor filter for each object in the image
-at two phases separated by 90&deg; in order to account for texture
-features whose peaks fall on even or odd quarter-wavelengths.</li>
-<li>Multiply the image times each Gabor filter and sum over the pixels
-in each object.</li>
-<li>Take the square root of the sum of the squares of the two filter scores.
-This results in one score per Theta.</li>
-<li>Save the maximum score over all Theta as the score at the desired scale.</li>
-</ul>
-</p>
-<h3>Changes from CellProfiler 1.0</h3>
-CellProfiler 2.0 normalizes the co-occurence matrix of the Haralick features
-per object by basing the intensity levels of the matrix on the maximum and
-minimum intensity observed within each object. CellProfiler 1.0 normalizes
-the co-occurrence matrix based on the maximum and minimum intensity observed
-among all objects in each image. CellProfiler 2.0's measurements should be
-more informative especially for objects whose maximum intensities vary
-substantially because each object will have the full complement of levels;
-in CellProfiler 1.0, only the brightest object would have the full dynamic
-range. Measurements of Haralick features may differ substantially between
-CellProfiler 1.0 and 2.0.
 
-CellProfiler 1.0 constructs a single kernel for the Gabor filter operation, with
-a fixed size of slightly less than the median radius of the objects in an image and 
-a single exponential fall-off based on this median radius. The texture of pixels not 
-covered by the kernel is not measured. In contrast, CellProfiler 2.0 performs a 
-vectorized calculation of the Gabor filter, properly scaled to the size of the 
-object being measured and covering all pixels in the object. CellProfiler 2.0's 
-Gabor filter can be calculated at a user-selected number of angles whereas 
-CellProfiler 1.0's Gabor filter is calculated only at angles of 0&deg; and 90&deg;.
+Divide the half-circle from 0 to 180 degrees; by the number of desired
+angles. For instance, if the user chooses two angles, EnhancedMeasureTexture
+uses 0 and 90 degrees; (horizontal and vertical) for the filter
+orientations. This is the Theta value from the reference paper.
+For each angle, compute the Gabor filter for each object in the image
+at two phases separated by 90 degrees; in order to account for texture
+features whose peaks fall on even or odd quarter-wavelengths.
+Multiply the image times each Gabor filter and sum over the pixels
+in each object.
+Take the square root of the sum of the squares of the two filter scores.
+This results in one score per Theta.
+Save the maximum score over all Theta as the score at the desired scale.
+
+|
+
+============ ============ ===============
+Supports 2D? Supports 3D? Respects masks?
+============ ============ ===============
+YES          YES          YES
+============ ============ ===============
+
 
 References
-<ul>
-<li>Haralick et al. (1973), "Textural Features for Image
-Classification," <i>IEEE Transaction on Systems Man, Cybernetics</i>,
-SMC-3(6):610-621.</li>
-<li>Gabor D. (1946). "Theory of communication," 
-<i>Journal of the Institute of Electrical Engineers</i> 93:429-441.</li>
-</ul>
+^^^^^^^^^^
+Haralick et al. (1973), "Textural Features for Image
+Classification," IEEE Transaction on Systems Man, Cybernetics,
+SMC-3(6):610-621.  
+
+Gabor D. (1946). "Theory of communication," 
+Journal of the Institute of Electrical Engineers 93:429-441.
+
+.. _here: http://murphylab.web.cmu.edu/publications/boland/boland_node26.html
+
 """
 
 # CellProfiler is distributed under the GNU General Public License.
@@ -214,7 +203,7 @@ class EnhancedMeasureTexture(cpm.Module):
             the Gabor feature calculation if it is not informative for your
             images""")
         self.gabor_angles = Integer("Number of angles to compute for Gabor",4,2, doc="""
-        <i>(Used only if Gabor features are measured)</i><br>
+        (Used only if Gabor features are measured)<br>
         How many angles do you want to use for each Gabor texture measurement?
             The default value is 4 which detects bands in the horizontal, vertical and diagonal
             orientations.""")
@@ -226,11 +215,11 @@ class EnhancedMeasureTexture(cpm.Module):
         self.tamura_feats=MultiChoice(
                     "Features to compute", F_ALL, F_ALL,
                     doc = """Tamura Features:
-                        <p><ul>
-                        <li><i>%(F_1)s</i> - bla.</li>
-                        <li><i>%(F_2)s</i> - bla.</li>
-                        <li><i>%(F_3)s</i> - bla.</li>
-                        </ul><p>
+                        
+                        %(F_1)s - bla.
+                        %(F_2)s - bla.
+                        %(F_3)s - bla.
+                        
                         Choose one or more features to compute.""" % globals())           
 
     def settings(self):
@@ -308,11 +297,11 @@ class EnhancedMeasureTexture(cpm.Module):
                         What did you call the objects whose texture you want to measure? 
                         If you only want to measure the texture 
                         for the image overall, you can remove all objects using the "Remove this object" button. 
-                        <p>Objects specified here will have their
-                        texture measured against <i>all</i> images specfied above, which
-                        may lead to image-object combinations that are unneccesary. If you
-                        do not want this behavior, use multiple <b>EnhancedMeasureTexture</b>
-                        modules to specify the particular image-object measures that you want.</p>"""))
+                        Objects specified here will have their
+                        texture measured against all images specified above, which
+                        may lead to image-object combinations that are unnecessary. If you
+                        do not want this behavior, use multiple EnhancedMeasureTexture
+                        modules to specify the particular image-object measures that you want."""))
         if can_remove:
             group.append("remover", cps.do_something.RemoveSettingButton("", "Remove this object", self.object_groups, group))
         self.object_groups.append(group)
@@ -342,16 +331,16 @@ class EnhancedMeasureTexture(cpm.Module):
             "Angles to measure", H_ALL, H_ALL,
         doc = """The Haralick texture measurements are based on the correlation
         between pixels offset by the scale in one of four directions:
-        <p><ul>
-        <li><i>%(H_HORIZONTAL)s</i> - the correlated pixel is "scale" pixels
-        to the right of the pixel of interest.</li>
-        <li><i>%(H_VERTICAL)s</i> - the correlated pixel is "scale" pixels
-        below the pixel of interest.</li>
-        <li><i>%(H_DIAGONAL)s</i> - the correlated pixel is "scale" pixels
-        to the right and "scale" pixels below the pixel of interest.</li>
-        <li><i>%(H_ANTIDIAGONAL)s</i> - the correlated pixel is "scale"
-        pixels to the left and "scale" pixels below the pixel of interest.</li>
-        </ul><p>
+        
+        %(H_HORIZONTAL)s - the correlated pixel is "scale" pixels
+        to the right of the pixel of interest.
+        %(H_VERTICAL)s - the correlated pixel is "scale" pixels
+        below the pixel of interest.
+        %(H_DIAGONAL)s - the correlated pixel is "scale" pixels
+        to the right and "scale" pixels below the pixel of interest.
+        %(H_ANTIDIAGONAL)s - the correlated pixel is "scale"
+        pixels to the left and "scale" pixels below the pixel of interest.
+        
         Choose one or more directions to measure.""" % globals()))
                                 
         if can_remove:
@@ -404,7 +393,6 @@ class EnhancedMeasureTexture(cpm.Module):
     
     def get_measurements(self, pipeline, object_name, category):
         '''Get the measurements made on the given object in the given category
-        
         pipeline - pipeline being run
         object_name - name of objects being measured
         category - measurement category
@@ -415,7 +403,6 @@ class EnhancedMeasureTexture(cpm.Module):
 
     def get_measurement_images(self, pipeline, object_name, category, measurement):
         '''Get the list of images measured
-        
         pipeline - pipeline being run
         object_name - name of objects being measured
         category - measurement category
