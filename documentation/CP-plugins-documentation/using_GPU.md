@@ -1,8 +1,8 @@
-# Tips on setting up your GPU
+# Using a GPU with CellProfiler Plugins
 
-Updated June 28, 2022
+These CellProfiler modules currently support using a GPU: LIST MODULES
 
-## Setup your GPU (if you have one)
+## Tips for Setting Up Your GPU (if you have one)
 
 If you want to use a GPU to run the model (this is recommended for speed), you'll need a compatible version of PyTorch and a supported GPU. General instructions are available at this [link](https://pytorch.org/get-started/locally/).
 

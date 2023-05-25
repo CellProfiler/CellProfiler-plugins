@@ -1,6 +1,4 @@
-# CellProfiler-plugins
-
-A home for community-contributed, experimental, and dependency-heavy CellProfiler modules. 
+# What are CellProfiler Plugins?
 
 Plugins advance the capabilities of CellProfiler but are not officially supported in the same way as modules.
 A module may be in CellProfiler-plugins instead of CellProfiler itself because:
@@ -11,4 +9,7 @@ A module may be in CellProfiler-plugins instead of CellProfiler itself because:
 - it requires extra libraries or other dependencies we are unable or unwilling to require for CellProfiler
 - it has been contributed by a community member
 
-Please see our [CellProfiler-plugins documentation](https://cellprofiler.github.io/CellProfiler-plugins) for more information about installation, currently supported plugins, and how to contribute.
+
+## Who made this?
+
+CellProfiler and CellProfiler-plugins are maintained and developed in the [Cimini Lab](https://cimini-lab.broadinstitute.org) in the Imaging Platform at the Broad Institute in Cambridge, MA, USA.
