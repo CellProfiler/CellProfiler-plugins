@@ -1,8 +1,13 @@
 # What are CellProfiler Plugins?
 
 Plugins advance the capabilities of CellProfiler but are not officially supported in the same way as modules.
-Plugins can bring in bridges to other software (like ImageJ, ilastik, Cellpose, and StarDist) 
-Because of this, it is necessary to install CellProfiler from source so it can interact correctly with other software
+A module may be in CellProfiler-plugins instead of CellProfiler itself because:
+- it is under active development
+- it has a niche audience
+- it is not documented to CellProfiler's standards
+- it only works with certain version of CellProfiler
+- it requires extra libraries or other dependencies we are unable or unwilling to require for CellProfiler
+- it has been contributed by a community member
 
 
 ## Who made this?
