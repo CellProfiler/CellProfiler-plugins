@@ -64,7 +64,8 @@ jobs:
       - name: Run basic plugin pipeline
         run: |
           python -m cellprofiler -c -r -p ./tests/headless_test/4.2.5_plugins_test_pipeline_BASIC.cppipe -i ./tests/headless_test/test_pipeline_img -o . --plugins-directory=./basic --log-level=DEBUG 2>&1 | tee logfile
-          sh test_run.sh "could not load these modules.*compensatecolors|distancetransform|enhancedmeasuretexture|histogramequalization|histogrammatching|pixelshuffle" logfile
+          sh test_run.sh "could not load these modules.*compensatecolors|could not load these modules.*distancetransform|could not load these modules.*enhancedmeasuretexture|could not load these modules.*histogramequalization|could not load these modules.*histogrammatching|could not load these modules.*pixelshuffle" logfile
+
       - name: Run cellpose plugin pipeline
         run: |
           pip install -e .[cellpose]
