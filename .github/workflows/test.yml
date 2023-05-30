@@ -63,13 +63,16 @@ jobs:
           mv runstardist.py cellpose/runstardist.py
       - name: Run basic plugin pipeline
         run: |
-          python -m cellprofiler -c -r -p ./tests/headless_test/4.2.5_plugins_test_pipeline_BASIC.cppipe -i ./tests/headless_test/test_pipeline_img -o . --plugins-directory=./basic
+          python -m cellprofiler -c -r -p ./tests/headless_test/4.2.5_plugins_test_pipeline_BASIC.cppipe -i ./tests/headless_test/test_pipeline_img -o . --plugins-directory=./basic --log-level=DEBUG &> logfile
+          sh test_run.sh "could not load these modules.*compensatecolors|distancetransform|enhancedmeasuretexture|histogramequalization|histogrammatching|pixelshuffle" logfile
       - name: Run cellpose plugin pipeline
         run: |
           pip install -e .[cellpose]
-          python -m cellprofiler -c -r -p ./tests/headless_test/4.2.5_plugins_test_pipeline_CELLPOSE.cppipe -i ./tests/headless_test/test_pipeline_img -o . --plugins-directory=./cellpose
+          python -m cellprofiler -c -r -p ./tests/headless_test/4.2.5_plugins_test_pipeline_CELLPOSE.cppipe -i ./tests/headless_test/test_pipeline_img -o . --plugins-directory=./cellpose --log-level=DEBUG &> logfile
+          sh test_run.sh "could not load these modules.*runcellpose" logfile
       - name: Run stardist plugin pipeline
         run: |
           pip uninstall -y cellpose pytorch
           pip install -e .[stardist]
-          python -m cellprofiler -c -r -p ./tests/headless_test/4.2.5_plugins_test_pipeline_STARDIST.cppipe -i ./tests/headless_test/test_pipeline_img -o . --plugins-directory=./stardist
+          python -m cellprofiler -c -r -p ./tests/headless_test/4.2.5_plugins_test_pipeline_STARDIST.cppipe -i ./tests/headless_test/test_pipeline_img -o . --plugins-directory=./stardist --log-level=DEBUG &> logfile
+          sh test_run.sh "could not load these modules.*runstardist" logfile
