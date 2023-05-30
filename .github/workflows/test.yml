@@ -64,16 +64,21 @@ jobs:
       - name: Run basic plugin pipeline
         run: |
           python -m cellprofiler -c -r -p ./tests/headless_test/4.2.5_plugins_test_pipeline_BASIC.cppipe -i ./tests/headless_test/test_pipeline_img -o . --plugins-directory=./basic --log-level=DEBUG 2>&1 | tee logfile
-          sh test_run.sh "could not load these modules.*compensatecolors|could not load these modules.*distancetransform|could not load these modules.*enhancedmeasuretexture|could not load these modules.*histogramequalization|could not load these modules.*histogrammatching|could not load these modules.*pixelshuffle" logfile
-
+          # sh test_run.sh "module compensatecolors&module distancetransform&module enhancedmeasuretexture&module histogramequalization&module histogrammatching&module pixelshuffle" logfile
+          sh test_run.sh "module compensatecolors" logfile
+          sh test_run.sh "module distancetransform" logfile
+          sh test_run.sh "module enhancedmeasuretexture" logfile
+          sh test_run.sh "module histogramequalization" logfile
+          sh test_run.sh "module histogrammatching" logfile
+          sh test_run.sh "module pixelshuffle" logfile
       - name: Run cellpose plugin pipeline
         run: |
           pip install -e .[cellpose]
           python -m cellprofiler -c -r -p ./tests/headless_test/4.2.5_plugins_test_pipeline_CELLPOSE.cppipe -i ./tests/headless_test/test_pipeline_img -o . --plugins-directory=./cellpose --log-level=DEBUG 2>&1 | tee logfile
-          sh test_run.sh "could not load these modules.*runcellpose" logfile
+          sh test_run.sh "module runcellpose" logfile
       - name: Run stardist plugin pipeline
         run: |
           pip uninstall -y cellpose torch
           pip install -e .[stardist]
           python -m cellprofiler -c -r -p ./tests/headless_test/4.2.5_plugins_test_pipeline_STARDIST.cppipe -i ./tests/headless_test/test_pipeline_img -o . --plugins-directory=./stardist --log-level=DEBUG 2>&1 | tee logfile
-          sh test_run.sh "could not load these modules.*runstardist" logfile
+          sh test_run.sh "module runstardist" logfile
