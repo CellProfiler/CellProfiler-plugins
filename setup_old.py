@@ -2,16 +2,17 @@ from setuptools import setup
 import setuptools
 
 install_deps = [
-    "cellprofiler~=4.2.5",
-    "cellprofiler-core~=4.2.5",
+    "cellprofiler",
+    "cellprofiler-core",
             ]
 
 cellpose_deps = [
-    "cellpose~=2.2"
+    "cellpose>=1.0.2"
 ]
 
 omnipose_deps = [
-    "omnipose"
+    "omnipose",
+    "ncolor"
 ]
 
 stardist_deps = [
@@ -19,7 +20,6 @@ stardist_deps = [
     "stardist"
 ]
 
-    
 setup(
     name="cellprofiler_plugins",
     packages=setuptools.find_packages(),
