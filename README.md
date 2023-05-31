@@ -11,4 +11,4 @@ A module may be in CellProfiler-plugins instead of CellProfiler itself because:
 - it requires extra libraries or other dependencies we are unable or unwilling to require for CellProfiler
 - it has been contributed by a community member
 
-Please see our [CellProfiler-plugins documentation](https://cellprofiler.github.io/CellProfiler-plugins) for more information about installation, currently supported plugins, and how to contribute.
+Please see our [CellProfiler-plugins documentation](https://plugins.cellprofiler.org) for more information about installation, currently supported plugins, and how to contribute.
