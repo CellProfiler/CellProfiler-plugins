@@ -19,4 +19,5 @@ Those plugins in the `CellProfiler4_autoconverted` folder were automatically con
 We cannot provide comprehensive information about why we are not supporting a given plugin.
 Information about select plugins is as follows:
 
+**ClassifyPixelsUNET**: ClassifyPixelsUNET is a pixel classifier for background/object edge/object body. As far as we are aware, other deep learning  based plugins that we do currently support (such as RunCellpose) work better.
 **DeclumpObjects**: DeclumpObjects will split objects based on a seeded watershed method. Functionality from this module was [added into CellProfiler](https://github.com/CellProfiler/CellProfiler/pull/4397) in the Watershed module as of CellProfiler 4.2.0.

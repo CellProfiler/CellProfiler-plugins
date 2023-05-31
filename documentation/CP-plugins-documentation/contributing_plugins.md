@@ -20,6 +20,13 @@ In your PR, we appreciate if you also include:
 - unit tests for your plugin
 - customized installation in setup.py, if your plugin has dependencies
 
+## Contributing bug fixes or updating deprecated plugins
+
+Please create a Pull Request to the CellProfiler-plugins repository to submit a bug fix or plugin un-deprecation.
+If you would like to update a currently deprecated plugin, we encourage you to read closed Issues in GitHub relevant to the plugin as they may contain helpful information about bugs present at the time of deprecation.
+
 ## Having your plugin cited
 
 While we cannot guarantee that users will cite your plugin, we have introduced a Citation generator into CellProfiler v? that scans all modules in a user's pipeline and generators a citation file for them that includes citation information for any modules (including plugins) that have specific citation information in them.
+
+See [Citing Plugins](citing.md) for information on citing CellProfiler Plugins.

@@ -153,4 +153,5 @@ These are all the folders you need to copy over:
 ```
 
 7. **Open and use CellProfiler.**
-When you try to run your plugin in your pipeline, if you have missed copying over any specific requirements, it will give you an error message that will tell you what dependency is missing.
+When you try to run your plugin in your pipeline, if you have missed copying over any specific requirements, it will give you an error message that will tell you what dependency is missing in the terminal window that opens with CellProfiler on Windows machines.
+This information is not available in Mac machines.

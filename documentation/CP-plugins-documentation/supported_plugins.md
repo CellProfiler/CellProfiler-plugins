@@ -6,6 +6,9 @@ For details about using any particular plugin, please read the module documentat
 Most plugins will run without any special installation of either CellProfiler or the plugins. 
 See [using plugins](using_plugins.md) for how to set up CellProfiler for plugin use as well as for installation information for those plugins that do require installation of dependencies.
 
+Most plugin documentation can be found within the plugin itself and can be accessed through CellProfiler help.
+Those plugins that do have extra documentation contain links below.
+
 | Plugin | Description | Requires installation of dependencies? | Install flag |
 |--------|-------------|----------------------------------------|--------------|
 | CalculateMoments      | CalculateMoments extracts moments statistics from a given distribution of pixel values. | No | |
@@ -17,7 +20,7 @@ See [using plugins](using_plugins.md) for how to set up CellProfiler for plugin 
 | HistogramMatching     | HistogramMatching manipulates the pixel intensity values an input image and matches them to the histogram of a reference image. It can be used as a way to normalize intensities across different 2D or 3D images or different frames of the same 3D image. It allows you to choose which frame to use as the reference. | No | |
 | PixelShuffle          | PixelShuffle takes the intensity of each pixel in an image and randomly shuffles its position. | No | |
 | Predict               | Predict allows you to use an ilastik pixel classifier to generate a probability image. CellProfiler supports two types of ilastik projects: Pixel Classification and Autocontext (2-stage). | No |  |
-| RunCellpose           | RunCellpose allows you to run Cellpose within CellProfiler. Cellpose is a generalist machine-learning algorithm for cellular segmentation and is a great starting point for segmenting non-round cells. You can use pre-trained Cellpose models or your custom model with this plugin. You can use a GPU with this module to dramatically increase your speed/efficiency. | Yes | `cellpose` |
+| [RunCellpose](RunCellPose.md) | RunCellpose allows you to run Cellpose within CellProfiler. Cellpose is a generalist machine-learning algorithm for cellular segmentation and is a great starting point for segmenting non-round cells. You can use pre-trained Cellpose models or your custom model with this plugin. You can use a GPU with this module to dramatically increase your speed/efficiency. | Yes | `cellpose` |
 | RunImageJScript       | RunImageJScript allows you to run any supported ImageJ script directly within CellProfiler. It is significantly more performant than RunImageJMacro, and is also less likely to leave behind temporary files. | Yes | XXXXX |
 | RunOmnipose           | RunOmnipose allows you to run Omnipose within CellProfiler. Omnipose is a general image segmentation tool that builds on Cellpose. | Yes | `omnipose` |
 | RunStarDist           | RunStarDist allows you to run StarDist within CellProfiler. StarDist is a machine-learning algorithm for object detection with star-convex shapes making it best suited for nuclei or round-ish cells. You can use pre-trained StarDist models or your custom model with this plugin. You can use a GPU with this module to dramatically increase your speed/efficiency. RunStarDist is generally faster than RunCellpose. | Yes | `stardist` |
