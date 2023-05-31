@@ -6,8 +6,6 @@ In the CellProfiler repository, within [cellprofiler/modules/plugins](https://gi
 `imagetemplate.py` provides a template that takes one image as an input and produces a second image for downstream processing.
 `measurementtemplate.py` provides a template that measures a property of an image both for the image as a whole and for every object in the image.
 
-In you plugin, you must include:
-
 In your plugin, we appreciate if you also include:
 - display functionality
 - extensive module documentation
@@ -20,6 +18,7 @@ In your PR, you must:
 
 In your PR, we appreciate if you also include:
 - unit tests for your plugin
+- customized installation in setup.py, if your plugin has dependencies
 
 ## Having your plugin cited
 
