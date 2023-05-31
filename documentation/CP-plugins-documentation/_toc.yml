@@ -5,7 +5,6 @@ root: overview
 parts:
 - caption: Overview
   chapters:
-  - file: overview
   - file: using_plugins
   - file: supported_plugins
   - file: unsupported_plugins
