@@ -4,7 +4,7 @@ name: deploy-documentation
 on:
   push:
     branches:
-    - main
+    - master
     # Only run if edits in DS-documentation
     paths:
     - documentation/CP-plugins-documentation/**
