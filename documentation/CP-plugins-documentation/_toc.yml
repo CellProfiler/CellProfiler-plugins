@@ -6,9 +6,10 @@ parts:
 - caption: Overview
   chapters:
   - file: overview
+  - file: using_plugins
   - file: supported_plugins
   - file: unsupported_plugins
-- caption: Technical Guides
-  chapters:
-  - file: Windows
-    - file: Mac
+  - file: contributing_plugins
+  - file: troubleshooting
+  - file: citing
+  - file: versions

@@ -39,7 +39,7 @@ Alternatively, if you have code for plugins that are not in the CellProfiler-plu
 
 3. **Set the plugins path in CellProfiler.**  
 - Open CellProfiler. 
-- Go to `CellProfiler` => `Preferences` and set the path in the `CellProfiler plugins directory` to the GitHub repository that you just cloned (or, if you didn't clone the whole repository, whatever location you have saved your plugins into).
+- Go to `CellProfiler` => `Preferences` and set the path in the `CellProfiler plugins directory` to the `active_plugins` folder in the GitHub repository that you just cloned (or, if you didn't clone the whole repository, whatever location you have saved your plugins into).
 - Select `Save` at the bottom of the Preferences window
 - Close CellProfiler and re-open it
 
@@ -59,7 +59,7 @@ git clone https://github.com/CellProfiler/CellProfiler-plugins.git
 
 3. **Set the plugins path in CellProfiler.**  
 - Open CellProfiler. 
-- Go to `CellProfiler` => `Preferences` and set the path in the `CellProfiler plugins directory` to the GitHub repository that you just cloned.
+- Go to `CellProfiler` => `Preferences` and set the path in the `CellProfiler plugins directory` to the `active_plugins` folder in the GitHub repository that you just cloned.
 - Select `Save` at the bottom of the Preferences window
 - Close CellProfiler
 
@@ -89,7 +89,7 @@ git clone https://github.com/CellProfiler/CellProfiler-plugins.git
 
 3. **Set the plugins path in CellProfiler.**  
 - Open CellProfiler. 
-- Go to `CellProfiler` => `Preferences` and set the path in the `CellProfiler plugins directory` to the GitHub repository that you just cloned.
+- Go to `CellProfiler` => `Preferences` and set the path in the `CellProfiler plugins directory` to the `active_plugins` folder in the GitHub repository that you just cloned.
 - Select `Save` at the bottom of the Preferences window
 - Close CellProfiler
 
