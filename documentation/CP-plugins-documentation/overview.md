@@ -9,6 +9,17 @@ A module may be in CellProfiler-plugins instead of CellProfiler itself because:
 - it requires extra libraries or other dependencies we are unable or unwilling to require for CellProfiler
 - it has been contributed by a community member
 
+## How do I use CellProfiler Plugins?
+
+See our [Using Plugins](using_plugins.md) page for information on how to install and use plugins.
+
+## What plugins are available?
+
+See our [Supported Plugins](supported_plugins.md) page for information on all currently supported plugins.
+
+## How do I contribute a plugin?
+
+See our [Contributing Plugins](contributing_plugins.md) page for information on contributing a plugin to CellPainting-plugins.
 
 ## Who made this?
 
