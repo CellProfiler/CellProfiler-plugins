@@ -1,7 +1,10 @@
 # Using plugins
 
-Once you have installed your plugins and their dependencies (see below), CellProfiler will automatically detect all plugins in the plugin folder that you have set.
+Once you have installed your plugins and their dependencies (see below), CellProfiler will automatically detect all useable plugins in the plugin folder that you have set.
 The plugins will appear in the "Add Modules" panel like all standard modules and you can use the plugins as you would any other CellProfiler module.
+Typically, if a plugin's dependencies are not installed, it will not be visible in the "Add Modules" panel.
+If you cannot find any plugins in the "Add Modules" panel then you have not properly set the plugins path (see below).
+If you can find some but not all plugins in the "Add Modules" panel then the not-visible plugins have unmet dependencies.
 
 Please note that, as CellProfiler-plugins are considered experimental, they may not be as well documented as standard modules and they may not have a window that shows on run. 
 Please report any installation issues or bugs related to plugins in the [CellProfiler-plugins repository](https://github.com/CellProfiler/CellProfiler-plugins) and not in the main CellProfiler repository.
