@@ -1,23 +1,18 @@
 __doc__ ="""\
 VarianceTransform
 =================
-
 **VarianceTransform** 
-
 This module allows you to calculate the variance of an image, using a determined window size. It also has
 the option to find the optimal window size from a predetermied range to obtain the maximum variance of an image.
-
 ============ ============ ===============
 Supports 2D? Supports 3D? Respects masks?
 ============ ============ ===============
 YES          YES           YES
 ============ ============ ===============
-
 """
 
 import logging
 import numpy
-import pandas
 import scipy.ndimage
 
 import cellprofiler_core.setting
@@ -52,7 +47,6 @@ class VarianceTransform(cellprofiler_core.module.ImageProcessing):
                 doc="""\
 Select "*Yes*" to provide a range that will be used to obtain the window size that will generate
 the maximum variance in the input image.
-
 Select "*No*" to give the window size used to obtain the image variance.""",
         )
 
@@ -110,19 +104,17 @@ Select "*No*" to give the window size used to obtain the image variance.""",
         size = self.window_size.value
 
         if self.calculate_maximal.value:
-            maxvar_dic = {}
-            for i in window_range:
-                result = abs(scipy.ndimage.uniform_filter(image_pixels**2, size=i, output=numpy.float64)-(scipy.ndimage.uniform_filter(image_pixels, size=i, output=numpy.float64)**2))
-                maxvar_dic[i] = {}
-                maxvar_dic[i]["window_size"] = i
-                maxvar_dic[i]["max_variance"] = result.max()
-            df = pandas.DataFrame(data=maxvar_dic)
-            df = df.transpose()
-            max_size= int(df["window_size"].loc[df["max_variance"] == df["max_variance"].max()])
-            size = max_size
+            max_variance = -1
+            for window in window_range:
+                result = abs(scipy.ndimage.uniform_filter(image_pixels**2, size=window, output=numpy.float64) - 
+                            (scipy.ndimage.uniform_filter(image_pixels, size=window, output=numpy.float64)**2))
+                variance = result.max()
+                if variance > max_variance:
+                    max_variance = variance
+                    size = window
      
         output_pixels = abs(scipy.ndimage.uniform_filter(image_pixels**2, size=size, output=numpy.float64) 
-        - (scipy.ndimage.uniform_filter(image_pixels, size=size, output=numpy.float64)**2))
+                         - (scipy.ndimage.uniform_filter(image_pixels, size=size, output=numpy.float64)**2))
 
         new_image = Image(output_pixels, parent_image=image, dimensions=image.dimensions)
         
@@ -156,4 +148,3 @@ Select "*No*" to give the window size used to obtain the image variance.""",
             x=1,
             y=0,
         )
-

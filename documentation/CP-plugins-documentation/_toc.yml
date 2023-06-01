@@ -1,0 +1,14 @@
+# Table of contents
+
+format: jb-book
+root: overview
+parts:
+- caption: Overview
+  chapters:
+  - file: using_plugins
+  - file: supported_plugins
+  - file: unsupported_plugins
+  - file: contributing_plugins
+  - file: troubleshooting
+  - file: citing
+  - file: versions
