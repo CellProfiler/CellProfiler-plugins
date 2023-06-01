@@ -368,16 +368,27 @@ The default is set to "Yes".
         # --verbose
         # """
 
-        cmd = f"""
-        docker run -it --rm -v {temp_dir}:/img \
-        ctromanscoia/cellpose:0.1 \
-        cellpose --dir /img \
-        --pretrained_model nuclei \
-        --verbose
-        """
+        cmd = f"""/usr/local/bin/docker run --rm -v {temp_dir}:/img ctromanscoia/cellpose:0.1 cellpose --dir /img --pretrained_model nuclei --verbose"""
+
+        result = subprocess.run(cmd.split(), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+
+        print(result)
+
+        # cmd = [
+        #     f"docker run --rm -v {temp_dir}:/img", 
+        #     "ctromanscoia/cellpose:0.1",
+        #     "cellpose --dir /img",
+        #     "--pretrained_model nuclei",
+        #     "--verbose"
+        # ]
 
         # result = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
-        result = subprocess.run(cmd, shell=True)
+        # result = subprocess.run(cmd, shell=True)
+
+        # result = subprocess.run(cmd.split())
+        # process = subprocess.Popen(cmd.split())
+        # outs, errs = process.communicate()
+        # print(outs,errs)
 
         cellpose_output = numpy.load(os.path.join(temp_dir, unique_name + "_seg.npy"), allow_pickle=True).item()
 
