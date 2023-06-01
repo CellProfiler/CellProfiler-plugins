@@ -20,6 +20,9 @@ from cellprofiler_core.preferences import get_default_output_directory
 
 LOGGER = logging.getLogger(__name__)
 
+MODEL_NAMES = ['cyto','nuclei','tissuenet','livecell', 'cyto2', 'general',
+                'CP', 'CPx', 'TN1', 'TN2', 'TN3', 'LC1', 'LC2', 'LC3', 'LC4']
+
 CUDA_LINK = "https://pytorch.org/get-started/locally/"
 Cellpose_link = " https://doi.org/10.1038/s41592-020-01018-x"
 Omnipose_link = "https://doi.org/10.1101/2021.11.03.467199"
@@ -103,8 +106,8 @@ detect much smaller objects it may be more efficient to resize the image first u
 
         self.mode = Choice(
             text="Detection mode",
-            choices= ["hello"],
-            value='cyto2',
+            choices= MODEL_NAMES,
+            value=MODEL_NAMES[0],
             doc="""\
 CellPose comes with models for detecting nuclei or cells. Alternatively, you can supply a custom-trained model
 generated using the command line or Cellpose GUI. Custom models can be useful if working with unusual cell types.
@@ -312,35 +315,32 @@ The default is set to "Yes".
             self.remove_edge_masks
         ]
 
-    # def visible_settings(self):
-    #     if float(cellpose_ver[0:3]) >= 0.6 and int(cellpose_ver[0])<2:
-    #         vis_settings = [self.mode, self.omni, self.x_name]
-    #     else:
-    #         vis_settings = [self.mode, self.x_name]
+    def visible_settings(self):
+        vis_settings = [self.mode, self.x_name]
 
-    #     if self.mode.value != 'nuclei':
-    #         vis_settings += [self.supply_nuclei]
-    #         if self.supply_nuclei.value:
-    #             vis_settings += [self.nuclei_image]
-    #     if self.mode.value == 'custom':
-    #         vis_settings += [self.model_directory, self.model_file_name,]
+        if self.mode.value != 'nuclei':
+            vis_settings += [self.supply_nuclei]
+            if self.supply_nuclei.value:
+                vis_settings += [self.nuclei_image]
+        if self.mode.value == 'custom':
+            vis_settings += [self.model_directory, self.model_file_name,]
 
-    #     vis_settings += [self.expected_diameter, self.cellprob_threshold, self.min_size, self.flow_threshold, self.y_name, self.invert, self.save_probabilities]
+        vis_settings += [self.expected_diameter, self.cellprob_threshold, self.min_size, self.flow_threshold, self.y_name, self.invert, self.save_probabilities]
 
-    #     vis_settings += [self.do_3D, self.stitch_threshold, self.remove_edge_masks]
+        vis_settings += [self.do_3D, self.stitch_threshold, self.remove_edge_masks]
 
-    #     if self.do_3D.value:
-    #         vis_settings.remove( self.stitch_threshold)
+        if self.do_3D.value:
+            vis_settings.remove( self.stitch_threshold)
 
-    #     if self.save_probabilities.value:
-    #         vis_settings += [self.probabilities_name]
+        if self.save_probabilities.value:
+            vis_settings += [self.probabilities_name]
 
-    #     vis_settings += [self.use_averaging, self.use_gpu]
+        vis_settings += [self.use_averaging, self.use_gpu]
 
-    #     if self.use_gpu.value:
-    #         vis_settings += [self.gpu_test, self.manual_GPU_memory_share]
+        if self.use_gpu.value:
+            vis_settings += [self.gpu_test, self.manual_GPU_memory_share]
 
-    #     return vis_settings
+        return vis_settings
 
 
     def run(self, workspace):
@@ -376,7 +376,8 @@ The default is set to "Yes".
         --verbose
         """
 
-        result = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+        # result = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+        result = subprocess.run(cmd, shell=True)
 
         cellpose_output = numpy.load(os.path.join(temp_dir, unique_name + "_seg.npy"), allow_pickle=True).item()
 
