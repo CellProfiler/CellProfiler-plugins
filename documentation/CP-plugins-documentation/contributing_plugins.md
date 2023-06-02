@@ -27,6 +27,6 @@ If you would like to update a currently deprecated plugin, we encourage you to r
 
 ## Having your plugin cited
 
-While we cannot guarantee that users will cite your plugin, we have introduced a Citation generator into CellProfiler v? that scans all modules in a user's pipeline and generators a citation file for them that includes citation information for any modules (including plugins) that have specific citation information in them.
+While we cannot guarantee that users will cite your plugin, we have introduced a Citation generator into CellProfiler (currently available in CellProfiler from source and will be in CellProfiler 5) that scans all modules in a user's pipeline and generates a citation file for them that includes citation information for any modules (including plugins) that have specific citation information in them.
 
 See [Citing Plugins](citing.md) for information on citing CellProfiler Plugins.
