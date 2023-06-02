@@ -20,6 +20,11 @@ stardist_deps = [
     "stardist"
 ]
 
+deepprofiler_deps = [
+    "numpy==1.23.0",
+    "inflect==6.0.0"
+]
+
 setup(
     name="cellprofiler_plugins",
     packages=setuptools.find_packages(),
@@ -28,5 +33,6 @@ setup(
       "cellpose": cellpose_deps,
       "omnipose": omnipose_deps,
       "stardist": stardist_deps,
+      "deepprofiler":deepprofiler_deps,
     }
 )
