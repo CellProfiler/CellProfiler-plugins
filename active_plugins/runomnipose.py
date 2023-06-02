@@ -25,12 +25,18 @@ from cellprofiler_core.setting import Binary
 from cellprofiler_core.setting.choice import Choice
 from cellprofiler_core.setting.do_something import DoSomething
 from cellprofiler_core.setting.subscriber import ImageSubscriber
-from cellprofiler_core.setting.text import Integer, ImageName, Directory, Filename, Float
+from cellprofiler_core.setting.text import (
+    Integer,
+    ImageName,
+    Directory,
+    Filename,
+    Float,
+)
 
 CUDA_LINK = "https://pytorch.org/get-started/locally/"
 Cellpose_link = " https://doi.org/10.1038/s41592-020-01018-x"
 Omnipose_link = "https://doi.org/10.1101/2021.11.03.467199"
-cellpose_ver = importlib.metadata.version('cellpose')
+cellpose_ver = importlib.metadata.version("cellpose")
 
 __doc__ = f"""\
 RunOmnipose
@@ -75,7 +81,7 @@ YES          YES          NO
 """
 
 model_dic = models.MODEL_NAMES
-model_dic.append('custom')
+model_dic.append("custom")
 
 
 class RunOmnipose(ImageSegmentation):
@@ -85,9 +91,10 @@ class RunOmnipose(ImageSegmentation):
 
     variable_revision_number = 3
 
-    doi = {"Please cite the following when using RunOmnipose:": 'https://doi.org/10.1038/s41592-020-01018-x',
-    "If you are using Omnipose also cite the following:": 'https://doi.org/10.1101/2021.11.03.467199' }
-
+    doi = {
+        "Please cite the following when using RunOmnipose:": "https://doi.org/10.1038/s41592-020-01018-x",
+        "If you are using Omnipose also cite the following:": "https://doi.org/10.1101/2021.11.03.467199",
+    }
 
     def create_settings(self):
         super(RunOmnipose, self).create_settings()
@@ -108,48 +115,44 @@ class RunOmnipose(ImageSegmentation):
 
         self.mode = Choice(
             text="Model",
-            choices= model_dic,
-            value='cyto2',
+            choices=model_dic,
+            value="cyto2",
             doc="""\
                 CellPose comes with models for detecting nuclei or cells. Alternatively, you can supply a custom-trained model
                 generated using the command line or Cellpose GUI. Custom models can be useful if working with unusual cell types.
                 """,
         )
 
-        self.omni= Binary(
+        self.omni = Binary(
             text="Use Omnipose for mask reconstruction",
             value=True,
-            doc="""If enabled, Omnipose mask recontruction features will be used. """
-        )
-        
-        self.cluster= Binary(
-            text="DBSCAN clustering",
-            value=False,
-            doc="""Use DBSCAN clustering to solve over-segmentation of thin regions.  """
-        )
-        
-        self.verbose= Binary(
-            text="verbose",
-            value=True,
-            doc="""Turn on verbose output."""
-        )
-        
-        self.tile= Binary(
-            text="tile",
-            value=False,
-            doc="""Tile image for running model and stitch outputs."""
-        )
-        
-        self.ncolor= Binary(
-            text="ncolor",
-            value=True,
-            doc="""Display masks in ncolor mode."""
+            doc="""If enabled, Omnipose mask recontruction features will be used. """,
         )
 
-        self.do_3D= Binary(
+        self.cluster = Binary(
+            text="DBSCAN clustering",
+            value=False,
+            doc="""Use DBSCAN clustering to solve over-segmentation of thin regions.  """,
+        )
+
+        self.verbose = Binary(
+            text="verbose", value=True, doc="""Turn on verbose output."""
+        )
+
+        self.tile = Binary(
+            text="tile",
+            value=False,
+            doc="""Tile image for running model and stitch outputs.""",
+        )
+
+        self.ncolor = Binary(
+            text="ncolor", value=True, doc="""Display masks in ncolor mode."""
+        )
+
+        self.do_3D = Binary(
             text="Use 3D",
             value=False,
-            doc="""If enabled, 3D specific settings will be available."""
+            doc="""If enabled, 3D specific settings will be available.""",
         )
 
         self.use_gpu = Binary(
@@ -166,7 +169,7 @@ class RunOmnipose(ImageSegmentation):
                 Note that, particularly when in 3D mode, lack of GPU memory can become a limitation. If a model crashes you may need to
                 re-start CellProfiler to release GPU memory. Resizing large images prior to running them through the model can free up
                 GPU memory.
-                """
+                """,
         )
 
         self.use_averaging = Binary(
@@ -174,7 +177,7 @@ class RunOmnipose(ImageSegmentation):
             value=False,
             doc="""\
                 If enabled, CellPose will run it's 4 inbuilt models and take a consensus to determine the results. If disabled, only a
-                single model will be called to produce results. Disabling averaging is faster to run but less accurate."""
+                single model will be called to produce results. Disabling averaging is faster to run but less accurate.""",
         )
 
         self.invert = Binary(
@@ -182,7 +185,7 @@ class RunOmnipose(ImageSegmentation):
             value=False,
             doc="""\
                 If enabled the image will be inverted and also normalized.
-                For use with fluorescence images using bact model (bact model was trained on phase images"""
+                For use with fluorescence images using bact model (bact model was trained on phase images""",
         )
 
         self.supply_nuclei = Binary(
@@ -190,12 +193,12 @@ class RunOmnipose(ImageSegmentation):
             value=False,
             doc="""
                 When detecting whole cells, you can provide a second image featuring a nuclear stain to assist
-                the model with segmentation. This can help to split touching cells."""
+                the model with segmentation. This can help to split touching cells.""",
         )
 
         self.nuclei_image = ImageSubscriber(
             "Select the nuclei image",
-            doc="Select the image you want to use as the nuclear stain."
+            doc="Select the image you want to use as the nuclear stain.",
         )
 
         self.save_probabilities = Binary(
@@ -217,7 +220,7 @@ class RunOmnipose(ImageSegmentation):
             "Location of the pre-trained model file",
             doc=f"""\
                 *(Used only when using a custom pre-trained model)*
-                Select the location of the pre-trained CellPose model file that will be used for detection."""
+                Select the location of the pre-trained CellPose model file that will be used for detection.""",
         )
 
         def get_directory_fn():
@@ -236,7 +239,7 @@ class RunOmnipose(ImageSegmentation):
             set_directory_fn=set_directory_fn,
             doc=f"""\
 *(Used only when using a custom pre-trained model)*
-This file can be generated by training a custom model withing the CellPose GUI or command line applications."""
+This file can be generated by training a custom model withing the CellPose GUI or command line applications.""",
         )
 
         self.gpu_test = DoSomething(
@@ -264,7 +267,6 @@ This file can be generated by training a custom model withing the CellPose GUI o
         )
 
         self.mask_threshold = Float(
-
             text="Distance field threshold",
             value=0.0,
             minval=-6.0,
@@ -335,24 +337,42 @@ Minimum number of pixels per mask, can turn off by setting value to -1
         ]
 
     def visible_settings(self):
-        if float(cellpose_ver[0:3]) >= 0.6 and int(cellpose_ver[0])<2:
+        if float(cellpose_ver[0:3]) >= 0.6 and int(cellpose_ver[0]) < 2:
             vis_settings = [self.mode, self.omni, self.x_name]
         else:
             vis_settings = [self.mode, self.x_name]
 
-        if self.mode.value != 'nuclei':
+        if self.mode.value != "nuclei":
             vis_settings += [self.supply_nuclei]
             if self.supply_nuclei.value:
                 vis_settings += [self.nuclei_image]
-        if self.mode.value == 'custom':
-            vis_settings += [self.model_directory, self.model_file_name,]
+        if self.mode.value == "custom":
+            vis_settings += [
+                self.model_directory,
+                self.model_file_name,
+            ]
 
-        vis_settings += [self.expected_diameter, self.mask_threshold, self.min_size, self.flow_threshold, self.y_name, self.invert, self.save_probabilities]
+        vis_settings += [
+            self.expected_diameter,
+            self.mask_threshold,
+            self.min_size,
+            self.flow_threshold,
+            self.y_name,
+            self.invert,
+            self.save_probabilities,
+        ]
 
-        vis_settings += [self.do_3D, self.stitch_threshold, self.verbose, self.tile, self.cluster, self.ncolor]
+        vis_settings += [
+            self.do_3D,
+            self.stitch_threshold,
+            self.verbose,
+            self.tile,
+            self.cluster,
+            self.ncolor,
+        ]
 
         if self.do_3D.value:
-            vis_settings.remove( self.stitch_threshold)
+            vis_settings.remove(self.stitch_threshold)
 
         if self.save_probabilities.value:
             vis_settings += [self.probabilities_name]
@@ -366,7 +386,7 @@ Minimum number of pixels per mask, can turn off by setting value to -1
 
     def validate_module(self, pipeline):
         """If using custom model, validate the model file opens and works"""
-        if self.mode.value == 'custom':
+        if self.mode.value == "custom":
             model_file = self.model_file_name.value
             model_directory = self.model_directory.get_absolute_path()
             model_path = os.path.join(model_directory, model_file)
@@ -374,32 +394,39 @@ Minimum number of pixels per mask, can turn off by setting value to -1
                 open(model_path)
             except:
                 raise ValidationError(
-                    "Failed to load custom file: %s "
-                    % model_path, self.model_file_name,
+                    "Failed to load custom file: %s " % model_path,
+                    self.model_file_name,
                 )
             try:
-                model = models.CellposeModel(pretrained_model=model_path, gpu=self.use_gpu.value)
+                model = models.CellposeModel(
+                    pretrained_model=model_path, gpu=self.use_gpu.value
+                )
             except:
                 raise ValidationError(
-                    "Failed to load custom model: %s "
-                    % model_path, self.model_file_name,
+                    "Failed to load custom model: %s " % model_path,
+                    self.model_file_name,
                 )
 
     def run(self, workspace):
-        print('run')
+        print("run")
         print(self.mode.value)
-        if self.mode.value != 'custom':
-            model = models.CellposeModel(model_type= self.mode.value, #VS cellpose(), not source of bug tho
-                                    gpu=self.use_gpu.value)
+        if self.mode.value != "custom":
+            model = models.CellposeModel(
+                model_type=self.mode.value,  # VS cellpose(), not source of bug tho
+                gpu=self.use_gpu.value,
+            )
 
         else:
             model_file = self.model_file_name.value
             model_directory = self.model_directory.get_absolute_path()
             model_path = os.path.join(model_directory, model_file)
-            model = models.CellposeModel(pretrained_model=model_path, gpu=self.use_gpu.value)
+            model = models.CellposeModel(
+                pretrained_model=model_path, gpu=self.use_gpu.value
+            )
 
         if self.use_gpu.value and model.torch:
             from torch import cuda
+
             cuda.set_per_process_memory_fraction(self.manual_GPU_memory_share.value)
 
         x_name = self.x_name.value
@@ -411,26 +438,34 @@ Minimum number of pixels per mask, can turn off by setting value to -1
         anisotropy = 0.0
 
         if self.do_3D.value:
-            anisotropy = x.spacing[0]/x.spacing[1]
+            anisotropy = x.spacing[0] / x.spacing[1]
 
         if x.multichannel:
-            raise ValueError("Color images are not currently supported. Please provide greyscale images.")
+            raise ValueError(
+                "Color images are not currently supported. Please provide greyscale images."
+            )
 
         if self.mode.value != "nuclei" and self.supply_nuclei.value:
             nuc_image = images.get_image(self.nuclei_image.value)
             # CellPose expects RGB, we'll have a blank red channel, cells in green and nuclei in blue.
             if self.do_3D.value:
-                x_data = numpy.stack((numpy.zeros_like(x_data), x_data, nuc_image.pixel_data), axis=1)
+                x_data = numpy.stack(
+                    (numpy.zeros_like(x_data), x_data, nuc_image.pixel_data), axis=1
+                )
 
             else:
-                x_data = numpy.stack((numpy.zeros_like(x_data), x_data, nuc_image.pixel_data), axis=-1)
+                x_data = numpy.stack(
+                    (numpy.zeros_like(x_data), x_data, nuc_image.pixel_data), axis=-1
+                )
 
             channels = [2, 3]
         else:
             channels = [0, 0]
 
-        diam = self.expected_diameter.value if self.expected_diameter.value > 0 else None
-        
+        diam = (
+            self.expected_diameter.value if self.expected_diameter.value > 0 else None
+        )
+
         try:
             y_data, flows, *_ = model.eval(
                 x_data,
@@ -454,14 +489,16 @@ Minimum number of pixels per mask, can turn off by setting value to -1
             y.segmented = y_data
 
         except Exception as a:
-                    print(f"Unable to create masks. Check your module settings. {a}")
+            print(f"Unable to create masks. Check your module settings. {a}")
         finally:
             if self.use_gpu.value and model.torch:
                 # Try to clear some GPU memory for other worker processes.
                 try:
                     cuda.empty_cache()
                 except Exception as e:
-                    print(f"Unable to clear GPU memory. You may need to restart CellProfiler to change models. {e}")
+                    print(
+                        f"Unable to clear GPU memory. You may need to restart CellProfiler to change models. {e}"
+                    )
 
         y.parent_image = x.parent_image
         objects = workspace.object_set
@@ -492,16 +529,15 @@ Minimum number of pixels per mask, can turn off by setting value to -1
             else:
                 workspace.display_data.x_data = x_data
             workspace.display_data.y_data = y_data
-            workspace.display_data.outlines = plot.outline_view(x_data,y_data)
+            workspace.display_data.outlines = plot.outline_view(x_data, y_data)
             workspace.display_data.flowsRGB = flows[0]
             workspace.display_data.distance = flows[2]
             workspace.display_data.boundary = flows[4]
 
-
             workspace.display_data.dimensions = dimensions
 
     def display(self, workspace, figure):
-        N = 5 # image, 2 network predictions, segmentation, outlines 
+        N = 5  # image, 2 network predictions, segmentation, outlines
         if self.save_probabilities.value:
             layout = (N, 2)
         else:
@@ -519,27 +555,27 @@ Minimum number of pixels per mask, can turn off by setting value to -1
             x=col,
             y=0,
         )
- 
+
         # show the network outputs
         col += 1
         figure.subplot_imshow(
             image=workspace.display_data.flowsRGB,
             sharexy=figure.subplot(0, 0),
-            title='predicted flows',
+            title="predicted flows",
             x=col,
             y=0,
         )
         col += 1
         figure.subplot_imshow(
-            colormap='magma',
+            colormap="magma",
             image=workspace.display_data.distance,
             sharexy=figure.subplot(0, 0),
-            title='predicted distance',
+            title="predicted distance",
             x=col,
             y=0,
         )
-        
-        # boundary logits output not really relevant 
+
+        # boundary logits output not really relevant
         # col += 1
         # figure.subplot_imshow(
         #     colormap='viridis',
@@ -550,7 +586,6 @@ Minimum number of pixels per mask, can turn off by setting value to -1
         #     y=0,
         # )
 
-            
         # show the segmentation (change to ncolor)
         col += 1
         m = workspace.display_data.y_data
@@ -560,7 +595,7 @@ Minimum number of pixels per mask, can turn off by setting value to -1
         cmap = ListedColormap([color for color in list(sinebow(m.max()).values())[1:]])
         pic = ncolor.label(m) if self.ncolor else m
         pic = cmap(rescale(pic))
-        pic[:,:,-1] = m>0 # alpha
+        pic[:, :, -1] = m > 0  # alpha
         figure.subplot_imshow(
             image=pic,
             sharexy=figure.subplot(0, 0),
@@ -569,16 +604,16 @@ Minimum number of pixels per mask, can turn off by setting value to -1
             y=0,
         )
 
-        #show the outlines
+        # show the outlines
         col += 1
         figure.subplot_imshow(
             image=workspace.display_data.outlines,
             sharexy=figure.subplot(0, 0),
-            title='outlines',
+            title="outlines",
             x=col,
             y=0,
         )
-        
+
         if self.save_probabilities.value:
             figure.subplot_imshow(
                 colormap="gray",
@@ -590,26 +625,29 @@ Minimum number of pixels per mask, can turn off by setting value to -1
             )
 
     def do_check_gpu(self):
-        print('do_check_gpu')
+        print("do_check_gpu")
         import importlib.util
-        torch_installed = importlib.util.find_spec('torch') is not None
-        #if the old version of cellpose <2.0, then use istorch kwarg
-        if float(cellpose_ver[0:3]) >= 0.7 and int(cellpose_ver[0])<2:
+
+        torch_installed = importlib.util.find_spec("torch") is not None
+        # if the old version of cellpose <2.0, then use istorch kwarg
+        if float(cellpose_ver[0:3]) >= 0.7 and int(cellpose_ver[0]) < 2:
             GPU_works = core.use_gpu(istorch=torch_installed)
-        else: #if new version of cellpose, use use_torch kwarg
+        else:  # if new version of cellpose, use use_torch kwarg
             GPU_works = core.use_gpu(use_torch=torch_installed)
         if GPU_works:
             message = "GPU appears to be working correctly!"
         else:
-            message = "GPU test failed. There may be something wrong with your configuration."
+            message = (
+                "GPU test failed. There may be something wrong with your configuration."
+            )
         import wx
+
         wx.MessageBox(message, caption="GPU Test")
 
-
     def upgrade_settings(self, setting_values, variable_revision_number, module_name):
-        print('upgrade_settings')
+        print("upgrade_settings")
         if variable_revision_number == 1:
-            setting_values = setting_values+["0.4", "0.0"]
+            setting_values = setting_values + ["0.4", "0.0"]
             variable_revision_number = 2
         if variable_revision_number == 2:
             setting_values = setting_values + ["0.0", False, "15", "1.0", False, False]

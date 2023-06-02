@@ -19,7 +19,7 @@ import cellprofiler_core.image
 import cellprofiler_core.module
 import cellprofiler_core.setting
 
-__doc__ ="""\
+__doc__ = """\
 PixelShuffle
 ============
 
@@ -34,6 +34,7 @@ YES          NO            NO
 ============ ============ ===============
 
 """
+
 
 class PixelShuffle(cellprofiler_core.module.ImageProcessing):
     module_name = "PixelShuffle"
@@ -75,18 +76,16 @@ class PixelShuffle(cellprofiler_core.module.ImageProcessing):
         for i in idx:
             seq.append(pxs[i])
         out = numpy.asarray(seq)
-        out = out.reshape(width,height)
+        out = out.reshape(width, height)
 
         y_data = out
 
         y = cellprofiler_core.image.Image(
-            dimensions=dimensions,
-            image=y_data,
-            parent_image=x
+            dimensions=dimensions, image=y_data, parent_image=x
         )
 
         images.add(y_name, y)
-        
+
         if self.show_window:
             workspace.display_data.x_data = x_data
             workspace.display_data.y_data = y_data

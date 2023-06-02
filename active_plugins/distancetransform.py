@@ -37,6 +37,7 @@ YES          YES          YES
 
 """
 
+
 class DistanceTransform(cellprofiler_core.module.ImageProcessing):
     module_name = "DistanceTransform"
 
@@ -46,9 +47,9 @@ class DistanceTransform(cellprofiler_core.module.ImageProcessing):
         super(DistanceTransform, self).create_settings()
 
         self.rescale_values = Binary(
-                "Rescale values from 0 to 1?",
-                True,
-                doc="""\
+            "Rescale values from 0 to 1?",
+            True,
+            doc="""\
 Select "*Yes*" to rescale the transformed values to lie between 0 and
 1. This is the option to use if the distance transformed image is to be
 used for thresholding by an **Identify** module or the like, which
@@ -61,7 +62,9 @@ input for a measurement module.""",
 
     def settings(self):
         __settings__ = super(DistanceTransform, self).settings()
-        __settings__ += [self.rescale_values,]
+        __settings__ += [
+            self.rescale_values,
+        ]
         return __settings__
 
     def visible_settings(self):
@@ -82,20 +85,18 @@ input for a measurement module.""",
         dimensions = x.dimensions
 
         x_data = x.pixel_data
-    
+
         y_data = scipy.ndimage.distance_transform_edt(x_data, sampling=x.spacing)
 
         if self.rescale_values.value:
             y_data = y_data / numpy.max(y_data)
 
         y = cellprofiler_core.image.Image(
-            dimensions=dimensions,
-            image=y_data,
-            parent_image=x
+            dimensions=dimensions, image=y_data, parent_image=x
         )
 
         images.add(y_name, y)
-        
+
         if self.show_window:
             workspace.display_data.x_data = x_data
             workspace.display_data.y_data = y_data
@@ -103,7 +104,3 @@ input for a measurement module.""",
 
     def volumetric(self):
         return True
- 
-
-    
-    

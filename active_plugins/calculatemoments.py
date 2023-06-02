@@ -1,4 +1,3 @@
-
 #################################
 #
 # Imports from useful Python libraries
@@ -50,118 +49,130 @@ YES          NO            YES
 
 """
 
+
 def get_object_moment(pixels, func):
-    labs=np.unique(pixels)
-    moms=np.zeros([np.max(labs)+1,1])
+    labs = np.unique(pixels)
+    moms = np.zeros([np.max(labs) + 1, 1])
     for l in labs:
-        if l!=0:
-            px=pixels[np.where(pixels==l)]
-            moms[l]=func(px)
+        if l != 0:
+            px = pixels[np.where(pixels == l)]
+            moms[l] = func(px)
     return moms
+
 
 def mean(pixels):
     return np.mean(pixels)
 
+
 def std(pixels):
     return np.std(pixels, ddof=1)
 
+
 def skewness(pixels):
-    if len(pixels)==0:
+    if len(pixels) == 0:
         return 0
 
-    pixels=np.array(pixels,dtype='float64')
-    mean=np.mean(pixels)
+    pixels = np.array(pixels, dtype="float64")
+    mean = np.mean(pixels)
 
-    num=np.sum(np.power(pixels-mean,3))
-    #num=num/(len(pixels)*len(pixels[0]))
-    num=num/pixels.size
-    denom=np.std(pixels)
+    num = np.sum(np.power(pixels - mean, 3))
+    # num=num/(len(pixels)*len(pixels[0]))
+    num = num / pixels.size
+    denom = np.std(pixels)
 
-    if denom==0.0: skew=0.0
-    else: skew=num/(denom*denom*denom)
+    if denom == 0.0:
+        skew = 0.0
+    else:
+        skew = num / (denom * denom * denom)
     return skew
 
+
 def kurtosis(pixels):
-    if len(pixels)==0:
+    if len(pixels) == 0:
         return 0
 
-    pixels=np.array(pixels,dtype='float64')
-    mean=np.mean(pixels)
+    pixels = np.array(pixels, dtype="float64")
+    mean = np.mean(pixels)
 
-    num=np.sum(np.power(pixels-mean,4))
-    #num=num/(len(pixels)*len(pixels[0]))
-    num=num/pixels.size
-    denom=np.std(pixels)
+    num = np.sum(np.power(pixels - mean, 4))
+    # num=num/(len(pixels)*len(pixels[0]))
+    num = num / pixels.size
+    denom = np.std(pixels)
 
-    if denom==0.0: kurt=0.0
-    else: kurt=num/(denom*denom*denom*denom)
+    if denom == 0.0:
+        kurt = 0.0
+    else:
+        kurt = num / (denom * denom * denom * denom)
     return kurt
+
 
 """The category of the measurements made by this module"""
 MOMENTS = "Moments"
 
-MOM_1="Mean"
-MOM_2="Standard Deviation"
-MOM_3="Skewness"
-MOM_4="Kurtosis"
-MOM_ALL=[MOM_1, MOM_2, MOM_3, MOM_4]
+MOM_1 = "Mean"
+MOM_2 = "Standard Deviation"
+MOM_3 = "Skewness"
+MOM_4 = "Kurtosis"
+MOM_ALL = [MOM_1, MOM_2, MOM_3, MOM_4]
 
-MOM_TO_F={MOM_1: mean,
-          MOM_2: std,
-          MOM_3: skewness,
-          MOM_4: kurtosis}
+MOM_TO_F = {MOM_1: mean, MOM_2: std, MOM_3: skewness, MOM_4: kurtosis}
+
 
 class CalculateMoments(cpm.Module):
 
     module_name = "CalculateMoments"
-    category = 'Measurement'
+    category = "Measurement"
     variable_revision_number = 1
 
     def create_settings(self):
-        """Create the settings for the module at startup.
-        """
+        """Create the settings for the module at startup."""
         self.image_groups = []
         self.image_count = cps.HiddenCount(self.image_groups)
-        self.add_image_cb(can_remove = False)
-        self.add_images = DoSomething("", "Add another image",
-                                          self.add_image_cb)
+        self.add_image_cb(can_remove=False)
+        self.add_images = DoSomething("", "Add another image", self.add_image_cb)
         self.image_divider = cps.Divider()
 
         self.object_groups = []
         self.object_count = cps.HiddenCount(self.object_groups)
-        self.add_object_cb(can_remove = True)
-        self.add_objects = DoSomething("", "Add another object",
-                                           self.add_object_cb)
+        self.add_object_cb(can_remove=True)
+        self.add_objects = DoSomething("", "Add another object", self.add_object_cb)
         self.object_divider = cps.Divider()
 
-        self.moms=MultiChoice(
-            "Moments to compute", MOM_ALL, MOM_ALL,
-            doc = """Moments are statistics describing the distribution of values in the set of pixels of interest:
+        self.moms = MultiChoice(
+            "Moments to compute",
+            MOM_ALL,
+            MOM_ALL,
+            doc="""Moments are statistics describing the distribution of values in the set of pixels of interest:
                 
                 - %(MOM_1)s - the first image moment, which corresponds to the central value of the collection of pixels of interest.
                 - %(MOM_2)s - the second image moment, which measures the amount of variation or dispersion of pixel values about its mean.
                 - %(MOM_3)s - a scaled version of the third moment, which measures the asymmetry of the pixel values distribution about its mean.
                 - %(MOM_4)s - a scaled version of the fourth moment, which measures the "peakedness" of the pixel values distribution.
                 
-                Choose one or more moments to measure.""" % globals())
+                Choose one or more moments to measure."""
+            % globals(),
+        )
 
     def settings(self):
         """The settings as they appear in the save file."""
-        result = [self.image_count,self.object_count]
-        for groups, elements in [(self.image_groups, ['image_name']),
-                                (self.object_groups, ['object_name'])]:
+        result = [self.image_count, self.object_count]
+        for groups, elements in [
+            (self.image_groups, ["image_name"]),
+            (self.object_groups, ["object_name"]),
+        ]:
             for group in groups:
                 for element in elements:
-                    result+= [getattr(group,element)]
-        result+=[self.moms]
+                    result += [getattr(group, element)]
+        result += [self.moms]
         return result
 
-    def prepare_settings(self,setting_values):
+    def prepare_settings(self, setting_values):
         """Adjust the number of groups based on the number of
         setting_values"""
-        for count, sequence, fn in\
-            ((int(setting_values[0]), self.image_groups, self.add_image_cb),
-             (int(setting_values[1]), self.object_groups, self.add_object_cb)):
+        for count, sequence, fn in (
+            (int(setting_values[0]), self.image_groups, self.add_image_cb),
+            (int(setting_values[1]), self.object_groups, self.add_object_cb),
+        ):
             del sequence[count:]
             while len(sequence) < count:
                 fn()
@@ -169,52 +180,75 @@ class CalculateMoments(cpm.Module):
     def visible_settings(self):
         """The settings as they appear in the module viewer"""
         result = []
-        for groups, add_button, div in [(self.image_groups, self.add_images, self.image_divider),
-                                        (self.object_groups, self.add_objects, self.object_divider)]:
+        for groups, add_button, div in [
+            (self.image_groups, self.add_images, self.image_divider),
+            (self.object_groups, self.add_objects, self.object_divider),
+        ]:
             for group in groups:
                 result += group.visible_settings()
             result += [add_button, div]
 
-        result+=[self.moms]
+        result += [self.moms]
         return result
 
-    def add_image_cb(self, can_remove = True):
-        '''Add an image to the image_groups collection
+    def add_image_cb(self, can_remove=True):
+        """Add an image to the image_groups collection
 
         can_delete - set this to False to keep from showing the "remove"
                      button for images that must be present.
-        '''
+        """
         group = cps.SettingsGroup()
         if can_remove:
             group.append("divider", cps.Divider(line=False))
-        group.append('image_name',
-                     ImageSubscriber("Select an image to measure","None",
-                                             doc="""
-                                             What did you call the grayscale images whose moments you want to calculate?"""))
+        group.append(
+            "image_name",
+            ImageSubscriber(
+                "Select an image to measure",
+                "None",
+                doc="""
+                                             What did you call the grayscale images whose moments you want to calculate?""",
+            ),
+        )
         if can_remove:
-            group.append("remover", cps.do_something.RemoveSettingButton("", "Remove this image", self.image_groups, group))
+            group.append(
+                "remover",
+                cps.do_something.RemoveSettingButton(
+                    "", "Remove this image", self.image_groups, group
+                ),
+            )
         self.image_groups.append(group)
 
-    def add_object_cb(self, can_remove = True):
-        '''Add an object to the object_groups collection
+    def add_object_cb(self, can_remove=True):
+        """Add an object to the object_groups collection
 
         can_delete - set this to False to keep from showing the "remove"
         button for objects that must be present.
-        '''
+        """
         group = cps.SettingsGroup()
         if can_remove:
             group.append("divider", cps.Divider(line=False))
-        group.append('object_name',
-                     LabelSubscriber("Select objects to measure","None", doc="""
+        group.append(
+            "object_name",
+            LabelSubscriber(
+                "Select objects to measure",
+                "None",
+                doc="""
                      What did you call the objects from which you want to calculate moments?
                      If you only want to calculate moments of
                      the image overall, you can remove all objects using the "Remove this object" button.
                      Objects specified here will have moments computed against *all* images specified above, which
                      may lead to image-object combinations that are unnecessary. If you
                      do not want this behavior, use multiple CalculateMoments
-                     modules to specify the particular image-object measures that you want."""))
+                     modules to specify the particular image-object measures that you want.""",
+            ),
+        )
         if can_remove:
-            group.append("remover", cps.do_something.RemoveSettingButton("", "Remove this object", self.object_groups, group))
+            group.append(
+                "remover",
+                cps.do_something.RemoveSettingButton(
+                    "", "Remove this object", self.object_groups, group
+                ),
+            )
         self.object_groups.append(group)
 
     def validate_module(self, pipeline):
@@ -223,21 +257,23 @@ class CalculateMoments(cpm.Module):
         for group in self.image_groups:
             if group.image_name.value in images:
                 raise cps.ValidationError(
-                    "%s has already been selected" %group.image_name.value,
-                    group.image_name)
+                    "%s has already been selected" % group.image_name.value,
+                    group.image_name,
+                )
             images.add(group.image_name.value)
 
         objects = set()
         for group in self.object_groups:
             if group.object_name.value in objects:
                 raise cps.ValidationError(
-                    "%s has already been selected" %group.object_name.value,
-                    group.object_name)
+                    "%s has already been selected" % group.object_name.value,
+                    group.object_name,
+                )
             objects.add(group.object_name.value)
 
     def run(self, workspace):
         """Run, computing the measurements"""
-        statistics = [[ "Image", "Object", "Measurement", "Value"]]
+        statistics = [["Image", "Object", "Measurement", "Value"]]
 
         for image_group in self.image_groups:
             image_name = image_group.image_name.value
@@ -250,23 +286,21 @@ class CalculateMoments(cpm.Module):
             workspace.display_data.statistics = statistics
 
     def run_image(self, image_name, workspace):
-        '''Run measurements on image'''
+        """Run measurements on image"""
         statistics = []
-        input_image = workspace.image_set.get_image(image_name,
-                                                    must_be_grayscale = True)
+        input_image = workspace.image_set.get_image(image_name, must_be_grayscale=True)
         pixels = input_image.pixel_data
-        for name in self.moms.value.split(','):
-            fn=MOM_TO_F[name]
-            value=fn(pixels)
-            statistics+=self.record_image_measurement(workspace,
-                                                      image_name,
-                                                      name, value)
+        for name in self.moms.value.split(","):
+            fn = MOM_TO_F[name]
+            value = fn(pixels)
+            statistics += self.record_image_measurement(
+                workspace, image_name, name, value
+            )
         return statistics
 
     def run_object(self, image_name, object_name, workspace):
         statistics = []
-        input_image = workspace.image_set.get_image(image_name,
-                                                    must_be_grayscale = True)
+        input_image = workspace.image_set.get_image(image_name, must_be_grayscale=True)
         objects = workspace.get_objects(object_name)
         pixels = input_image.pixel_data
         if input_image.has_mask:
@@ -292,12 +326,12 @@ class CalculateMoments(cpm.Module):
             labels = labels.copy()
             labels[~mask] = 0
 
-        for name in self.moms.value.split(','):
-            fn=MOM_TO_F[name]
-            value=get_object_moment(pixels, fn)
-            statistics+=self.record_measurement(workspace,
-                                                image_name, object_name,
-                                                name, value)
+        for name in self.moms.value.split(","):
+            fn = MOM_TO_F[name]
+            value = get_object_moment(pixels, fn)
+            statistics += self.record_measurement(
+                workspace, image_name, object_name, name, value
+            )
         return statistics
 
     def is_interactive(self):
@@ -305,31 +339,40 @@ class CalculateMoments(cpm.Module):
 
     def display(self, workspace):
         statistics = workspace.display_data.statistics
-        figure = workspace.create_or_find_figure(title="CalculateMoments, image cycle #%d"%(
-                workspace.measurements.image_set_number),subplots=(1,1))
-        figure.subplot_table(0,0, statistics, ratio = (0.25, 0.25, 0.25, 0.25))
+        figure = workspace.create_or_find_figure(
+            title="CalculateMoments, image cycle #%d"
+            % (workspace.measurements.image_set_number),
+            subplots=(1, 1),
+        )
+        figure.subplot_table(0, 0, statistics, ratio=(0.25, 0.25, 0.25, 0.25))
 
     def get_features(self):
-        '''Return a measurement feature name'''
+        """Return a measurement feature name"""
         return MOM_ALL
 
     def get_measurement_columns(self, pipeline):
-        '''Get column names output for each measurement.'''
+        """Get column names output for each measurement."""
         cols = []
         for im in self.image_groups:
             for feature in self.get_features():
-                cols += [("Image",
-                          '%s_%s_%s' % (MOMENTS, feature,
-                                        im.image_name.value),
-                          COLTYPE_FLOAT)]
+                cols += [
+                    (
+                        "Image",
+                        "%s_%s_%s" % (MOMENTS, feature, im.image_name.value),
+                        COLTYPE_FLOAT,
+                    )
+                ]
 
         for ob in self.object_groups:
             for im in self.image_groups:
                 for feature in self.get_features():
-                    cols += [(ob.object_name.value,
-                              '%s_%s_%s' % (MOMENTS, feature,
-                                            im.image_name.value),
-                              COLTYPE_FLOAT)]
+                    cols += [
+                        (
+                            ob.object_name.value,
+                            "%s_%s_%s" % (MOMENTS, feature, im.image_name.value),
+                            COLTYPE_FLOAT,
+                        )
+                    ]
 
         return cols
 
@@ -348,57 +391,52 @@ class CalculateMoments(cpm.Module):
             return []
 
     def get_measurements(self, pipeline, object_name, category):
-        '''Get the measurements made on the given image in the given category
+        """Get the measurements made on the given image in the given category
 
         pipeline - pipeline being run
         image_name - name of image being measured
         category - measurement category
-        '''
+        """
         if category in self.get_categories(pipeline, object_name):
             return self.get_features()
         return []
 
     def get_measurement_images(self, pipeline, object_name, category, measurement):
-        '''Get the list of images measured
+        """Get the list of images measured
 
         pipeline - pipeline being run
         image_name - name of objects being measured
         category - measurement category
         measurement - measurement made on images
-        '''
-        if measurement in self.get_measurements(
-            pipeline, object_name, category):
+        """
+        if measurement in self.get_measurements(pipeline, object_name, category):
             return [x.image_name.value for x in self.image_groups]
         return []
 
-    def record_measurement(self, workspace,
-                           image_name, object_name,
-                           feature_name, result):
+    def record_measurement(
+        self, workspace, image_name, object_name, feature_name, result
+    ):
         """Record the result of a measurement in the workspace's
         measurements"""
         # Todo: The line below previous referred to "fix", assumed this meant the numpy version
         data = np.fix(result)
         data[~np.isfinite(data)] = 0
-        workspace.add_measurement(object_name,
-                                  "%s_%s_%s" % (MOMENTS, feature_name,
-                                                image_name),
-                                  data)
-        statistics = [[image_name, object_name,
-                       feature_name,
-                       "%f"%(d) if len(data) else "-"]
-                      for d in data]
+        workspace.add_measurement(
+            object_name, "%s_%s_%s" % (MOMENTS, feature_name, image_name), data
+        )
+        statistics = [
+            [image_name, object_name, feature_name, "%f" % (d) if len(data) else "-"]
+            for d in data
+        ]
         return statistics
 
-    def record_image_measurement(self, workspace,
-                                 image_name, feature_name, result):
+    def record_image_measurement(self, workspace, image_name, feature_name, result):
         """Record the result of a measurement in the workspace's
         measurements"""
         if not np.isfinite(result):
             result = 0
-        workspace.measurements.add_image_measurement("%s_%s_%s" % (MOMENTS, feature_name,
-                                                                   image_name),
-                                                     result)
-        statistics = [[image_name, "-",
-                       feature_name,
-                       "%f"%(result)]]
+        workspace.measurements.add_image_measurement(
+            "%s_%s_%s" % (MOMENTS, feature_name, image_name), result
+        )
+        statistics = [[image_name, "-", feature_name, "%f" % (result)]]
         return statistics
