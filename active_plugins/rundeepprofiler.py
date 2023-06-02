@@ -3,16 +3,15 @@
 # Imports from useful Python libraries
 #
 #################################
+import random
+import os
+import shutil
+import subprocess
+import csv
 
-import centrosome.cpmorphology
-import centrosome.zernike
-import numpy
-import scipy.ndimage
-import numpy
-
-from cellprofiler_core.setting.text import LabelName
+from cellprofiler_core.module import Module
+from cellprofiler_core.setting.subscriber import LabelSubscriber
 from cellprofiler_core.setting.text import Text, Filename, Directory
-from cellprofiler_core.setting.choice import Choice
 from cellprofiler.modules import _help
 from cellprofiler_core.preferences import ABSOLUTE_FOLDER_NAME
 from cellprofiler_core.preferences import DEFAULT_INPUT_FOLDER_NAME
@@ -24,30 +23,12 @@ from cellprofiler_core.constants.module import (
     IO_WITH_METADATA_HELP_TEXT,
 )
 from cellprofiler_core.setting import (
-    Divider,
-    Binary,
-    SettingsGroup,
     Measurement,
-    ValidationError,
 )
 from cellprofiler_core.setting.subscriber import (
     ImageListSubscriber,
-    LabelListSubscriber,
 )
-from cellprofiler_core.preferences import get_default_output_directory, get_headless
-from cellprofiler_core.utilities.measurement import find_metadata_tokens
-from cellprofiler_core.modules.metadata import Metadata
-import cellprofiler_core.constants.measurement
-from cellprofiler_core.pipeline._pipeline import Pipeline
 
-import random
-import os
-import shutil
-import subprocess
-import csv
-
-S_RULES = "Metadata"
-IM_MEASUREMENT = "Measurement"
 #################################
 #
 # Imports from CellProfiler
@@ -121,22 +102,6 @@ DeepProfiler
 -  DeepProfiler GitHub repository: https://github.com/cytomining/DeepProfiler
 -  DeepProfiler handbook: https://cytomining.github.io/DeepProfiler-handbook/
 """
-
-#
-# Constants
-#
-# It's good programming practice to replace things like strings with
-# constants if they will appear more than once in your program. That way,
-# if someone wants to change the text, that text will change everywhere.
-# Also, you can't misspell it by accident.
-#
-from cellprofiler_core.constants.measurement import COLTYPE_FLOAT
-from cellprofiler_core.module import Module
-from cellprofiler_core.setting.subscriber import ImageSubscriber, LabelSubscriber
-from cellprofiler_core.setting.text import Integer
-
-"""This is the measurement template category"""
-C_MEASUREMENT_TEMPLATE = "MT"
 
 
 class RunDeepProfiler(Module):
@@ -287,16 +252,22 @@ Select the folder containing the DeepProfiler repository that you cloned to your
         #
         # Create folders using deepprofiler setup
         #
-        executable = f"{deep_directory}\deepprofiler"
+        executable = os.path.join(f"{deep_directory}","deepprofiler")
         cmd_setup = f"python {executable} --root={out_directory} setup"
-        subprocess.run(cmd_setup, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+        result = subprocess.run(cmd_setup.split(), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True) 
+        if result.returncode!=0: 
+            msg = f"The call to DeepProfiler ({cmd_setup}) returned an error; you should try to solve this outside of CellProfiler. DeepProfiler output was as follows: \n {result.stdout}" 
+            raise RuntimeError(msg)
 
         # 
         # Copy model and config to the folders deepprofiler expects
         #
-        os.makedirs(f"{out_directory}\outputs\{self.assay.value}\checkpoint", exist_ok=True)
-        shutil.copy(f"{model_dir}\{self.model_filename.value}", f"{out_directory}\outputs\{self.assay.value}\checkpoint")
-        shutil.copy(f"{config_dir}\{self.config_filename.value}", f"{out_directory}\inputs\config")
+        local_output = os.path.join(f"{out_directory}","outputs",f"{self.assay.value}","checkpoint")
+        os.makedirs(local_output, exist_ok=True)
+        local_input = os.path.join(f"{out_directory}","inputs","config")
+        os.makedirs(local_input, exist_ok=True)
+        shutil.copy(os.path.join(f"{model_dir}",f"{self.model_filename.value}"), local_output)
+        shutil.copy(os.path.join(f"{config_dir}",f"{self.config_filename.value}"), local_input)
 
         #
         # Locations file
@@ -307,14 +278,12 @@ Select the folder containing the DeepProfiler repository that you cloned to your
         # Get inputs
         x_obj = measurements.get_current_measurement(self.input_object_name.value, "Location_Center_X")
         y_obj = measurements.get_current_measurement(self.input_object_name.value, "Location_Center_Y")
-        plate = measurements.get_current_image_measurement(self.metadata_plate.value)
         well = measurements.get_current_image_measurement(self.metadata_well.value)
         site = measurements.get_current_image_measurement(self.metadata_site.value)
-        print(plate, well, site)
         # Create plate directory and location file
-        loc_dir = f"{out_directory}\inputs\locations\{self.metadata_plate.value}"
+        loc_dir = os.path.join(f"{out_directory}","inputs","locations",f"{self.metadata_plate.value}")
         loc_file = f"{well}-{site}-Nuclei.csv"
-        os.makedirs(f"{out_directory}\inputs\locations\{self.metadata_plate.value}", exist_ok=True)
+        os.makedirs(loc_dir, exist_ok=True)
         # Create the actual file
         header = 'Nuclei_Location_Center_X', 'Nuclei_Location_Center_Y'
         csvpath = os.path.join(loc_dir, loc_file)
@@ -331,11 +300,10 @@ Select the folder containing the DeepProfiler repository that you cloned to your
         for img in self.images_list.value:
             pathname = measurements.get_current_image_measurement(f"PathName_{img}")
             filename = measurements.get_current_image_measurement(f"FileName_{img}")
-            filename_list.append(f"{pathname}\{filename}")
+            filename_list.append(os.path.join(f"{pathname}",f"{filename}"))
         header_files.extend(self.images_list.value)
-        print(filename_list)
-        print(header_files)
-        index_dir = f"{out_directory}\inputs\metadata"
+        index_dir = os.path.join(f"{out_directory}","inputs","metadata")
+        os.makedirs(index_dir, exist_ok=True)
         index_file = f"index_{str(random.randint(100000, 999999))}.csv"
         indexpath = os.path.join(index_dir, index_file)
         with open(indexpath, 'w', newline='', encoding='utf-8') as fpointer:
@@ -347,7 +315,10 @@ Select the folder containing the DeepProfiler repository that you cloned to your
         # RUN!
         #
         cmd_run = f"python {executable} --root={out_directory} --config {self.config_filename.value} --metadata {index_file} --exp {self.assay.value} profile"
-        subprocess.run(cmd_run, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+        result = subprocess.run(cmd_run.split(), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+        if result.returncode!=0:
+            msg = f"The call to DeepProfiler ({cmd_run}) returned an error; you should try to solve this outside of CellProfiler. DeepProfiler output was as follows: \n {result.stdout}"
+            raise RuntimeError(msg)
 
         if self.show_window:
             image_set_number = workspace.measurements.image_set_number
