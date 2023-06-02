@@ -1,3 +1,24 @@
+#################################
+#
+# Imports from useful Python libraries
+#
+#################################
+
+import logging
+import scipy.ndimage
+import numpy
+
+#################################
+#
+# Imports from CellProfiler
+#
+##################################
+
+import cellprofiler_core.image
+import cellprofiler_core.module
+import cellprofiler_core.setting
+from cellprofiler_core.setting import Binary
+
 __doc__ = """\
 DistanceTransform
 =================
@@ -15,15 +36,6 @@ YES          YES          YES
 ============ ============ ===============
 
 """
-
-import logging
-
-import scipy.ndimage
-import cellprofiler_core.image
-import cellprofiler_core.module
-import cellprofiler_core.setting
-import numpy
-from cellprofiler_core.setting import Binary
 
 class DistanceTransform(cellprofiler_core.module.ImageProcessing):
     module_name = "DistanceTransform"

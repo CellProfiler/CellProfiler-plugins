@@ -1,4 +1,24 @@
+#################################
+#
+# Imports from useful Python libraries
+#
+#################################
+
 from os import path
+from wx import Gauge
+from wx import Window
+from collections.abc import Iterable
+from threading import Thread
+from sys import platform
+import time
+import skimage.io
+import cpij.bridge as ijbridge, cpij.server as ijserver
+
+#################################
+#
+# Imports from CellProfiler
+#
+##################################
 
 from cellprofiler_core.image import Image
 from cellprofiler_core.module import Module
@@ -14,15 +34,6 @@ from cellprofiler_core.setting.do_something import DoSomething, RemoveSettingBut
 from cellprofiler_core.setting._settings_group import SettingsGroup
 from cellprofiler_core.setting import Divider, HiddenCount
 from cellprofiler_core.setting.subscriber import ImageSubscriber
-
-from wx import Gauge
-from wx import Window
-from collections.abc import Iterable
-from threading import Thread
-from sys import platform
-import time
-import skimage.io
-import cpij.bridge as ijbridge, cpij.server as ijserver
 
 __doc__ = """\
 RunImageJScript

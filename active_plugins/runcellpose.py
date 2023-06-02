@@ -1,8 +1,20 @@
+#################################
+#
+# Imports from useful Python libraries
+#
+#################################
+
 import numpy
 import os
 from cellpose import models, io, core, utils
 from skimage.transform import resize
 import importlib.metadata
+
+#################################
+#
+# Imports from CellProfiler
+#
+##################################
 
 from cellprofiler_core.image import Image
 from cellprofiler_core.module.image_segmentation import ImageSegmentation
@@ -59,8 +71,6 @@ YES          YES          NO
 ============ ============ ===============
 
 """
-
-
 
 model_dic = models.MODEL_NAMES
 model_dic.append('custom')

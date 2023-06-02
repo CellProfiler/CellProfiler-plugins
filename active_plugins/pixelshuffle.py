@@ -1,3 +1,24 @@
+#################################
+#
+# Imports from useful Python libraries
+#
+#################################
+
+import logging
+import scipy.ndimage
+import numpy
+import random
+
+#################################
+#
+# Imports from CellProfiler
+#
+##################################
+
+import cellprofiler_core.image
+import cellprofiler_core.module
+import cellprofiler_core.setting
+
 __doc__ ="""\
 PixelShuffle
 ============
@@ -13,17 +34,6 @@ YES          NO            NO
 ============ ============ ===============
 
 """
-
-import logging
-
-import scipy.ndimage
-import numpy
-import random
-import cellprofiler_core.image
-import cellprofiler_core.module
-import cellprofiler_core.setting
-
-
 
 class PixelShuffle(cellprofiler_core.module.ImageProcessing):
     module_name = "PixelShuffle"

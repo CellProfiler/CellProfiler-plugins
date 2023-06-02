@@ -1,8 +1,33 @@
+#################################
+#
+# Imports from useful Python libraries
+#
+#################################
+
+import os
+import subprocess
+import tempfile
+import h5py  # HDF5 is ilastik's preferred file format
+import logging
+import skimage
+
+#################################
+#
+# Imports from CellProfiler
+#
+##################################
+
+from cellprofiler_core.image import Image
+from cellprofiler_core.module import Module
+import cellprofiler_core.setting
+from cellprofiler_core.setting.choice import Choice
+from cellprofiler_core.setting.text import Pathname
+
 __doc__ = """\
 Predict
 =======
 
-Use an ilastik pixel classifier to generate a probability image. Each
+**Predict** uses an ilastik pixel classifier to generate a probability image. Each
 channel represents the probability of the pixels in the image belong to
 a particular class. Use **ColorToGray** to separate channels for further
 processing. For example, use **IdentifyPrimaryObjects** on a
@@ -56,21 +81,6 @@ Supports 2D? Supports 3D? Respects masks?
 YES          NO           NO
 ============ ============ ===============
 """
-
-import os
-import subprocess
-import tempfile
-
-import h5py  # HDF5 is ilastik's preferred file format
-import logging
-import skimage
-
-from cellprofiler_core.image import Image
-from cellprofiler_core.module import Module
-import cellprofiler_core.setting
-from cellprofiler_core.setting.choice import Choice
-from cellprofiler_core.setting.text import Pathname
-
 
 logger = logging.getLogger(__name__)
 

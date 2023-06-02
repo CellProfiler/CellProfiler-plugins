@@ -1,3 +1,29 @@
+
+#################################
+#
+# Imports from useful Python libraries
+#
+#################################
+
+import numpy as np
+import scipy.ndimage as scind
+
+#################################
+#
+# Imports from CellProfiler
+#
+##################################
+
+import cellprofiler_core.module as cpm
+import cellprofiler_core.measurement as cpmeas
+import cellprofiler_core.object as cpo
+import cellprofiler_core.setting as cps
+from cellprofiler_core.constants.measurement import COLTYPE_FLOAT
+from cellprofiler_core.setting.do_something import DoSomething
+from cellprofiler_core.setting.multichoice import MultiChoice
+from cellprofiler_core.setting.subscriber import ImageSubscriber, LabelSubscriber
+from cellprofiler_core.utilities.core.object import size_similarly
+
 __doc__ = """\
 CalculateMoments
 ================
@@ -19,24 +45,10 @@ Available measurements:
 ============ ============ ===============
 Supports 2D? Supports 3D? Respects masks?
 ============ ============ ===============
-YES          ?            ?
+YES          NO            YES
 ============ ============ ===============
 
 """
-
-import numpy as np
-import scipy.ndimage as scind
-
-import cellprofiler_core.module as cpm
-import cellprofiler_core.measurement as cpmeas
-import cellprofiler_core.object as cpo
-import cellprofiler_core.setting as cps
-from cellprofiler_core.constants.measurement import COLTYPE_FLOAT
-from cellprofiler_core.setting.do_something import DoSomething
-from cellprofiler_core.setting.multichoice import MultiChoice
-from cellprofiler_core.setting.subscriber import ImageSubscriber, LabelSubscriber
-from cellprofiler_core.utilities.core.object import size_similarly
-
 
 def get_object_moment(pixels, func):
     labs=np.unique(pixels)

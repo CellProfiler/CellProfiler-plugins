@@ -1,3 +1,23 @@
+#################################
+#
+# Imports from useful Python libraries
+#
+#################################
+import numpy
+import skimage.exposure
+
+#################################
+#
+# Imports from CellProfiler
+#
+##################################
+
+import cellprofiler_core.image
+import cellprofiler_core.module
+import cellprofiler_core.setting
+import cellprofiler_core.setting.text
+from cellprofiler_core.setting.subscriber import ImageSubscriber
+
 __doc__ = """\
 HistogramEqualization 
 =====================
@@ -27,15 +47,6 @@ References
 (`link <http://www.janeriksolem.net/histogram-equalization-with-python-and.html>`__)
 (`link <https://docs.opencv.org/3.1.0/d5/daf/tutorial_py_histogram_equalization.html>`__)
 """
-
-import cellprofiler_core.image
-import cellprofiler_core.module
-import cellprofiler_core.setting
-import cellprofiler_core.setting.text
-import numpy
-import skimage.exposure
-from cellprofiler_core.setting.subscriber import ImageSubscriber
-
 
 class HistogramEqualization(cellprofiler_core.module.ImageProcessing):
     module_name = "HistogramEqualization"

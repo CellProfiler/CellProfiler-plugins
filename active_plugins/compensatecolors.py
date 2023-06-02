@@ -1,4 +1,27 @@
-# coding=utf-8
+#################################
+#
+# Imports from useful Python libraries
+#
+#################################
+
+import numpy
+
+import scipy.ndimage
+
+import skimage.exposure
+import skimage.filters
+import skimage.morphology
+
+#################################
+#
+# Imports from CellProfiler
+#
+##################################
+
+import cellprofiler_core.image
+import cellprofiler_core.module
+import cellprofiler_core.setting
+
 __doc__ = """\
 CompensateColors
 ================
@@ -32,31 +55,6 @@ Compensation will be performed between compensation classes so you need to assig
 Often, each compensation class is a separate channel used during image acquisition. 
 
 """
-
-#################################
-#
-# Imports from useful Python libraries
-#
-#################################
-
-import numpy
-
-import scipy.ndimage
-
-import skimage.exposure
-import skimage.filters
-import skimage.morphology
-
-#################################
-#
-# Imports from CellProfiler
-#
-##################################
-
-import cellprofiler_core.image
-import cellprofiler_core.module
-import cellprofiler_core.setting
-
 
 COMPENSATE_SUFFIX = "Compensated"
 

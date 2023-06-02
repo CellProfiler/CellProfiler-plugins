@@ -1,3 +1,26 @@
+#################################
+#
+# Imports from useful Python libraries
+#
+#################################
+
+import logging
+import numpy
+import scipy.ndimage
+
+#################################
+#
+# Imports from CellProfiler
+#
+##################################
+
+import cellprofiler_core.setting
+import cellprofiler_core.module
+from cellprofiler_core.image import Image
+from cellprofiler_core.setting import Binary
+from cellprofiler_core.setting.subscriber import ImageSubscriber
+from cellprofiler_core.setting.text import ImageName, Integer
+
 __doc__ ="""\
 VarianceTransform
 =================
@@ -12,19 +35,6 @@ Supports 2D? Supports 3D? Respects masks?
 YES          YES           YES
 ============ ============ ===============
 """
-
-import logging
-import numpy
-import scipy.ndimage
-
-import cellprofiler_core.setting
-import cellprofiler_core.module
-from cellprofiler_core.image import Image
-from cellprofiler_core.setting import Binary
-from cellprofiler_core.setting.subscriber import ImageSubscriber
-from cellprofiler_core.setting.text import ImageName, Integer
-
-
 
 class VarianceTransform(cellprofiler_core.module.ImageProcessing):
     module_name = "VarianceTransform"

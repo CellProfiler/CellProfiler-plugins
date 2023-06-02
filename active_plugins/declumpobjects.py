@@ -1,4 +1,31 @@
-# coding=utf-8
+#################################
+#
+# Imports from useful Python libraries
+#
+#################################
+
+import numpy
+import skimage.morphology
+import skimage.segmentation
+import scipy.ndimage
+import skimage.filters
+import skimage.feature
+import skimage.util
+
+#################################
+#
+# Imports from CellProfiler
+#
+##################################
+
+import cellprofiler_core.image
+import cellprofiler_core.module
+import cellprofiler_core.setting
+import cellprofiler_core.setting.text
+import cellprofiler_core.setting.choice
+import cellprofiler_core.object
+from cellprofiler_core.module.image_segmentation import ObjectProcessing
+from cellprofiler_core.setting.subscriber import ImageSubscriber
 
 """
 DeclumpObjects
@@ -28,23 +55,6 @@ YES          YES          NO
 ============ ============ ===============
 
 """
-
-import numpy
-import skimage.morphology
-import skimage.segmentation
-import scipy.ndimage
-import skimage.filters
-import skimage.feature
-import skimage.util
-
-import cellprofiler_core.image
-import cellprofiler_core.module
-import cellprofiler_core.setting
-import cellprofiler_core.setting.text
-import cellprofiler_core.setting.choice
-import cellprofiler_core.object
-from cellprofiler_core.module.image_segmentation import ObjectProcessing
-from cellprofiler_core.setting.subscriber import ImageSubscriber
 
 O_SHAPE = "Shape"
 O_INTENSITY = "Intensity"

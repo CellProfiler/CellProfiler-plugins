@@ -1,10 +1,19 @@
+#################################
+#
+# Imports from useful Python libraries
+#
+#################################
+
 import os
-
 from skimage.transform import resize
-
 from stardist.models import StarDist2D, StarDist3D
-
 from csbdeep.utils import normalize
+
+#################################
+#
+# Imports from CellProfiler
+#
+##################################
 
 from cellprofiler_core.image import Image
 from cellprofiler_core.module.image_segmentation import ImageSegmentation
@@ -50,6 +59,7 @@ YES          YES          NO
 ============ ============ ===============
 
 """
+
  # get available models
 _models2d, _aliases2d = get_registered_models(StarDist2D)
 _models3d, _aliases3d = get_registered_models(StarDist3D)

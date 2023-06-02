@@ -1,3 +1,35 @@
+#################################
+#
+# Imports from useful Python libraries
+#
+#################################
+
+import numpy as np
+import scipy.ndimage as scind
+
+#################################
+#
+# Imports from CellProfiler
+#
+##################################
+
+import calculatemoments as cpmoments
+import cellprofiler_core.module as cpm
+import cellprofiler_core.object as cpo
+import cellprofiler_core.setting as cps
+import cellprofiler_core.measurement as cpmeas
+from cellprofiler_core.constants.measurement import COLTYPE_FLOAT
+from cellprofiler_core.setting.do_something import DoSomething
+from cellprofiler_core.setting.multichoice import MultiChoice
+from cellprofiler_core.setting.subscriber import ImageSubscriber, LabelSubscriber
+from cellprofiler_core.setting.text import Integer
+from cellprofiler_core.utilities.core.object import size_similarly
+from centrosome.cpmorphology import fixup_scipy_ndimage_result as fix
+from centrosome.haralick import Haralick, normalized_per_object
+from centrosome.filter import gabor, stretch
+
+__version__ = "$Revision$"
+
 __doc__ = """\
 EnhancedMeasureTexture
 ======================
@@ -94,43 +126,12 @@ Journal of the Institute of Electrical Engineers 93:429-441.
 
 """
 
-# CellProfiler is distributed under the GNU General Public License.
-# See the accompanying file LICENSE for details.
-# 
-# Copyright (c) 2003-2009 Massachusetts Institute of Technology
-# Copyright (c) 2009-2012 Broad Institute
-# 
-# Please see the AUTHORS file for credits.
-# 
-# Website: http://www.cellprofiler.org
-
-
-__version__ = "$Revision$"
-
-import numpy as np
-import scipy.ndimage as scind
-
-import calculatemoments as cpmoments
-import cellprofiler_core.module as cpm
-import cellprofiler_core.object as cpo
-import cellprofiler_core.setting as cps
-import cellprofiler_core.measurement as cpmeas
-from cellprofiler_core.constants.measurement import COLTYPE_FLOAT
-from cellprofiler_core.setting.do_something import DoSomething
-from cellprofiler_core.setting.multichoice import MultiChoice
-from cellprofiler_core.setting.subscriber import ImageSubscriber, LabelSubscriber
-from cellprofiler_core.setting.text import Integer
-from cellprofiler_core.utilities.core.object import size_similarly
-from centrosome.cpmorphology import fixup_scipy_ndimage_result as fix
-from centrosome.haralick import Haralick, normalized_per_object
-from centrosome.filter import gabor, stretch
-
 """The category of the per-object measurements made by this module"""
 TEXTURE = 'Texture'
 
 """The "name" slot in the object group dictionary entry"""
 OG_NAME = 'name'
-"""The "remove"slot in the object group dictionary entry"""
+"""The "remove" slot in the object group dictionary entry"""
 OG_REMOVE = 'remove'
 
 F_HARALICK = """AngularSecondMoment Contrast Correlation Variance 

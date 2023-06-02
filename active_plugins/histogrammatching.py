@@ -1,3 +1,23 @@
+#################################
+#
+# Imports from useful Python libraries
+#
+#################################
+import numpy
+import skimage.exposure
+
+#################################
+#
+# Imports from CellProfiler
+#
+##################################
+
+import cellprofiler_core.image
+import cellprofiler_core.module
+import cellprofiler_core.setting
+import cellprofiler_core.setting.text
+from cellprofiler_core.setting.subscriber import ImageSubscriber
+
 __doc__ = """\
 HistogramMatching 
 ================+
@@ -19,15 +39,6 @@ References
 (`link <http://paulbourke.net/miscellaneous/equalisation/>`__)
 (`link <https://scikit-image.org/docs/stable/auto_examples/color_exposure/plot_histogram_matching.html>`__)
 """
-
-import cellprofiler_core.image
-import cellprofiler_core.module
-import cellprofiler_core.setting
-import cellprofiler_core.setting.text
-import numpy
-import skimage.exposure
-from cellprofiler_core.setting.subscriber import ImageSubscriber
-
 
 class HistogramMatching(cellprofiler_core.module.ImageProcessing):
     module_name = "HistogramMatching"
