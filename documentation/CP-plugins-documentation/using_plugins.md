@@ -20,6 +20,8 @@ See [Installing plugins with dependencies, using CellProfiler from source](#inst
 The second option allows you to use pre-built CellProfiler, but plugin installation is more complex.
 See [Installing plugins with dependencies, using pre-built CellProfiler](#installing-plugins-with-dependencies-using-pre-built-cellprofiler).
 
+If using RunDeepProfiler, check for alternative installation instructions in [RunDeepProfiler](RunDeepProfiler.md).
+
 ### Installing plugins without dependencies
 
 1. **Install CellProfiler.**  

@@ -4,21 +4,9 @@
 
 ### Windows
 
-1. Create an environment to run CellProfiler and DeepProfiler:
+1. Follow the instructions to install CellProfiler from source: [Installing plugins with dependencies, using CellProfiler from source](using_plugins.md);
 
-```
-conda create --name cp-dp python=3.8
-```
-
-Activate the environment:
-
-```
-conda activate cp-dp
-```
-
-2. Follow the [instructions](using_plugins.md) to install CellProfiler from source;
-
-3. Clone DeepProfiler repository:
+2. Clone DeepProfiler repository:
 
 ```
 git clone https://github.com/broadinstitute/DeepProfiler.git
@@ -33,21 +21,16 @@ pip install -e .
 
 5. Install dependencies by running:
 
+```bash
+cd CellProfiler-plugins
+pip install -e .[deepprofiler]
 ```
-pip install numpy==1.23.0
-pip install inflect==6.0.0
-```
 
-6. Run CellProfiler
+## Run Example
 
-Call `cellprofiler` in the command line and see if you can find RunDeepProfiler by adding the module.
+1. Use the folder with images and files available on CellProfiler-plugins > test > test_deepprofiler [link here](https://github.com/CellProfiler/CellProfiler-plugins/pull/182/commits/62874b4a28a370cea069662d3804a68b651130ec) as an example to run the test pipeline test_deepprofiler.cppipe
 
-7. Select the cellprofiler-plugins/active_plugins folder in Preferences > Save
-
-8. Use the folder with images and files available on CellProfiler-plugins > test > test_deepprofiler [link here]() as an example to run the test pipeline test_deepprofiler.cppipe
-
-9. Don't forget to select the config, model, and DeepProfiler directories to your local paths.
-
+2. Don't forget to select the config, model, and DeepProfiler directories to your local paths.
 
 
 ## Using GPU
@@ -64,16 +47,14 @@ If your GPU isn't there, you likely need to install drivers.
   * Run `python` on the command line (i.e., in Command Prompt or Terminal) to start an interactive session
   * Then run the following
   ```
-  import torch
-  torch.cuda.is_available()
+  import tensorflow as tf
+  tf.test.is_gpu_available(
+    cuda_only=False, min_cuda_compute_capability=None
+)
   ```
   * If this returns `True`, you're all set
-  * If this returns `False`, you likely need to install/reinstall torch. See [here](https://pytorch.org/get-started/locally/) for your exact command.
-  * Exit the session with `exit()` then install torch if necessary
-  ```
-  pip3 install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu113
-  ```
-  If you have a previous version of torch installed, make sure to run `pip uninstall torch` first.
+  * If this returns `False`, you likely need to install/reinstall torch. See [here](https://www.tensorflow.org/guide/gpu) for your exact command.
+  * Exit the session with `exit()` then install tensorflow if necessary.
 
 
 **NOTE**: You might get a warning like this:
