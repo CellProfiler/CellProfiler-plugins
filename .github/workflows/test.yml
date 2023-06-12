@@ -4,8 +4,8 @@ on:
   push:
     branches:
       - master
-  pull_request:
-    types: [opened, reopened, synchronize, ready_for_review, review_requested]
+  # pull_request:
+  #   types: [opened, reopened, synchronize, ready_for_review, review_requested]
 
 jobs:
   build_cellprofiler:
