@@ -55,7 +55,7 @@ Groups:[module_num:4|svn_version:'Unknown'|variable_revision_number:2|show_windo
 
 RunStarDist:[module_num:5|svn_version:'Unknown'|variable_revision_number:1|show_window:True|notes:[]|batch_state:array([], dtype=uint8)|enabled:True|wants_pause:False]
     Select the input image:DNA
-    Model:Versatile (fluorescent nuclei)
+    Model:2D
     Name the output object:RunStarDist
     Tile input image?:No
     Horizontal tiles:1
