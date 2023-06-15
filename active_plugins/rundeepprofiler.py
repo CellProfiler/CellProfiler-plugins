@@ -31,8 +31,11 @@ from cellprofiler_core.setting import (
 from cellprofiler_core.setting.subscriber import (
     ImageListSubscriber,
 )
+from cellprofiler_core.constants.measurement import COLTYPE_FLOAT, C_LOCATION
 
 LOGGER = logging.getLogger(__name__)
+
+C_MEASUREMENT = "DeepProfiler"
 
 #################################
 #
@@ -349,9 +352,24 @@ Select the folder containing the DeepProfiler repository that you cloned to your
             #
             # Get the outputs to save and/or display on window
             #
-            columns, features = self.get_measurements_deepprofiler()
+            self.columns_names, self.features = self.get_measurements_deepprofiler()
             object_name = self.input_object_name.value
-            self.record_measurements(object_name, columns, features)
+            for i in range(len(self.columns_names)):
+                if self.show_window and len(self.features[i]) > 0:
+                                self.statistics.append(
+                                    (
+                                        object_name,
+                                        self.columns_names[i],
+                                        np.round(np.mean(self.features[i]), 3),
+                                        np.round(np.median(self.features[i]), 3),
+                                        np.round(np.std(self.features[i]), 3),
+                                    )
+                                )
+                self.measurements.add_measurement(
+                    object_name,
+                    self.columns_names[i],
+                    self.features[i],
+                )
             #
             # Delete files after run in inputs folder
             #
@@ -383,24 +401,45 @@ Select the folder containing the DeepProfiler repository that you cloned to your
                                     np.round(np.std(results[i]), 3),
                                 )
                             )
-            if self.save_features.value:
-                self.measurements.add_measurement(
-                    object_name,
-                    feature_name_list[i],
-                    results[i],
-                )
-            
-
-        return 
-
+            self.measurements.add_measurement(
+                object_name,
+                feature_name_list[i],
+                results[i],
+            )
+        return
+    
     def get_measurements_deepprofiler(self):
         feat_dir = os.path.join(f"{self.out_directory}","outputs",f"{self.assay.value}","features", f"{self.metadata_plate.value}", f"{self.well}")
         feat_file = f"{self.site}.npz"
         features = os.path.join(f"{feat_dir}", f"{feat_file}")
-        file = np.load(features, allow_pickle=True)
-        columns_names = ["DeepProfiler_"+str(x+1) for x in range(0, len(file["features"][0]+1))]
-
-        return columns_names, file["features"].transpose()
+        self.file = np.load(features, allow_pickle=True)
+        columns_names = ["DeepProfiler_"+str(x+1) for x in range(0, len(self.file["features"][0]+1))]
+        return columns_names, self.file["features"].transpose()
+    
+    def get_measurement_columns(self, pipeline):
+        input_object_name = self.input_object_name.value
+        columns = []
+        # This shouldn't be hardcode for DeepProfiler only = 672 columns. Change that!
+        for feature in range(0, 672): 
+            columns.append(
+                (
+                    input_object_name,
+                    "%s_%s" % (C_MEASUREMENT, feature+1),
+                    COLTYPE_FLOAT,
+                )
+            )
+        return columns
+    
+    def get_categories(self, pipeline, object_name):
+        if object_name == self.input_object_name:
+            return [C_MEASUREMENT]
+        else:
+            return []
+    
+    def get_measurements(self, pipeline, object_name, category):
+        if category == C_MEASUREMENT and object_name == self.input_object_name:
+            return self.get_measurement_columns(pipeline)
+        return []
 
     def display(self, workspace, figure):
         figure.set_subplots((1, 1))
@@ -409,6 +448,6 @@ Select the folder containing the DeepProfiler repository that you cloned to your
             0,
             workspace.display_data.statistics,
             col_labels=workspace.display_data.col_labels,
-            title="default",
+            title="Per-object means. Get the per-object results on the output object's table",
         )
         
