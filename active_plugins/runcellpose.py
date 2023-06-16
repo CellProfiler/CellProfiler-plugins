@@ -659,6 +659,6 @@ The default is set to "Yes".
             setting_values = setting_values + ["0.0", False, "15", "1.0", False, False]
             variable_revision_number = 3
         if variable_revision_number == 3:
-            setting_values = ["Python"]
+            setting_values = setting_values[0] + ["Python"] + setting_values[1:]
             variable_revision_number = 4
         return setting_values, variable_revision_number
