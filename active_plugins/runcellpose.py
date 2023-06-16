@@ -91,25 +91,14 @@ class RunCellpose(ImageSegmentation):
             choices=["Docker", "Python"],
             value="Docker",
             doc="""\
-If Docker is selected, ensure that Docker Desktop is running on your computer
-and that you have downloaded the **"{CELLPOSE_DOCKER_NO_PRETRAINED}"** and/or
-**"{CELLPOSE_DOCKER_IMAGE_WITH_PRETRAINED}"** Docker containers. If you are not
-using a custom model, download **"{CELLPOSE_DOCKER_IMAGE_WITH_PRETRAINED}"**. If
-you are using a custom model, you can use either
-**"{CELLPOSE_DOCKER_NO_PRETRAINED}"** or
-**"{CELLPOSE_DOCKER_IMAGE_WITH_PRETRAINED}"**, but the latter will be slightly
-larger (~500 MB) due to including all of the pretrained models.
-
-To download the RunCellpose docker container, search the desired container name
-in Docker Desktop and the press "pull". Containers will only have to be
-downloaded once.
+If Docker is selected, ensure that Docker Desktop is open and running on your
+computer. On first run of the RunCellpose plugin, the Docker container will be
+downloaded. However, this slow downloading process will only have to happen
+once.
 
 If Python is selected, the Python environment in which CellProfiler and Cellpose
 are installed will be used.
-""".format(
-            **{"CELLPOSE_DOCKER_NO_PRETRAINED": CELLPOSE_DOCKER_NO_PRETRAINED, 
-               "CELLPOSE_DOCKER_IMAGE_WITH_PRETRAINED": CELLPOSE_DOCKER_IMAGE_WITH_PRETRAINED}
-),
+""",
         )
 
         self.docker_image = Choice(
@@ -117,9 +106,17 @@ are installed will be used.
             choices=[CELLPOSE_DOCKER_IMAGE_WITH_PRETRAINED, CELLPOSE_DOCKER_NO_PRETRAINED],
             value=CELLPOSE_DOCKER_IMAGE_WITH_PRETRAINED,
             doc="""\
-Select which Docker image to use for running Cellpose. If selecting the image without pretrained models and a pretrained model
-is selected, it will be downloaded. 
-""",
+Select which Docker image to use for running Cellpose.
+
+If you are not using a custom model, you can select
+**"{CELLPOSE_DOCKER_IMAGE_WITH_PRETRAINED}"**. If you are using a custom model,
+you can use either **"{CELLPOSE_DOCKER_NO_PRETRAINED}"** or
+**"{CELLPOSE_DOCKER_IMAGE_WITH_PRETRAINED}"**, but the latter will be slightly
+larger (~500 MB) due to including all of the pretrained models.
+""".format(
+            **{"CELLPOSE_DOCKER_NO_PRETRAINED": CELLPOSE_DOCKER_NO_PRETRAINED, 
+               "CELLPOSE_DOCKER_IMAGE_WITH_PRETRAINED": CELLPOSE_DOCKER_IMAGE_WITH_PRETRAINED}
+),
         )
 
         self.expected_diameter = Integer(
