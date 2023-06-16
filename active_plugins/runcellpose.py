@@ -91,7 +91,25 @@ class RunCellpose(ImageSegmentation):
             choices=["Docker", "Python"],
             value="Docker",
             doc="""\
-""",
+If Docker is selected, ensure that Docker Desktop is running on your computer
+and that you have downloaded the **"{CELLPOSE_DOCKER_NO_PRETRAINED}"** and/or
+**"{CELLPOSE_DOCKER_IMAGE_WITH_PRETRAINED}"** Docker containers. If you are not
+using a custom model, download **"{CELLPOSE_DOCKER_IMAGE_WITH_PRETRAINED}"**. If
+you are using a custom model, you can use either
+**"{CELLPOSE_DOCKER_NO_PRETRAINED}"** or
+**"{CELLPOSE_DOCKER_IMAGE_WITH_PRETRAINED}"**, but the latter will be slightly
+larger (~500 MB) due to including all of the pretrained models.
+
+To download the RunCellpose docker container, search the desired container name
+in Docker Desktop and the press "pull". Containers will only have to be
+downloaded once.
+
+If Python is selected, the Python environment in which CellProfiler and Cellpose
+are installed will be used.
+""".format(
+            **{"CELLPOSE_DOCKER_NO_PRETRAINED": CELLPOSE_DOCKER_NO_PRETRAINED, 
+               "CELLPOSE_DOCKER_IMAGE_WITH_PRETRAINED": CELLPOSE_DOCKER_IMAGE_WITH_PRETRAINED}
+),
         )
 
         self.docker_image = Choice(
@@ -326,7 +344,7 @@ The default is set to "Yes".
             self.stitch_threshold,
             self.do_3D,
             self.min_size,
-            # self.omni,
+            self.omni,
             self.invert,
             self.remove_edge_masks
         ]
@@ -338,6 +356,9 @@ The default is set to "Yes".
             vis_settings += [self.docker_image]
 
         vis_settings += [self.mode, self.x_name]
+
+        if self.docker_or_python.value == "Python":
+            vis_settings += [self.omni]
 
         if self.mode.value != 'nuclei':
             vis_settings += [self.supply_nuclei]
