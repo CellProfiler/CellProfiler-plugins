@@ -24,6 +24,10 @@ import time
 import skimage.io
 import cpij.bridge as ijbridge, cpij.server as ijserver
 
+imagej_link = "https://doi.org/10.1038/nmeth.2089"
+imagej2_link = "https://doi.org/10.1186/s12859-017-1934-z"
+pyimagej_link = "https://doi.org/10.1038/s41592-022-01655-4"
+
 __doc__ = """\
 RunImageJScript
 =================
@@ -51,6 +55,10 @@ See also
 ^^^^^^^^
 
 ImageJ Scripting: https://imagej.net/Scripting 
+Schneider, C. A., Rasband, W. S., & Eliceiri, K. W. (2012). NIH Image to ImageJ: 25 years of image analysis. Nature Methods, 9(7), 671–675. {imagej_link}
+Rueden, C. T., Schindelin, J., Hiner, M. C., DeZonia, B. E., Walter, A. E., Arena, E. T., & Eliceiri, K. W. (2017). ImageJ2: ImageJ for the next generation of scientific image data. BMC Bioinformatics, 18(1). {imagej2_link}
+Rueden, C.T., Hiner, M.C., Evans, E.L. Pinkart, M.A., Lucas, A.M., Carpenter, A.E., Cimini, B.A., & Eliceiri, K. W. (2022). PyImageJ: A library for integrating ImageJ and Python. Nat Methods 19, 1326–1327 . {pyimagej_link}
+
  
 """
 
@@ -111,6 +119,8 @@ class RunImageJScript(Module):
     module_name = "RunImageJScript"
     variable_revision_number = 3
     category = "Advanced"
+
+    doi = {"If you are using RunImageJScript please cite the following": pyimagej_link }
 
     def __init__(self):
         super().__init__()
@@ -503,6 +513,12 @@ Note: this must be done each time you change the script, before running the Cell
 
     def run(self, workspace):
         self.init_pyimagej()
+
+        # Unwrap the current settings from their SettingsGroups
+        all_settings = list(map(lambda x: x.settings[0], self.script_parameter_list))
+        # Update the script input/output settings in case any were removed from the GUI
+        self.script_input_settings = {k: v for (k,v) in self.script_input_settings.items() if v in all_settings}
+        self.script_output_settings = {k: v for (k,v) in self.script_output_settings.items() if v in all_settings}
 
         if self.show_window:
             workspace.display_data.script_input_pixels = {}

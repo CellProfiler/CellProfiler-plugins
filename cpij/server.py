@@ -209,7 +209,7 @@ def convert_java_type_to_setting(param_name, param_type, param_class):
                 browse_msg=f'Choose {param_label} file'
                 )
             return (param_dir, param_file)
-        elif bool((img_string for img_string in img_strings if type_string == img_string)):
+        elif type_string in img_strings:
             return ImageSubscriber(param_label)
     elif OUTPUT_CLASS == param_class:
         if bool((img_string for img_string in img_strings if type_string == img_string)):
