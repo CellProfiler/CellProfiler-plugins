@@ -1,4 +1,4 @@
-name: Basic plugin testing
+name: CellProfiler-Cellpose
 
 on:
   push:
@@ -47,20 +47,6 @@ jobs:
           pip install --upgrade pip setuptools wheel
           pip install numpy
 
-  test_basic_plugins:
-    needs: build_cellprofiler
-      - name: Install basic CellProfiler plugins (require )
-        run: |
-          pip install -e .
-      - name: Run basic plugin pipeline
-        run: |
-          python -m cellprofiler -c -r -p ./tests/headless_test/4.2.5_plugins_test_pipeline_BASIC.cppipe -i ./tests/headless_test/test_pipeline_img -o . --plugins-directory=./active_plugins --log-level=DEBUG 2>&1 | tee logfile
-          sh ./tests/headless_test/test_run.sh ", module compensatecolors" logfile
-          sh ./tests/headless_test/test_run.sh "module distancetransform" logfile
-          sh ./tests/headless_test/test_run.sh "module enhancedmeasuretexture" logfile
-          sh ./tests/headless_test/test_run.sh "module histogramequalization" logfile
-          sh ./tests/headless_test/test_run.sh "module histogrammatching" logfile
-          sh ./tests/headless_test/test_run.sh "module pixelshuffle" logfile
 
   test_cellpose_plugin:
     needs: build_cellprofiler
@@ -69,12 +55,4 @@ jobs:
           pip install -e .[cellpose]
           python -m cellprofiler -c -r -p ./tests/headless_test/4.2.5_plugins_test_pipeline_CELLPOSE.cppipe -i ./tests/headless_test/test_pipeline_img -o . --plugins-directory=./active_plugins --log-level=DEBUG 2>&1 | tee logfile
           sh ./tests/headless_test/test_run.sh "module runcellpose" logfile
-          
-  test_stardist_plugin:
-    needs: build_cellprofiler
-      - name: Run stardist plugin pipeline
-        run: |
-          pip uninstall -y cellpose torch
-          pip install -e .[stardist]
-          python -m cellprofiler -c -r -p ./tests/headless_test/4.2.5_plugins_test_pipeline_STARDIST.cppipe -i ./tests/headless_test/test_pipeline_img -o . --plugins-directory=./active_plugins --log-level=DEBUG 2>&1 | tee logfile
-          sh ./tests/headless_test/test_run.sh "module runstardist" logfile
+
