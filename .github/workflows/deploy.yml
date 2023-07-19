@@ -38,3 +38,4 @@ jobs:
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         publish_dir: ./documentation/CP-plugins-documentation/_build/html
+        cname: plugins.cellprofiler.org
