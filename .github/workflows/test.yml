@@ -46,6 +46,7 @@ jobs:
           pip install wxPython-4.1.0-cp38-cp38-linux_x86_64.whl
           pip install --upgrade pip setuptools wheel
           pip install numpy
+          pip install cython==0.29.36
 
       - name: Install basic CellProfiler plugins require 
         run: |
