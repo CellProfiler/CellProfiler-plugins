@@ -2,7 +2,7 @@ from setuptools import setup
 import setuptools
 
 install_deps = [
-    "cython<3"
+    "cython<3",
     "cellprofiler",
     "cellprofiler-core",
             ]
