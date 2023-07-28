@@ -57,13 +57,13 @@ import collections
 import atexit
 from io import BytesIO
 import requests
+import urllib.parse
 
 from struct import unpack
 
-from cellprofiler_core.preferences import get_headless
-
 import numpy
 
+from cellprofiler_core.preferences import get_headless
 from cellprofiler_core.constants.image import MD_SIZE_S, MD_SIZE_C, MD_SIZE_Z, MD_SIZE_T, \
     MD_SIZE_Y, MD_SIZE_X, MD_SERIES_NAME
 from cellprofiler_core.preferences import get_omero_server, get_omero_port, get_omero_user, set_omero_server,\
@@ -87,11 +87,10 @@ if TOKENS_AVAILABLE:
 
 REGEX_INDEX_FROM_FILE_NAME = re.compile(r'\?show=image-(\d+)')
 
-PASSTHROUGH_SCHEMES.append('OMERO')
+# Inject omero as a URI scheme which CellProfiler should accept as an image entry.
+PASSTHROUGH_SCHEMES.append('omero')
 
-SCALE_ONE_TYPE = ["float", "double"]
 LOGGER = logging.getLogger(__name__)
-
 
 PIXEL_TYPES = {
         "int8": ['b', numpy.int8, (-128, 127)],
@@ -107,7 +106,7 @@ PIXEL_TYPES = {
 
 class OMEROReader(Reader):
     """
-    Reads images from OMERO.
+    Reads images from an OMERO server.
     """
     reader_name = "OMERO Reader"
     variable_revision_number = 1
@@ -117,6 +116,7 @@ class OMEROReader(Reader):
     def __init__(self, image_file):
         self.login = CREDENTIALS
         self.image_id = None
+        self.server = None
         self.omero_image = None
         self.pixels = None
         self.width = None
@@ -128,26 +128,35 @@ class OMEROReader(Reader):
         self.close()
 
     def confirm_connection(self):
+        # Verify that we're able to connect to a server
         if self.login.client is None:
             if get_headless():
-                raise ValueError("No OMERO connection established")
+                connected = login(server=self.server)
+                if connected:
+                    return True
+                else:
+                    raise ValueError("No OMERO connection established")
             else:
-                login(None)
+                login(server=self.server)
                 if self.login.client is None:
                     raise ValueError("Connection failed")
 
     def init_reader(self):
-        # Check if session object already exists
-        self.confirm_connection()
+        # Setup the reader
         if self.omero_image is not None:
+            # We're already connected and have fetched the image pointer
             return True
         if self.file.scheme == "omero":
             self.image_id = int(self.file.url[10:])
         else:
             matches = REGEX_INDEX_FROM_FILE_NAME.findall(self.file.url)
             if not matches:
-                raise ValueError("URL may not be from OMERO")
+                raise ValueError("URL may not be from OMERO?")
             self.image_id = int(matches[0])
+            self.server = urllib.parse.urlparse(self.file.url).hostname
+
+        # Check if session object already exists
+        self.confirm_connection()
 
         LOGGER.debug("Initializing OmeroReader for Image id: %s" % self.image_id)
         # Get image object from the server
@@ -173,6 +182,7 @@ class OMEROReader(Reader):
              xywh=None,
              wants_max_intensity=False,
              channel_names=None,
+             volumetric=False,
              ):
         """Read a single plane from the image file.
         :param c: read from this channel. `None` = read color image if multichannel
@@ -187,9 +197,9 @@ class OMEROReader(Reader):
         :param wants_max_intensity: if `False`, only return the image; if `True`,
                   return a tuple of image and max intensity
         :param channel_names: provide the channel names for the OME metadata
+        :param volumetric: Whether we're reading in 3D
         """
         self.init_reader()
-
         debug_message = \
             "Reading C: %s, Z: %s, T: %s, series: %s, index: %s, " \
             "channel names: %s, rescale: %s, wants_max_intensity: %s, " \
@@ -197,7 +207,7 @@ class OMEROReader(Reader):
                           wants_max_intensity, xywh)
         if c is None and index is not None:
             c = index
-        LOGGER.info(debug_message)
+        LOGGER.debug(debug_message)
         message = None
         if (t or 0) >= self.pixels.getSizeT().val:
             message = "T index %s exceeds sizeT %s" % \
@@ -218,7 +228,10 @@ class OMEROReader(Reader):
             assert isinstance(xywh, tuple) and len(xywh) == 4, \
                 "Invalid XYWH tuple"
             tile = xywh
-        numpy_image = self.read_planes(z, c, t, tile)
+        if not volumetric:
+            numpy_image = self.read_planes(z, c, t, tile)
+        else:
+            numpy_image = self.read_planes_volumetric(z, c, t, tile)
         pixel_type = self.pixels.getPixelsType().value.val
         min_value = PIXEL_TYPES[pixel_type][2][0]
         max_value = PIXEL_TYPES[pixel_type][2][1]
@@ -250,56 +263,18 @@ class OMEROReader(Reader):
                     wants_max_intensity=False,
                     channel_names=None,
                     ):
-        self.init_reader()
-        debug_message = \
-            "Reading C: %s, Z: %s, T: %s, series: %s, index: %s, " \
-            "channel names: %s, rescale: %s, wants_max_intensity: %s, " \
-            "XYWH: %s" % (c, z, t, series, index, channel_names, rescale,
-                          wants_max_intensity, xywh)
-        if c is None and index is not None:
-            c = index
-        LOGGER.info(debug_message)
-        message = None
-        if (t or 0) >= self.pixels.getSizeT().val:
-            message = "T index %s exceeds sizeT %s" % \
-                      (t, self.pixels.getSizeT().val)
-            LOGGER.error(message)
-        if (c or 0) >= self.pixels.getSizeC().val:
-            message = "C index %s exceeds sizeC %s" % \
-                      (c, self.pixels.getSizeC().val)
-            LOGGER.error(message)
-        if (z or 0) >= self.pixels.getSizeZ().val:
-            message = "Z index %s exceeds sizeZ %s" % \
-                      (z, self.pixels.getSizeZ().val)
-            LOGGER.error(message)
-        if message is not None:
-            raise Exception("Couldn't retrieve a plane from OMERO image.")
-        tile = None
-        if xywh is not None:
-            assert isinstance(xywh, tuple) and len(xywh) == 4, \
-                "Invalid XYWH tuple"
-            tile = xywh
-        numpy_image = self.read_planes_volumetric(z, c, t, tile)
-        pixel_type = self.pixels.getPixelsType().value.val
-        min_value = PIXEL_TYPES[pixel_type][2][0]
-        max_value = PIXEL_TYPES[pixel_type][2][1]
-        LOGGER.debug("Pixel range [%s, %s]" % (min_value, max_value))
-        if rescale or pixel_type == 'double':
-            LOGGER.info("Rescaling image using [%s, %s]" % (min_value, max_value))
-            # Note: The result here differs from:
-            #     https://github.com/emilroz/python-bioformats/blob/a60b5c5a5ae018510dd8aa32d53c35083956ae74/bioformats/formatreader.py#L903
-            # Reason: the unsigned types are being properly taken into account
-            # and converted to [0, 1] using their full scale.
-            # Further note: float64 should be used for the numpy array in case
-            # image is stored as 'double', we're keeping it float32 to stay
-            # consitent with the CellProfiler reader (the double type is also
-            # converted to single precision)
-            numpy_image = \
-                (numpy_image.astype(numpy.float32) + float(min_value)) / \
-                (float(max_value) - float(min_value))
-        if wants_max_intensity:
-            return numpy_image, max_value
-        return numpy_image
+        # Forward 3D calls to the standard reader function
+        return self.read(
+            series=series,
+            c=c,
+            z=z,
+            t=t,
+            rescale=rescale,
+            xywh=xywh,
+            wants_max_intensity=wants_max_intensity,
+            channel_names=channel_names,
+            volumetric=True
+        )
 
     def read_planes(self, z=0, c=None, t=0, tile=None):
         '''
@@ -307,7 +282,13 @@ class OMEROReader(Reader):
         '''
         channels = []
         if c is None:
-            channels = range(self.pixels.getSizeC().val)
+            channel_count = self.pixels.getSizeC().val
+            if channel_count == 1:
+                # This is obviously greyscale, treat it as such.
+                channels.append(0)
+                c = 0
+            else:
+                channels = range(channel_count)
         else:
             channels.append(c)
         pixel_type = self.pixels.getPixelsType().value.val
@@ -403,51 +384,29 @@ class OMEROReader(Reader):
 
     @classmethod
     def supports_url(cls):
+        # We read OMERO URLs directly without caching a download.
         return True
 
     @classmethod
     def supports_format(cls, image_file, allow_open=False, volume=False):
-        """This function needs to evaluate whether a given ImageFile object
-        can be read by this reader class.
-
-        Return value should be an integer representing suitability:
-        -1 - 'I can't read this at all'
-        1 - 'I am the one true reader for this format, don't even bother checking any others'
-        2 - 'I am well-suited to this format'
-        3 - 'I can read this format, but I might not be the best',
-        4 - 'I can give it a go, if you must'
-
-        The allow_open parameter dictates whether the reader is permitted to read the file when
-        making this decision. If False the decision should be made using file extension only.
-        Any opened files should be closed before returning.
-
-        The volume parameter specifies whether the reader will need to return a 3D array.
-        ."""
         if image_file.scheme not in cls.supported_schemes:
+            # I can't read this
             return -1
         if image_file.scheme == "omero":
+            # Yes please
             return 1
         elif "?show=image" in image_file.url.lower():
+            # Looks enough like an OMERO URL that I'll have a go.
             return 2
         return -1
 
     def close(self):
-        # If your reader opens a file, this needs to release any active lock,
+        # We don't activate any file locks.
         pass
 
     def get_series_metadata(self):
         """
         OMERO image IDs only ever refer to a single series
-
-        Should return a dictionary with the following keys:
-        Key names are in cellprofiler_core.constants.image
-        MD_SIZE_S - int reflecting the number of series
-        MD_SIZE_X - list of X dimension sizes, one element per series.
-        MD_SIZE_Y - list of Y dimension sizes, one element per series.
-        MD_SIZE_Z - list of Z dimension sizes, one element per series.
-        MD_SIZE_C - list of C dimension sizes, one element per series.
-        MD_SIZE_T - list of T dimension sizes, one element per series.
-        MD_SERIES_NAME - list of series names, one element per series.
         """
         self.init_reader()
         LOGGER.info(f"Extracting metadata for image {self.image_id}")
@@ -463,6 +422,7 @@ class OMEROReader(Reader):
 
     @staticmethod
     def get_settings():
+        # Define settings available in the reader
         return [
             ('allow_token',
              "Allow OMERO user tokens",
@@ -508,6 +468,10 @@ class LoginHelper:
         self.tokens.clear()
         # Future versions of omero_user_token may support multiple tokens, so we code with that in mind.
         if not TOKENS_AVAILABLE:
+            return
+        # Check the reader setting which disables tokens.
+        tokens_enabled = config_read_typed(f"Reader.{OMEROReader.reader_name}.allow_token", bool)
+        if tokens_enabled is not None and not tokens_enabled:
             return
         # User tokens sadly default to the home directory. This would override that location.
         py_home = os.environ['HOME']
@@ -590,16 +554,19 @@ if not get_headless():
     import cellprofiler.gui.plugins_menu
 
 
-    def show_login_dlg(token=True):
+    def show_login_dlg(token=True, server=None):
         app = wx.GetApp()
         frame = app.GetTopWindow()
-        with OmeroLoginDlg(frame, title="Log into Omero", token=token) as dlg:
+        with OmeroLoginDlg(frame, title="Log into Omero", token=token, server=server) as dlg:
             dlg.ShowModal()
 
-    def login(e=None):
+    def login(e=None, server=None):
         CREDENTIALS.get_tokens()
         if CREDENTIALS.tokens:
-            connected = CREDENTIALS.try_token(list(CREDENTIALS.tokens.keys())[0])
+            if server is None:
+                # URL didn't specify which server we want. Just try whichever token is available
+                server = list(CREDENTIALS.tokens.keys())[0]
+            connected = CREDENTIALS.try_token(server)
             if get_headless():
                 if connected:
                     LOGGER.info("Connected to ", CREDENTIALS.server)
@@ -608,13 +575,12 @@ if not get_headless():
                 return connected
             elif connected:
                 from cellprofiler.gui.errordialog import show_warning
-                cellprofiler.gui.errordialog.show_warning("Connected to OMERO", 
-                                                          f"A token was found and used to "
-                                                          f"connect to the OMERO server at {CREDENTIALS.server}",
-                                                          get_display_server, 
-                                                          set_display_server)
+                show_warning("Connected to OMERO",
+                             f"A token was found and used to connect to the OMERO server at {CREDENTIALS.server}",
+                             get_display_server,
+                             set_display_server)
                 return
-        show_login_dlg()
+        show_login_dlg(server=server)
 
     def login_no_token(e):
         show_login_dlg()
@@ -641,11 +607,13 @@ if not get_headless():
 
     class OmeroLoginDlg(wx.Dialog):
 
-        def __init__(self, *args, token=True, **kwargs):
+        def __init__(self, *args, token=True, server=None, **kwargs):
             super(self.__class__, self).__init__(*args, **kwargs)
             self.credentials = CREDENTIALS
             self.token = token
             self.SetSizer(wx.BoxSizer(wx.VERTICAL))
+            if server is None:
+                server = self.credentials.server
             sizer = wx.BoxSizer(wx.VERTICAL)
             self.Sizer.Add(sizer, 1, wx.EXPAND | wx.ALL, 6)
             sub_sizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -663,7 +631,7 @@ if not get_headless():
             sub_sizer.Add(
                 wx.StaticText(self, label="Server:", size=lsize),
                 0, wx.ALIGN_CENTER_VERTICAL)
-            self.omero_server_ctrl = wx.TextCtrl(self, value=self.credentials.server)
+            self.omero_server_ctrl = wx.TextCtrl(self, value=server)
             sub_sizer.Add(self.omero_server_ctrl, 1, wx.EXPAND)
     
             sizer.AddSpacer(5)
@@ -692,6 +660,8 @@ if not get_headless():
                 0, wx.ALIGN_CENTER_VERTICAL)
             self.omero_password_ctrl = wx.TextCtrl(self, value="", style=wx.TE_PASSWORD|wx.TE_PROCESS_ENTER)
             self.omero_password_ctrl.Bind(wx.EVT_TEXT_ENTER, self.on_connect_pressed)
+            if self.credentials.username is not None:
+                self.omero_password_ctrl.SetFocus()
             sub_sizer.Add(self.omero_password_ctrl, 1, wx.EXPAND)
     
             sizer.AddSpacer(5)
@@ -974,7 +944,12 @@ if not get_headless():
             else:
                 sub_str = f"id={subject}&"
             url = f"https://{self.credentials.server}/webclient/api/{target_type}/?{sub_str}experimenter_id=-1&page=0&group={self.current_group}&bsession={self.credentials.session_key}"
-            result = requests.get(url, timeout=5)
+
+            try:
+                result = requests.get(url, timeout=5)
+            except requests.exceptions.ConnectTimeout:
+                LOGGER.error("Server request timed out")
+                return
             result.raise_for_status()
             result = result.json()
             if 'images' in result:
@@ -985,7 +960,11 @@ if not get_headless():
 
         def fetch_containers(self):
             url = f"https://{self.credentials.server}/webclient/api/containers/?experimenter_id=-1&page=0&group={self.current_group}&bsession={self.credentials.session_key}"
-            data = requests.get(url, timeout=5)
+            try:
+                data = requests.get(url, timeout=5)
+            except requests.exceptions.ConnectTimeout:
+                LOGGER.error("Server request timed out")
+                return {}
             data.raise_for_status()
             return data.json()
 
@@ -999,7 +978,10 @@ if not get_headless():
                 ids_to_get = '&id='.join(id_list[i:i + chunk_size])
                 url = f"https://{self.credentials.server}/webclient/get_thumbnails/128/?&bsession={self.credentials.session_key}&id={ids_to_get}"
                 LOGGER.debug(f"Fetching {url}")
-                data = requests.get(url, timeout=5)
+                try:
+                    data = requests.get(url, timeout=5)
+                except requests.exceptions.ConnectTimeout:
+                    continue
                 if data.status_code != 200:
                     LOGGER.warning(f"Server error: {data.status_code} - {data.reason}")
                 else:
@@ -1008,9 +990,14 @@ if not get_headless():
 
         @functools.lru_cache(maxsize=20)
         def fetch_large_thumbnail(self, id):
+            # Get a large thumbnail for single image display mode. We cache the last 20.
             url = f"https://{self.credentials.server}/webgateway/render_thumbnail/{id}/450/450/?bsession={self.credentials.session_key}"
             LOGGER.debug(f"Fetching {url}")
-            data = requests.get(url)
+            try:
+                data = requests.get(url, timeout=5)
+            except requests.exceptions.ConnectTimeout:
+                LOGGER.error("Thumbnail request timed out")
+                return False
             if data.status_code != 200:
                 LOGGER.warning("Server error:", data.status_code, data.reason)
                 return False
@@ -1064,7 +1051,7 @@ if not get_headless():
 
         @functools.lru_cache(maxsize=10)
         def get_error_thumbnail(self, size):
-            # Create an image with an error icon
+            # Draw an image with an error icon. Cache the result since we may need the error icon repeatedly.
             artist = wx.ArtProvider()
             size //= 2
             return artist.GetBitmap(wx.ART_WARNING, size=(size, size))
@@ -1123,7 +1110,6 @@ if not get_headless():
             e.Skip()
 
         def right_click(self, event):
-            print("Got right click")
             popupmenu = wx.Menu()
             add_file_item = popupmenu.Append(-1, "Add to file list")
             self.Bind(wx.EVT_MENU, self.add_to_pipeline, add_file_item)
@@ -1157,3 +1143,4 @@ if not get_headless():
 
 # Todo: Make better drag selection
 # Todo: Split GUI into a helper module
+# Todo: User filter
