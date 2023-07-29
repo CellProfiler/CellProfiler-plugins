@@ -799,9 +799,15 @@ if not get_headless():
             self.Bind(wx.EVT_CLOSE, self.close_browser)
 
             ec = self.admin_service.getEventContext()
-            self.groups = [self.admin_service.getGroup(v) for v in ec.memberOfGroups]
+            # Exclude sys groups
+            self.groups = [self.admin_service.getGroup(v) for v in ec.memberOfGroups if v > 1]
             self.group_names = [group.name.val for group in self.groups]
             self.current_group = self.groups[0].id.getValue()
+            self.users_in_group = {'All Members': -1}
+            self.users_in_group.update({
+                x.omeName.val: x.id.val for x in self.groups[0].linkedExperimenterList()
+            })
+            self.current_user = -1
             self.levels = {'projects': 'datasets',
                            'datasets': 'images',
                            'screens': 'plates',
@@ -815,7 +821,11 @@ if not get_headless():
             self.groups_box = wx.Choice(self.browse_controls, choices=self.group_names)
             self.groups_box.Bind(wx.EVT_CHOICE, self.switch_group)
 
+            self.members_box = wx.Choice(self.browse_controls, choices=list(self.users_in_group.keys()))
+            self.members_box.Bind(wx.EVT_CHOICE, self.switch_member)
+
             b.Add(self.groups_box, 0, wx.EXPAND)
+            b.Add(self.members_box, 0, wx.EXPAND)
             self.container = self.credentials.session.getContainerService()
 
             self.tree = wx.TreeCtrl(self.browse_controls, style=wx.TR_HAS_BUTTONS | wx.TR_HIDE_ROOT)
@@ -926,8 +936,26 @@ if not get_headless():
         def switch_group(self, e=None):
             new_group = self.groups_box.GetCurrentSelection()
             self.current_group = self.groups[new_group].id.getValue()
+            self.current_user = -1
+            self.refresh_group_members()
             data = self.fetch_containers()
             self.populate_tree(data)
+
+        def switch_member(self, e=None):
+            new_member = self.members_box.GetStringSelection()
+            self.current_user = self.users_in_group.get(new_member, -1)
+            data = self.fetch_containers()
+            self.populate_tree(data)
+
+        def refresh_group_members(self):
+            self.users_in_group = {'All Members': -1}
+            group = self.groups[self.groups_box.GetCurrentSelection()]
+            self.users_in_group.update({
+                x.omeName.val: x.id.val for x in group.linkedExperimenterList()
+            })
+            self.members_box.Clear()
+            self.members_box.AppendItems(list(self.users_in_group.keys()))
+
 
         def fetch_children(self, event):
             target_id = event.GetItem()
@@ -959,7 +987,7 @@ if not get_headless():
             self.populate_tree(result, target_id)
 
         def fetch_containers(self):
-            url = f"https://{self.credentials.server}/webclient/api/containers/?experimenter_id=-1&page=0&group={self.current_group}&bsession={self.credentials.session_key}"
+            url = f"https://{self.credentials.server}/webclient/api/containers/?id={self.current_user}&page=0&group={self.current_group}&bsession={self.credentials.session_key}"
             try:
                 data = requests.get(url, timeout=5)
             except requests.exceptions.ConnectTimeout:
@@ -972,7 +1000,7 @@ if not get_headless():
             if not id_list:
                 return {}
             id_list = [str(x) for x in id_list]
-            chunk_size = 100
+            chunk_size = 10
             buffer = {x: "" for x in id_list}
             for i in range(0, len(id_list), chunk_size):
                 ids_to_get = '&id='.join(id_list[i:i + chunk_size])
@@ -1143,4 +1171,4 @@ if not get_headless():
 
 # Todo: Make better drag selection
 # Todo: Split GUI into a helper module
-# Todo: User filter
+# Todo: Handle wells/fields
