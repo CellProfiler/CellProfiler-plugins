@@ -1,10 +1,21 @@
+#################################
+#
+# Imports from useful Python libraries
+#
+#################################
+
 import os
 import subprocess
 import tempfile
-
 import h5py  # HDF5 is ilastik's preferred file format
 import logging
 import skimage
+
+#################################
+#
+# Imports from CellProfiler
+#
+##################################
 
 from cellprofiler_core.image import Image
 from cellprofiler_core.module import Module
@@ -12,14 +23,11 @@ import cellprofiler_core.setting
 from cellprofiler_core.setting.choice import Choice
 from cellprofiler_core.setting.text import Pathname
 
-
-logger = logging.getLogger(__name__)
-
 __doc__ = """\
 Predict
 =======
 
-Use an ilastik pixel classifier to generate a probability image. Each
+**Predict** uses an ilastik pixel classifier to generate a probability image. Each
 channel represents the probability of the pixels in the image belong to
 a particular class. Use **ColorToGray** to separate channels for further
 processing. For example, use **IdentifyPrimaryObjects** on a
@@ -64,7 +72,17 @@ trained on RGB images, use **NamesAndTypes** to load images as RGB by
 selecting "*Color image*" from the *Select the image type* dropdown. If
 your classifier expects grayscale images, use **NamesAndTypes** to load
 images as "*Grayscale image*".
+
+|
+
+============ ============ ===============
+Supports 2D? Supports 3D? Respects masks?
+============ ============ ===============
+YES          NO           NO
+============ ============ ===============
 """
+
+logger = logging.getLogger(__name__)
 
 
 class Predict(cellprofiler_core.module.ImageProcessing):
@@ -77,20 +95,16 @@ class Predict(cellprofiler_core.module.ImageProcessing):
 
         self.executable = Pathname(
             "Executable",
-            doc="ilastik command line executable name, or location if it is not on your path."
+            doc="ilastik command line executable name, or location if it is not on your path.",
         )
 
         self.project_file = Pathname(
-            "Project file",
-            doc="Path to the project file (\*.ilp)."
+            "Project file", doc="Path to the project file (\*.ilp)."
         )
 
         self.project_type = Choice(
             "Select the project type",
-            [
-                "Pixel Classification",
-                "Autocontext (2-stage)"
-            ],
+            ["Pixel Classification", "Autocontext (2-stage)"],
             "Pixel Classification",
             doc="""\
 Select the project type which matches the project file specified by
@@ -104,28 +118,20 @@ Select the project type which matches the project file specified by
    more <http://ilastik.org/documentation/autocontext/autocontext>`__.
 
 .. _Read more: http://ilastik.org/documentation/pixelclassification/pixelclassification
-"""
+""",
         )
 
     def settings(self):
         settings = super(Predict, self).settings()
 
-        settings += [
-            self.executable,
-            self.project_file,
-            self.project_type
-        ]
+        settings += [self.executable, self.project_file, self.project_type]
 
         return settings
 
     def visible_settings(self):
         visible_settings = super(Predict, self).visible_settings()
 
-        visible_settings += [
-            self.executable,
-            self.project_file,
-            self.project_type
-        ]
+        visible_settings += [self.executable, self.project_file, self.project_type]
 
         return visible_settings
 
@@ -141,28 +147,28 @@ Select the project type which matches the project file specified by
         cmd = [
             self.executable.value,
             "--headless",
-            "--project", self.project_file.value,
-            "--output_format", "hdf5"
+            "--project",
+            self.project_file.value,
+            "--output_format",
+            "hdf5",
         ]
 
         if self.project_type.value in ["Pixel Classification"]:
             cmd += ["--export_source", "Probabilities"]
         elif self.project_type.value in ["Autocontext (2-stage)"]:
-            x_data = skimage.img_as_ubyte(x_data)  # ilastik requires UINT8. Might be relaxed in future.
+            x_data = skimage.img_as_ubyte(
+                x_data
+            )  # ilastik requires UINT8. Might be relaxed in future.
 
             cmd += ["--export_source", "probabilities stage 2"]
-            #cmd += ["--export_source", "probabilities all stages"]
+            # cmd += ["--export_source", "probabilities all stages"]
 
-        cmd += [
-            "--output_filename_format", fout.name,
-            fin.name
-        ]
+        cmd += ["--output_filename_format", fout.name, fin.name]
 
         try:
             with h5py.File(fin.name, "w") as f:
                 shape = x_data.shape
 
-                
                 f.create_dataset("data", shape, data=x_data)
 
             fin.close()
@@ -185,7 +191,10 @@ Select the project type which matches the project file specified by
 
                 workspace.display_data.dimensions = image.dimensions
         except subprocess.CalledProcessError as cpe:
-            logger.error("Command {} exited with status {}".format(cpe.output, cpe.returncode), cpe)
+            logger.error(
+                "Command {} exited with status {}".format(cpe.output, cpe.returncode),
+                cpe,
+            )
 
             raise cpe
         except IOError as ioe:

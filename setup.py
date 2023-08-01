@@ -20,6 +20,10 @@ stardist_deps = [
     "stardist"
 ]
 
+imagejscript_deps = [
+    "pyimagej"
+]
+
 setup(
     name="cellprofiler_plugins",
     packages=setuptools.find_packages(),
@@ -28,5 +32,6 @@ setup(
       "cellpose": cellpose_deps,
       "omnipose": omnipose_deps,
       "stardist": stardist_deps,
+      "imagejscript": imagejscript_deps,
     }
 )

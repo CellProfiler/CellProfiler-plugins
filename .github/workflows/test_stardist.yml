@@ -1,0 +1,55 @@
+name: CellProfiler-Stardist
+
+on:
+    push:
+      branches:
+        - master
+    pull_request:
+      types: [opened, reopened, synchronize, ready_for_review, review_requested]
+
+jobs:
+  build_cellprofiler:
+    name: Test CellProfiler-Stardist
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          architecture: x64
+          python-version: ${{ matrix.python-version }}
+      - name: Get pip cache dir
+        id: pip-cache-dir
+        run: |
+          echo "::set-output name=dir::$(pip cache dir)"
+      - name: Cache pip
+        uses: actions/cache@v3
+        id: cache-pip
+        with:
+          path: ${{ steps.pip-cache-dir.outputs.dir }}
+          key: ${{ runner.os }}-${{ env.pythonLocation }}-${{ hashFiles('**/setup.py') }}
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+
+      - name: Install CellProfiler dependencies
+        run: |
+          sudo apt-get update
+          sudo apt install -y make gcc build-essential libgtk-3-dev
+          sudo apt-get install -y python3-pip openjdk-11-jdk-headless default-libmysqlclient-dev libnotify-dev libsdl2-dev
+          export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+          export PATH=$PATH:/home/ubuntu/.local/bin
+
+      - name: Install CellProfiler
+        run: |
+          wget https://extras.wxpython.org/wxPython4/extras/linux/gtk3/ubuntu-20.04/wxPython-4.1.0-cp38-cp38-linux_x86_64.whl
+          pip install wxPython-4.1.0-cp38-cp38-linux_x86_64.whl
+          pip install --upgrade pip setuptools wheel
+          pip install numpy
+          pip install git+https://github.com/CellProfiler/centrosome.git@cython3
+          
+      - name: Run stardist plugin pipeline
+        run: |
+          pip install -e .[stardist]
+          python -m cellprofiler -c -r -p ./tests/headless_test/4.2.5_plugins_test_pipeline_STARDIST.cppipe -i ./tests/headless_test/test_pipeline_img -o . --plugins-directory=./active_plugins --log-level=DEBUG 2>&1 | tee logfile
+          sh ./tests/headless_test/test_run.sh "module runstardist" logfile

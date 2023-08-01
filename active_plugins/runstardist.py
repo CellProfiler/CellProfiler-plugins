@@ -1,12 +1,20 @@
+#################################
+#
+# Imports from useful Python libraries
+#
+#################################
+
 import os
-
 from skimage.transform import resize
-
 from stardist.models import StarDist2D, StarDist3D
-
 from csbdeep.utils import normalize
-
 from numba import cuda
+
+#################################
+#
+# Imports from CellProfiler
+#
+##################################
 
 from cellprofiler_core.image import Image
 from cellprofiler_core.module.image_segmentation import ImageSegmentation
@@ -14,7 +22,7 @@ from cellprofiler_core.object import Objects
 from cellprofiler_core.setting import Binary
 from cellprofiler_core.setting.choice import Choice
 from cellprofiler_core.setting.do_something import DoSomething
-from cellprofiler_core.setting.text import  Integer, ImageName, Directory, Float
+from cellprofiler_core.setting.text import Integer, ImageName, Directory, Float
 from csbdeep.models.pretrained import get_registered_models
 
 __doc__ = f"""\
@@ -52,21 +60,22 @@ YES          YES          NO
 ============ ============ ===============
 
 """
- # get available models
+
+# get available models
 _models2d, _aliases2d = get_registered_models(StarDist2D)
 _models3d, _aliases3d = get_registered_models(StarDist3D)
-    
+
 # use first alias for model selection (if alias exists)
-models2d = [((_aliases2d[m][0] if len(_aliases2d[m]) > 0 else m),m) for m in _models2d]
-models3d = [((_aliases3d[m][0] if len(_aliases3d[m]) > 0 else m),m) for m in _models3d]
+models2d = [((_aliases2d[m][0] if len(_aliases2d[m]) > 0 else m), m) for m in _models2d]
+models3d = [((_aliases3d[m][0] if len(_aliases3d[m]) > 0 else m), m) for m in _models3d]
 
 
-CUSTOM_MODEL = 'Custom 2D/3D'
-MODEL_OPTIONS = [('2D', StarDist2D), ('3D', StarDist3D), ('Custom 2D/3D', CUSTOM_MODEL)]
+CUSTOM_MODEL = "Custom 2D/3D"
+MODEL_OPTIONS = [("2D", StarDist2D), ("3D", StarDist3D), ("Custom 2D/3D", CUSTOM_MODEL)]
 
-GREY_1 = 'Versatile (fluorescent nuclei)'
-GREY_2 = 'DSB 2018 (from StarDist 2D paper)'
-COLOR_1 = 'Versatile (H&E nuclei)'
+GREY_1 = "Versatile (fluorescent nuclei)"
+GREY_2 = "DSB 2018 (from StarDist 2D paper)"
+COLOR_1 = "Versatile (H&E nuclei)"
 
 
 class RunStarDist(ImageSegmentation):
@@ -76,16 +85,18 @@ class RunStarDist(ImageSegmentation):
 
     variable_revision_number = 1
 
-    doi = {"Please cite the following when using RunstarDist:": 'https://doi.org/10.1007/978-3-030-00934-2_30',
-    "If you are using 3D also cite the following:": 'https://doi.org/10.1109/WACV45572.2020.9093435' }
+    doi = {
+        "Please cite the following when using RunstarDist:": "https://doi.org/10.1007/978-3-030-00934-2_30",
+        "If you are using 3D also cite the following:": "https://doi.org/10.1109/WACV45572.2020.9093435",
+    }
 
     def create_settings(self):
         super(RunStarDist, self).create_settings()
 
         self.model = Choice(
             text="Model Type",
-            choices= list(zip(*MODEL_OPTIONS))[0],
-            value= '2D',
+            choices=list(zip(*MODEL_OPTIONS))[0],
+            value="2D",
             doc="""\
 StarDist comes with models for detecting nuclei. Alternatively, you can supply a custom-trained model 
 generated outside of CellProfiler within Python. Custom models can be useful if working with unusual cell types.
@@ -94,8 +105,8 @@ generated outside of CellProfiler within Python. Custom models can be useful if 
 
         self.model_choice2D = Choice(
             text="Model",
-            choices= list(zip(*models2d))[0],
-            value='Versatile (fluorescent nuclei)' ,
+            choices=list(zip(*models2d))[0],
+            value="Versatile (fluorescent nuclei)",
             doc="""\
 The inbuilt fluorescent and DSB models expect greyscale images. The H&E model expects a color image as input (from 
 brightfield). Custom models will require images of the type they were trained with.
@@ -104,8 +115,8 @@ brightfield). Custom models will require images of the type they were trained wi
 
         self.model_choice3D = Choice(
             text="Model",
-            choices= list(zip(*models3d))[0],
-            value= "3D_demo",
+            choices=list(zip(*models3d))[0],
+            value="3D_demo",
             doc="""\
 It should be noted that the models supplied with StarDist.
 """,
@@ -128,7 +139,7 @@ and vertical tile number.""",
             value=1,
             minval=1,
             doc="""\
-Specify the number of tiles to break the image down into along the x-axis (horizontal)."""
+Specify the number of tiles to break the image down into along the x-axis (horizontal).""",
         )
 
         self.n_tiles_y = Integer(
@@ -136,7 +147,7 @@ Specify the number of tiles to break the image down into along the x-axis (horiz
             value=1,
             minval=1,
             doc="""\
-Specify the number of tiles to break the image down into along the y-axis (vertical)."""
+Specify the number of tiles to break the image down into along the y-axis (vertical).""",
         )
 
         self.save_probabilities = Binary(
@@ -160,7 +171,7 @@ You may want to use a custom threshold to manually generate objects.""",
 *(Used only when using a custom pre-trained model)*
 
 Select the folder containing your StarDist model. This should have the config, threshold and weights files 
-exported after training."""
+exported after training.""",
         )
 
         self.gpu_test = DoSomething(
@@ -190,7 +201,6 @@ all pixels with probability above threshold kept for masks.
         )
 
         self.nms_thresh = Float(
-
             text="Overlap threshold",
             value=0.4,
             minval=0.0,
@@ -218,18 +228,19 @@ Prevent overlapping
         ]
 
     def visible_settings(self):
-        vis_settings = [self.x_name, self.model,]
+        vis_settings = [
+            self.x_name,
+            self.model,
+        ]
 
-        if self.model.value == '2D':
+        if self.model.value == "2D":
             vis_settings += [self.model_choice2D]
 
-
-        if self.model.value == '3D':
+        if self.model.value == "3D":
             vis_settings += [self.model_choice3D]
-        
+
         if self.model.value == CUSTOM_MODEL:
             vis_settings += [self.model_directory]
-
 
         vis_settings += [self.y_name, self.save_probabilities]
 
@@ -249,29 +260,41 @@ Prevent overlapping
         x = images.get_image(self.x_name.value)
         dimensions = x.dimensions
         x_data = x.pixel_data
-        prob_thresh=self.prob_thresh.value
-        nms_thresh=self.nms_thresh.value
+        prob_thresh = self.prob_thresh.value
+        nms_thresh = self.nms_thresh.value
 
         # Validate some settings
         if self.model_choice2D.value in (GREY_1, GREY_2) and x.multichannel:
-            raise ValueError("Color images are not supported by this model. Please provide greyscale images.")
+            raise ValueError(
+                "Color images are not supported by this model. Please provide greyscale images."
+            )
         elif self.model_choice2D.value == COLOR_1 and not x.multichannel:
-            raise ValueError("Greyscale images are not supported by this model. Please provide a color overlay.")
+            raise ValueError(
+                "Greyscale images are not supported by this model. Please provide a color overlay."
+            )
 
         if self.model.value == CUSTOM_MODEL:
-            model_directory, model_name = os.path.split(self.model_directory.get_absolute_path())
+            model_directory, model_name = os.path.split(
+                self.model_directory.get_absolute_path()
+            )
             if x.volumetric:
                 from stardist.models import StarDist3D
-                model = StarDist3D(config=None, basedir=model_directory, name=model_name)
+
+                model = StarDist3D(
+                    config=None, basedir=model_directory, name=model_name
+                )
             else:
-                model = StarDist2D(config=None, basedir=model_directory, name=model_name)
-        if self.model.value == '2D':
+                model = StarDist2D(
+                    config=None, basedir=model_directory, name=model_name
+                )
+        if self.model.value == "2D":
             model = StarDist2D.from_pretrained(self.model_choice2D.value)
-            
-        if self.model.value == '3D':
+
+        if self.model.value == "3D":
             from stardist.models import StarDist3D
+
             model = StarDist3D.from_pretrained(self.model_choice3D.value)
-        
+
         tiles = None
         if self.tile_image.value:
             tiles = []
@@ -372,10 +395,14 @@ Prevent overlapping
 
     def do_check_gpu(self):
         import tensorflow
-        if len(tensorflow.config.list_physical_devices('GPU')) > 0:
+
+        if len(tensorflow.config.list_physical_devices("GPU")) > 0:
             message = "GPU appears to be working correctly!"
-            print("GPUs:", tensorflow.config.list_physical_devices('GPU'))
+            print("GPUs:", tensorflow.config.list_physical_devices("GPU"))
         else:
-            message = "GPU test failed. There may be something wrong with your configuration."
+            message = (
+                "GPU test failed. There may be something wrong with your configuration."
+            )
         import wx
+
         wx.MessageBox(message, caption="GPU Test")

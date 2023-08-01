@@ -1,10 +1,31 @@
-__doc__ ="""\
+#################################
+#
+# Imports from useful Python libraries
+#
+#################################
+
+import logging
+import scipy.ndimage
+import numpy
+import random
+
+#################################
+#
+# Imports from CellProfiler
+#
+##################################
+
+import cellprofiler_core.image
+import cellprofiler_core.module
+import cellprofiler_core.setting
+
+__doc__ = """\
 PixelShuffle
-===========
+============
 
-**PixelShuffle** 
-Takes the intensity of each pixel in an image and it shuffles its position 
+**PixelShuffle** takes the intensity of each pixel in an image and it randomly shuffles its position.
 
+|
 
 ============ ============ ===============
 Supports 2D? Supports 3D? Respects masks?
@@ -13,16 +34,6 @@ YES          NO            NO
 ============ ============ ===============
 
 """
-
-import logging
-
-import scipy.ndimage
-import numpy
-import random
-import cellprofiler_core.image
-import cellprofiler_core.module
-import cellprofiler_core.setting
-
 
 
 class PixelShuffle(cellprofiler_core.module.ImageProcessing):
@@ -65,18 +76,16 @@ class PixelShuffle(cellprofiler_core.module.ImageProcessing):
         for i in idx:
             seq.append(pxs[i])
         out = numpy.asarray(seq)
-        out = out.reshape(width,height)
+        out = out.reshape(width, height)
 
         y_data = out
 
         y = cellprofiler_core.image.Image(
-            dimensions=dimensions,
-            image=y_data,
-            parent_image=x
+            dimensions=dimensions, image=y_data, parent_image=x
         )
 
         images.add(y_name, y)
-        
+
         if self.show_window:
             workspace.display_data.x_data = x_data
             workspace.display_data.y_data = y_data
