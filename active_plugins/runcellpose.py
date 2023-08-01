@@ -1,3 +1,9 @@
+#################################
+#
+# Imports from useful Python libraries
+#
+#################################
+
 import numpy
 import os
 import skimage
@@ -8,6 +14,12 @@ import shutil
 import logging
 import sys
 
+#################################
+#
+# Imports from CellProfiler
+#
+##################################
+
 from cellprofiler_core.image import Image
 from cellprofiler_core.module.image_segmentation import ImageSegmentation
 from cellprofiler_core.object import Objects
@@ -15,8 +27,14 @@ from cellprofiler_core.setting import Binary, ValidationError
 from cellprofiler_core.setting.choice import Choice
 from cellprofiler_core.setting.do_something import DoSomething
 from cellprofiler_core.setting.subscriber import ImageSubscriber
-from cellprofiler_core.setting.text import Integer, ImageName, Directory, Filename, Float
 from cellprofiler_core.preferences import get_default_output_directory
+from cellprofiler_core.setting.text import (
+    Integer,
+    ImageName,
+    Directory,
+    Filename,
+    Float,
+)
 
 CUDA_LINK = "https://pytorch.org/get-started/locally/"
 Cellpose_link = " https://doi.org/10.1038/s41592-020-01018-x"
@@ -79,9 +97,10 @@ class RunCellpose(ImageSegmentation):
 
     variable_revision_number = 4
 
-    doi = {"Please cite the following when using RunCellPose:": 'https://doi.org/10.1038/s41592-020-01018-x',
-    "If you are using Omnipose also cite the following:": 'https://doi.org/10.1101/2021.11.03.467199' }
-
+    doi = {
+        "Please cite the following when using RunCellPose:": "https://doi.org/10.1038/s41592-020-01018-x",
+        "If you are using Omnipose also cite the following:": "https://doi.org/10.1101/2021.11.03.467199",
+    }
 
     def create_settings(self):
         super(RunCellpose, self).create_settings()
@@ -143,18 +162,18 @@ generated using the command line or Cellpose GUI. Custom models can be useful if
 """,
         )
 
-        self.omni= Binary(
+        self.omni = Binary(
             text="Use Omnipose for mask reconstruction",
             value=False,
             doc="""\
-If enabled, use omnipose mask recontruction features will be used (Omnipose installation required and CellPose >= 1.0)  """
+If enabled, use omnipose mask recontruction features will be used (Omnipose installation required and CellPose >= 1.0)  """,
         )
 
-        self.do_3D= Binary(
+        self.do_3D = Binary(
             text="Use 3D",
             value=False,
             doc="""\
-If enabled, 3D specific settings will be available."""
+If enabled, 3D specific settings will be available.""",
         )
 
         self.use_gpu = Binary(
@@ -171,7 +190,7 @@ with different hardware setups.
 Note that, particularly when in 3D mode, lack of GPU memory can become a limitation. If a model crashes you may need to
 re-start CellProfiler to release GPU memory. Resizing large images prior to running them through the model can free up
 GPU memory.
-"""
+""",
         )
 
         self.use_averaging = Binary(
@@ -179,14 +198,14 @@ GPU memory.
             value=False,
             doc="""\
 If enabled, CellPose will run it's 4 inbuilt models and take a consensus to determine the results. If disabled, only a
-single model will be called to produce results. Disabling averaging is faster to run but less accurate."""
+single model will be called to produce results. Disabling averaging is faster to run but less accurate.""",
         )
 
         self.invert = Binary(
             text="Invert images",
             value=False,
             doc="""\
-If enabled the image will be inverted and also normalized. For use with fluorescence images using bact model (bact model was trained on phase images"""
+If enabled the image will be inverted and also normalized. For use with fluorescence images using bact model (bact model was trained on phase images""",
         )
 
         self.supply_nuclei = Binary(
@@ -194,12 +213,12 @@ If enabled the image will be inverted and also normalized. For use with fluoresc
             value=False,
             doc="""
 When detecting whole cells, you can provide a second image featuring a nuclear stain to assist
-the model with segmentation. This can help to split touching cells."""
+the model with segmentation. This can help to split touching cells.""",
         )
 
         self.nuclei_image = ImageSubscriber(
             "Select the nuclei image",
-            doc="Select the image you want to use as the nuclear stain."
+            doc="Select the image you want to use as the nuclear stain.",
         )
 
         self.save_probabilities = Binary(
@@ -221,7 +240,7 @@ You may want to use a higher threshold to manually generate objects.""",
             "Location of the pre-trained model file",
             doc=f"""\
 *(Used only when using a custom pre-trained model)*
-Select the location of the pre-trained CellPose model file that will be used for detection."""
+Select the location of the pre-trained CellPose model file that will be used for detection.""",
         )
 
         def get_directory_fn():
@@ -240,7 +259,7 @@ Select the location of the pre-trained CellPose model file that will be used for
             set_directory_fn=set_directory_fn,
             doc=f"""\
 *(Used only when using a custom pre-trained model)*
-This file can be generated by training a custom model withing the CellPose GUI or command line applications."""
+This file can be generated by training a custom model withing the CellPose GUI or command line applications.""",
         )
 
         self.gpu_test = DoSomething(
@@ -268,7 +287,6 @@ Similarly, decrease this threshold if cellpose is returning too many ill-shaped 
         )
 
         self.cellprob_threshold = Float(
-
             text="Cell probability threshold",
             value=0.0,
             minval=-6.0,
@@ -343,7 +361,7 @@ The default is set to "Yes".
             self.min_size,
             self.omni,
             self.invert,
-            self.remove_edge_masks
+            self.remove_edge_masks,
         ]
 
     def visible_settings(self):
@@ -357,19 +375,30 @@ The default is set to "Yes".
         if self.docker_or_python.value == "Python":
             vis_settings += [self.omni]
 
-        if self.mode.value != 'nuclei':
+        if self.mode.value != "nuclei":
             vis_settings += [self.supply_nuclei]
             if self.supply_nuclei.value:
                 vis_settings += [self.nuclei_image]
-        if self.mode.value == 'custom':
-            vis_settings += [self.model_directory, self.model_file_name,]
+        if self.mode.value == "custom":
+            vis_settings += [
+                self.model_directory,
+                self.model_file_name,
+            ]
 
-        vis_settings += [self.expected_diameter, self.cellprob_threshold, self.min_size, self.flow_threshold, self.y_name, self.invert, self.save_probabilities]
+        vis_settings += [
+            self.expected_diameter,
+            self.cellprob_threshold,
+            self.min_size,
+            self.flow_threshold,
+            self.y_name,
+            self.invert,
+            self.save_probabilities,
+        ]
 
         vis_settings += [self.do_3D, self.stitch_threshold, self.remove_edge_masks]
 
         if self.do_3D.value:
-            vis_settings.remove( self.stitch_threshold)
+            vis_settings.remove(self.stitch_threshold)
 
         if self.save_probabilities.value:
             vis_settings += [self.probabilities_name]
@@ -384,7 +413,7 @@ The default is set to "Yes".
 
     def validate_module(self, pipeline):
         """If using custom model, validate the model file opens and works"""
-        if self.mode.value == 'custom':
+        if self.mode.value == "custom":
             model_file = self.model_file_name.value
             model_directory = self.model_directory.get_absolute_path()
             model_path = os.path.join(model_directory, model_file)
@@ -392,8 +421,8 @@ The default is set to "Yes".
                 open(model_path)
             except:
                 raise ValidationError(
-                    "Failed to load custom file: %s "
-                    % model_path, self.model_file_name,
+                    "Failed to load custom file: %s " % model_path,
+                    self.model_file_name,
                 )
             if self.docker_or_python.value == "Python":
                 try:
@@ -413,21 +442,27 @@ The default is set to "Yes".
         x_data = x.pixel_data
         anisotropy = 0.0
         if self.do_3D.value:
-            anisotropy = x.spacing[0]/x.spacing[1]
+            anisotropy = x.spacing[0] / x.spacing[1]
 
         diam = self.expected_diameter.value if self.expected_diameter.value > 0 else None
 
         if x.multichannel:
-            raise ValueError("Color images are not currently supported. Please provide greyscale images.")
-        
+            raise ValueError(
+                "Color images are not currently supported. Please provide greyscale images."
+            )
+
         if self.mode.value != "nuclei" and self.supply_nuclei.value:
             nuc_image = images.get_image(self.nuclei_image.value)
             # CellPose expects RGB, we'll have a blank red channel, cells in green and nuclei in blue.
             if self.do_3D.value:
-                x_data = numpy.stack((numpy.zeros_like(x_data), x_data, nuc_image.pixel_data), axis=1)
+                x_data = numpy.stack(
+                    (numpy.zeros_like(x_data), x_data, nuc_image.pixel_data), axis=1
+                )
 
             else:
-                x_data = numpy.stack((numpy.zeros_like(x_data), x_data, nuc_image.pixel_data), axis=-1)
+                x_data = numpy.stack(
+                    (numpy.zeros_like(x_data), x_data, nuc_image.pixel_data), axis=-1
+                )
 
             channels = [2, 3]
         else:
@@ -641,19 +676,21 @@ The default is set to "Yes".
         #if the old version of cellpose <2.0, then use istorch kwarg
         if float(self.cellpose_ver[0:3]) >= 0.7 and int(self.cellpose_ver[0])<2:
             GPU_works = core.use_gpu(istorch=torch_installed)
-        else: #if new version of cellpose, use use_torch kwarg
+        else:  # if new version of cellpose, use use_torch kwarg
             GPU_works = core.use_gpu(use_torch=torch_installed)
         if GPU_works:
             message = "GPU appears to be working correctly!"
         else:
-            message = "GPU test failed. There may be something wrong with your configuration."
+            message = (
+                "GPU test failed. There may be something wrong with your configuration."
+            )
         import wx
-        wx.MessageBox(message, caption="GPU Test")
 
+        wx.MessageBox(message, caption="GPU Test")
 
     def upgrade_settings(self, setting_values, variable_revision_number, module_name):
         if variable_revision_number == 1:
-            setting_values = setting_values+["0.4", "0.0"]
+            setting_values = setting_values + ["0.4", "0.0"]
             variable_revision_number = 2
         if variable_revision_number == 2:
             setting_values = setting_values + ["0.0", False, "15", "1.0", False, False]

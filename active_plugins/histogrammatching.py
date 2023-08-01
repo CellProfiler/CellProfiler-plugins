@@ -1,11 +1,32 @@
+#################################
+#
+# Imports from useful Python libraries
+#
+#################################
+import numpy
+import skimage.exposure
+
+#################################
+#
+# Imports from CellProfiler
+#
+##################################
+
+import cellprofiler_core.image
+import cellprofiler_core.module
+import cellprofiler_core.setting
+import cellprofiler_core.setting.text
+from cellprofiler_core.setting.subscriber import ImageSubscriber
+
 __doc__ = """\
 HistogramMatching 
-================
-**HistogramMatching** it manipulates the pixel intesity values an input image and matches
+================+
+**HistogramMatching** manipulates the pixel intensity values an input image and matches
 them to the histogram of a reference image. It can be used as a way to normalize intensities 
-across different images or, or different frames of the same image. It allows you to choose 
+across different images or different frames of the same image. It allows you to choose 
 which frame to use as the reference. 
 
+|
 
 ============ ============ ===============
 Supports 2D? Supports 3D? Respects masks?
@@ -19,14 +40,6 @@ References
 (`link <https://scikit-image.org/docs/stable/auto_examples/color_exposure/plot_histogram_matching.html>`__)
 """
 
-import cellprofiler_core.image
-import cellprofiler_core.module
-import cellprofiler_core.setting
-import cellprofiler_core.setting.text
-import numpy
-import skimage.exposure
-from cellprofiler_core.setting.subscriber import ImageSubscriber
-
 
 class HistogramMatching(cellprofiler_core.module.ImageProcessing):
     module_name = "HistogramMatching"
@@ -35,34 +48,33 @@ class HistogramMatching(cellprofiler_core.module.ImageProcessing):
 
     def create_settings(self):
         super(HistogramMatching, self).create_settings()
-        
+
         self.reference_image = ImageSubscriber(
             "Image to use as reference ",
-            doc="Select the image you want to use the reference."
+            doc="Select the image you want to use the reference.",
         )
 
-        self.do_3D= cellprofiler_core.setting.Binary(
-            text="Is you image 3D?",
+        self.do_3D = cellprofiler_core.setting.Binary(
+            text="Is your image 3D?",
             value=False,
             doc="""
-            If enabled, 3D specific settings will be available."""
+            If enabled, 3D specific settings are available.""",
         )
-        
-        self.do_self_reference= cellprofiler_core.setting.Binary(
+
+        self.do_self_reference = cellprofiler_core.setting.Binary(
             text="Use a frame within image as reference?",
             value=False,
             doc="""
-            If enabled, a frame within the 3D image would be used as the reference image."""
+            If enabled, a frame within the 3D image is used as the reference image.""",
         )
 
         self.frame_number = cellprofiler_core.setting.text.Integer(
-            u"Frame number",
+            "Frame number",
             value=5,
             minval=1,
-            doc="""for 3D image you have the option of performing histagram matching within the image using one of the frames in the image
-                """
+            doc="""For 3D images, you have the option of performing histogram matching within the image using one of the frames in the image
+                """,
         )
-
 
     def settings(self):
         __settings__ = super(HistogramMatching, self).settings()
@@ -72,7 +84,6 @@ class HistogramMatching(cellprofiler_core.module.ImageProcessing):
             self.do_self_reference,
             self.reference_image,
             self.frame_number,
-
         ]
 
     def visible_settings(self):
@@ -80,9 +91,9 @@ class HistogramMatching(cellprofiler_core.module.ImageProcessing):
 
         __settings__ += [self.do_3D, self.reference_image]
 
-        if self.do_3D.value: 
+        if self.do_3D.value:
             __settings__ += [self.do_self_reference]
-        
+
         if self.do_self_reference.value:
             __settings__.remove(self.reference_image)
             __settings__ += [self.frame_number]
@@ -101,14 +112,16 @@ class HistogramMatching(cellprofiler_core.module.ImageProcessing):
         dimensions = x.dimensions
 
         x_data = x.pixel_data
-        
+
         if x.volumetric:
             y_data = numpy.zeros_like(x_data, dtype=numpy.float)
 
             if self.do_self_reference.value:
                 reference_image = x_data[self.frame_number.value]
                 for index, plane in enumerate(x_data):
-                    y_data[index] = skimage.exposure.match_histograms(plane, reference_image)
+                    y_data[index] = skimage.exposure.match_histograms(
+                        plane, reference_image
+                    )
             else:
                 reference_image = images.get_image(self.reference_image)
                 for index, plane in enumerate(x_data):
@@ -117,11 +130,8 @@ class HistogramMatching(cellprofiler_core.module.ImageProcessing):
             reference_image = images.get_image(self.reference_image).pixel_data
             y_data = skimage.exposure.match_histograms(x_data, reference_image)
 
-
         y = cellprofiler_core.image.Image(
-            dimensions=dimensions,
-            image=y_data,
-            parent_image=x
+            dimensions=dimensions, image=y_data, parent_image=x
         )
 
         images.add(y_name, y)

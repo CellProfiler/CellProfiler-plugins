@@ -4,10 +4,14 @@ import atexit, cpij.server as ijserver
 from queue import Queue
 from threading import Lock
 
-class QueueManager(SyncManager): pass
-QueueManager.register('input_queue')
-QueueManager.register('output_queue')
-QueueManager.register('get_lock')
+
+class QueueManager(SyncManager):
+    pass
+
+
+QueueManager.register("input_queue")
+QueueManager.register("output_queue")
+QueueManager.register("get_lock")
 
 _init_method = None
 
@@ -18,7 +22,9 @@ def init_method():
         if ijserver.is_server_running():
             l = lock()
             l.acquire()
-            to_imagej().put({ijserver.PYIMAGEJ_KEY_COMMAND: ijserver.PYIMAGEJ_CMD_GET_INIT_METHOD})
+            to_imagej().put(
+                {ijserver.PYIMAGEJ_KEY_COMMAND: ijserver.PYIMAGEJ_CMD_GET_INIT_METHOD}
+            )
             _init_method = from_imagej().get()[ijserver.PYIMAGEJ_KEY_OUTPUT]
             l.release()
 
@@ -71,8 +77,12 @@ def init_pyimagej(init_string):
         This can be a path to a local ImageJ installation, or an initialization string per imagej.init(),
         e.g. sc.fiji:fiji:2.1.0
     """
-    to_imagej().put({ijserver.PYIMAGEJ_KEY_COMMAND: ijserver.PYIMAGEJ_CMD_START,
-                     ijserver.PYIMAGEJ_KEY_INPUT: init_string})
+    to_imagej().put(
+        {
+            ijserver.PYIMAGEJ_KEY_COMMAND: ijserver.PYIMAGEJ_CMD_START,
+            ijserver.PYIMAGEJ_KEY_INPUT: init_string,
+        }
+    )
     result = from_imagej().get()
     if result == ijserver.PYIMAGEJ_STATUS_STARTUP_FAILED:
         _shutdown_imagej()
@@ -93,7 +103,9 @@ def _manager() -> QueueManager:
     if not ijserver.is_server_running():
         raise RuntimeError("No ImageJ server instance available")
 
-    manager = QueueManager(address=('127.0.0.1', ijserver.SERVER_PORT), authkey=ijserver._SERVER_KEY)
+    manager = QueueManager(
+        address=("127.0.0.1", ijserver.SERVER_PORT), authkey=ijserver._SERVER_KEY
+    )
     manager.connect()
     return manager
 
@@ -115,7 +127,7 @@ def start_imagej_server():
     if ijserver.is_server_running():
         return
 
-    ctx = mp.get_context('spawn')
+    ctx = mp.get_context("spawn")
     p = ctx.Process(target=ijserver.main)
     p.start()
 
