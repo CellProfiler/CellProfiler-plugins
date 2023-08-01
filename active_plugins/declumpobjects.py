@@ -1,4 +1,31 @@
-# coding=utf-8
+#################################
+#
+# Imports from useful Python libraries
+#
+#################################
+
+import numpy
+import skimage.morphology
+import skimage.segmentation
+import scipy.ndimage
+import skimage.filters
+import skimage.feature
+import skimage.util
+
+#################################
+#
+# Imports from CellProfiler
+#
+##################################
+
+import cellprofiler_core.image
+import cellprofiler_core.module
+import cellprofiler_core.setting
+import cellprofiler_core.setting.text
+import cellprofiler_core.setting.choice
+import cellprofiler_core.object
+from cellprofiler_core.module.image_segmentation import ObjectProcessing
+from cellprofiler_core.setting.subscriber import ImageSubscriber
 
 """
 DeclumpObjects
@@ -28,23 +55,6 @@ YES          YES          NO
 ============ ============ ===============
 
 """
-
-import numpy
-import skimage.morphology
-import skimage.segmentation
-import scipy.ndimage
-import skimage.filters
-import skimage.feature
-import skimage.util
-
-import cellprofiler_core.image
-import cellprofiler_core.module
-import cellprofiler_core.setting
-import cellprofiler_core.setting.text
-import cellprofiler_core.setting.choice
-import cellprofiler_core.object
-from cellprofiler_core.module.image_segmentation import ObjectProcessing
-from cellprofiler_core.setting.subscriber import ImageSubscriber
 
 O_SHAPE = "Shape"
 O_INTENSITY = "Intensity"
@@ -87,21 +97,22 @@ line between segmented objects.
    is used to identify local maxima as seeds (i.e. the centers of the 
    individual objects). Those seeds are then used as markers for a 
    watershed on the inverted original intensity image.
-""".format(**{
-                "O_SHAPE": O_SHAPE,
-                "O_INTENSITY": O_INTENSITY
-            })
+""".format(
+                **{"O_SHAPE": O_SHAPE, "O_INTENSITY": O_INTENSITY}
+            ),
         )
 
         self.reference_name = ImageSubscriber(
             text="Reference Image",
-            doc="Image to reference for the *{O_INTENSITY}* method".format(**{"O_INTENSITY": O_INTENSITY})
+            doc="Image to reference for the *{O_INTENSITY}* method".format(
+                **{"O_INTENSITY": O_INTENSITY}
+            ),
         )
 
         self.gaussian_sigma = cellprofiler_core.setting.text.Float(
             text="Segmentation distance transform smoothing factor",
-            value=1.,
-            doc="Sigma defines how 'smooth' the Gaussian kernel makes the image. Higher sigma means a smoother image."
+            value=1.0,
+            doc="Sigma defines how 'smooth' the Gaussian kernel makes the image. Higher sigma means a smoother image.",
         )
 
         self.min_dist = cellprofiler_core.setting.text.Integer(
@@ -112,13 +123,13 @@ line between segmented objects.
 Minimum number of pixels separating peaks in a region of `2 * min_distance + 1 `
 (i.e. peaks are separated by at least min_distance). 
 To find the maximum number of peaks, set this value to `1`. 
-"""
+""",
         )
 
         self.min_intensity = cellprofiler_core.setting.text.Float(
             text="Minimum absolute internal distance",
-            value=0.,
-            minval=0.,
+            value=0.0,
+            minval=0.0,
             doc="""\
 Minimum absolute intensity threshold for seed generation. Since this threshold is
 applied to the distance transformed image, this defines a minimum object
@@ -126,14 +137,14 @@ applied to the distance transformed image, this defines a minimum object
 
 By default, the absolute threshold is the minimum value of the image.
 For distance transformed images, this value is `0` (or the background).
-"""
+""",
         )
 
         self.exclude_border = cellprofiler_core.setting.text.Integer(
             text="Pixels from border to exclude",
             value=0,
             minval=0,
-            doc="Exclude seed generation from within `n` pixels of the image border."
+            doc="Exclude seed generation from within `n` pixels of the image border.",
         )
 
         self.max_seeds = cellprofiler_core.setting.text.Integer(
@@ -143,7 +154,7 @@ For distance transformed images, this value is `0` (or the background).
 Maximum number of seeds to generate. Default is no limit. 
 When the number of seeds exceeds this number, seeds are chosen 
 based on largest internal distance.
-"""
+""",
         )
 
         self.structuring_element = cellprofiler_core.setting.StructuringElement(
@@ -151,7 +162,7 @@ based on largest internal distance.
             doc="""\
 Structuring element to use for dilating the seeds. 
 Volumetric images will require volumetric structuring elements.
-"""
+""",
         )
 
         self.connectivity = cellprofiler_core.setting.text.Integer(
@@ -159,7 +170,7 @@ Volumetric images will require volumetric structuring elements.
             value=1,
             minval=1,
             maxval=3,
-            doc="Connectivity for the watershed algorithm. Default is 1, maximum is number of dimensions of the image"
+            doc="Connectivity for the watershed algorithm. Default is 1, maximum is number of dimensions of the image",
         )
 
     def settings(self):
@@ -174,7 +185,7 @@ Volumetric images will require volumetric structuring elements.
             self.exclude_border,
             self.max_seeds,
             self.structuring_element,
-            self.connectivity
+            self.connectivity,
         ]
 
     def visible_settings(self):
@@ -192,7 +203,7 @@ Volumetric images will require volumetric structuring elements.
             self.exclude_border,
             self.max_seeds,
             self.structuring_element,
-            self.connectivity
+            self.connectivity,
         ]
 
         return __settings__
@@ -212,8 +223,10 @@ Volumetric images will require volumetric structuring elements.
 
         # Make sure structuring element matches image dimension
         if strel_dim != im_dim:
-            raise ValueError("Structuring element does not match object dimensions: "
-                             "{} != {}".format(strel_dim, im_dim))
+            raise ValueError(
+                "Structuring element does not match object dimensions: "
+                "{} != {}".format(strel_dim, im_dim)
+            )
 
         # Get the segmentation distance transform
         peak_image = scipy.ndimage.distance_transform_edt(x_data > 0)
@@ -236,19 +249,27 @@ Volumetric images will require volumetric structuring elements.
             watershed_image = 1 - watershed_image
 
         # Smooth the image
-        watershed_image = skimage.filters.gaussian(watershed_image, sigma=self.gaussian_sigma.value)
+        watershed_image = skimage.filters.gaussian(
+            watershed_image, sigma=self.gaussian_sigma.value
+        )
 
         # Generate local peaks
-        seeds = skimage.feature.peak_local_max(peak_image,
-                                               min_distance=self.min_dist.value,
-                                               threshold_rel=self.min_intensity.value,
-                                               exclude_border=self.exclude_border.value,
-                                               num_peaks=self.max_seeds.value if self.max_seeds.value != -1 else numpy.inf,
-                                               indices=False)
+        seeds = skimage.feature.peak_local_max(
+            peak_image,
+            min_distance=self.min_dist.value,
+            threshold_rel=self.min_intensity.value,
+            exclude_border=self.exclude_border.value,
+            num_peaks=self.max_seeds.value if self.max_seeds.value != -1 else numpy.inf,
+            indices=False,
+        )
 
         # Dilate seeds based on settings
-        seeds = skimage.morphology.binary_dilation(seeds, self.structuring_element.value)
-        seeds_dtype = (numpy.int16 if x.count < numpy.iinfo(numpy.int16).max else numpy.int32)
+        seeds = skimage.morphology.binary_dilation(
+            seeds, self.structuring_element.value
+        )
+        seeds_dtype = (
+            numpy.int16 if x.count < numpy.iinfo(numpy.int16).max else numpy.int32
+        )
 
         # NOTE: Not my work, the comments below are courtesy of Ray
         #
@@ -269,7 +290,7 @@ Volumetric images will require volumetric structuring elements.
             connectivity=self.connectivity.value,
             image=watershed_image,
             markers=markers,
-            mask=x_data != 0
+            mask=x_data != 0,
         )
 
         y_data = watershed_boundaries.copy()

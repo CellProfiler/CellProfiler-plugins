@@ -1,5 +1,3 @@
-# coding=utf-8
-
 #################################
 #
 # Imports from useful Python libraries
@@ -40,21 +38,18 @@ import cellprofiler_core.constants.measurement
 __doc__ = """\
 CallBarcodes
 ============
-
-**CallBarcodes** - This module calls barcodes.
-
-|
-
-============ ============ ===============
-Supports 2D? Supports 3D? Respects masks?
-============ ============ ===============
-YES          Yes           YES
-============ ============ ===============
-
+**CallBarcodes** is used for assigning a barcode to an object based on the channel with the strongest intensity for a given number of cycles.
+It is used for optical sequencing by synthesis (SBS).
 
 What do I need as input?
 ^^^^^^^^^^^^^^^^^^^^^^^^
-To be added
+You need to input a .csv file that contains at least two columns.
+One column contains the known barcodes that you will be matching against.
+One column contains the corresponding gene/transcript names.
+All other columns in the .csv will be ignored.
+
+Before running this module in your pipeline, you need to identify the objects in which you will be calling your barcodes and you will need to have measured the intensities of each object in four channels corresponding to nucleotides A,C,T, and G.
+If the background intensities of your four channels are not very well matched, you might want to run the **CompensateColors** module before measuring the object intensities.
 
 What do I get as output?
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -62,13 +57,29 @@ To be added
 
 Measurements made by this module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-To be added
+Within the InputObject.csv, this module outputs the following measurements:
+- BarcodeCalled is the n-cycle string of the barcode sequence that was read by the module
+- MatchedTo_Barcode is the known barcode that the module best matched to the called barcode
+- MatchedTo_ID is an ID number assigned to each known barcode
+- MatchedTo_GeneCode is the known gene/transcript name that corresponds to the known barcode
+- MatchedTo_Score is the quality of the called barcode to known barcode match, reported as (matching nucleotides)/(total nucleotides) where 1 is a perfect match
+
+Note that CellProfiler cannot create a per-parent mean measurement of a string.
 
 References
 ^^^^^^^^^^
 Optical Pooled Screens in Human Cells.
 Feldman D, Singh A, Schmid-Burgk JL, Carlson RJ, Mezger A, Garrity AJ, Zhang F, Blainey PC.
 Cell. 2019 Oct 17;179(3):787-799.e17. doi: 10.1016/j.cell.2019.09.016.
+
+|
+
+============ ============ ===============
+Supports 2D? Supports 3D? Respects masks?
+============ ============ ===============
+YES          YES           YES
+============ ============ ===============
+
 """
 
 C_CALL_BARCODES = "Barcode"
@@ -133,7 +144,7 @@ This measurement should be """,
             "Select the column of barcodes to match against",
             ["No CSV file"],
             choices_fn=self.get_choices,
-            doc="""\
+            doc="""\Select the column of barcodes to match against.
 """,
         )
 
@@ -141,7 +152,7 @@ This measurement should be """,
             "Select the column with gene/transcript barcode names",
             ["No CSV file"],
             choices_fn=self.get_choices,
-            doc="""\
+            doc="""\Select the column with gene/transcript barcode names.
 """,
         )
 
@@ -188,17 +199,22 @@ Enter the name to be given to the barcode score image.""",
         )
 
         self.has_empty_vector_barcode = cellprofiler_core.setting.Binary(
-            "Do you have an empty vector barcode you would like to add to the barcode list?", False, doc="""\
+            "Do you have an empty vector barcode you would like to add to the barcode list?",
+            False,
+            doc="""\
 Select "*{YES}*" to manually enter a sequence that should be added to the uploaded barcode
 list with the gene name of "EmptyVector". This can be helpful when there is a consistent
-backbone sequence to look out for in every barcoding set).""" .format(**{"YES": "Yes"
-                       }))
-
-        self.empty_vector_barcode_sequence = cellprofiler_core.setting.text.Text(
-            "What is the empty vector sequence?", "AAAAAAAAAAAAAAA", doc="""\
-Enter the sequence that represents barcoding reads of an empty vector"""
+backbone sequence to look out for in every barcoding set).""".format(
+                **{"YES": "Yes"}
+            ),
         )
 
+        self.empty_vector_barcode_sequence = cellprofiler_core.setting.text.Text(
+            "What is the empty vector sequence?",
+            "AAAAAAAAAAAAAAA",
+            doc="""\
+Enter the sequence that represents barcoding reads of an empty vector""",
+        )
 
     def settings(self):
         return [
@@ -360,7 +376,11 @@ Enter the sequence that represents barcoding reads of an empty vector"""
             listofmeasurements, self.ncycles.value, self.cycle1measure.value
         )
 
-        objectcount = len(measurements.get_current_measurement(self.input_object_name.value,listofmeasurements[0]))
+        objectcount = len(
+            measurements.get_current_measurement(
+                self.input_object_name.value, listofmeasurements[0]
+            )
+        )
 
         calledbarcodes, quality_scores = self.callonebarcode(
             measurements_for_calls,
@@ -378,14 +398,17 @@ Enter the sequence that represents barcoding reads of an empty vector"""
 
         workspace.measurements.add_measurement(
             self.input_object_name.value,
-            "_".join([C_CALL_BARCODES,"MeanQualityScore"]),
-            quality_scores)
+            "_".join([C_CALL_BARCODES, "MeanQualityScore"]),
+            quality_scores,
+        )
 
         barcodes = self.barcodeset(
             self.metadata_field_barcode.value, self.metadata_field_tag.value
         )
 
-        cropped_barcode_dict = {y[:self.ncycles.value]:y for y in list(barcodes.keys())}
+        cropped_barcode_dict = {
+            y[: self.ncycles.value]: y for y in list(barcodes.keys())
+        }
 
         scorelist = []
         matchedbarcode = []
@@ -417,16 +440,14 @@ Enter the sequence that represents barcoding reads of an empty vector"""
         imagemeanscore = numpy.mean(scorelist)
 
         workspace.measurements.add_measurement(
-            "Image",
-            "_".join([C_CALL_BARCODES,"MeanBarcodeScore"]),
-            imagemeanscore)
+            "Image", "_".join([C_CALL_BARCODES, "MeanBarcodeScore"]), imagemeanscore
+        )
 
         imagemeanquality = numpy.mean(quality_scores)
 
         workspace.measurements.add_measurement(
-            "Image",
-            "_".join([C_CALL_BARCODES,"MeanQualityScore"]),
-            imagemeanquality)
+            "Image", "_".join([C_CALL_BARCODES, "MeanQualityScore"]), imagemeanquality
+        )
 
         workspace.measurements.add_measurement(
             self.input_object_name.value,
@@ -464,7 +485,10 @@ Enter the sequence that represents barcoding reads of an empty vector"""
             )
 
         if self.show_window:
-            workspace.display_data.col_labels = ("Image Mean Score", "Image Mean Quality Score")
+            workspace.display_data.col_labels = (
+                "Image Mean Score",
+                "Image Mean Quality Score",
+            )
             workspace.display_data.statistics = [imagemeanscore, imagemeanquality]
 
     def display(self, workspace, figure):
@@ -491,10 +515,12 @@ Enter the sequence that represents barcoding reads of an empty vector"""
                         measurementdict[parsed_cycle].update({eachmeas: parsed_base})
         return measurementdict
 
-    def callonebarcode(self, measurementdict, measurements, object_name, ncycles, objectcount):
+    def callonebarcode(
+        self, measurementdict, measurements, object_name, ncycles, objectcount
+    ):
 
         master_cycles = []
-        score_array = numpy.zeros([ncycles,objectcount])
+        score_array = numpy.zeros([ncycles, objectcount])
 
         for eachcycle in range(1, ncycles + 1):
             cycles_measures_perobj = []
@@ -507,15 +533,15 @@ Enter the sequence that represents barcoding reads of an empty vector"""
                 )
                 cyclecode.append(measurementdict[eachcycle][eachmeasure])
             cycle_measures_perobj = numpy.transpose(numpy.array(cycles_measures_perobj))
-            argmax_per_obj = numpy.argmax(cycle_measures_perobj,1)
-            max_per_obj = numpy.max(cycle_measures_perobj,1)
-            sum_per_obj = numpy.sum(cycle_measures_perobj,1)
-            score_per_obj = max_per_obj/sum_per_obj
+            argmax_per_obj = numpy.argmax(cycle_measures_perobj, 1)
+            max_per_obj = numpy.max(cycle_measures_perobj, 1)
+            sum_per_obj = numpy.sum(cycle_measures_perobj, 1)
+            score_per_obj = max_per_obj / sum_per_obj
             argmax_per_obj = list(argmax_per_obj)
             argmax_per_obj = [cyclecode[x] for x in argmax_per_obj]
 
             master_cycles.append(list(argmax_per_obj))
-            score_array[eachcycle-1] = score_per_obj
+            score_array[eachcycle - 1] = score_per_obj
 
         mean_per_object = score_array.mean(axis=0)
 
@@ -532,7 +558,10 @@ Enter the sequence that represents barcoding reads of an empty vector"""
                 count += 1
         fd.close()
         if self.has_empty_vector_barcode:
-            barcodeset[self.empty_vector_barcode_sequence.value]=(count,"EmptyVector")
+            barcodeset[self.empty_vector_barcode_sequence.value] = (
+                count,
+                "EmptyVector",
+            )
         return barcodeset
 
     def queryall(self, cropped_barcode_dict, query):
@@ -540,7 +569,7 @@ Enter the sequence that represents barcoding reads of an empty vector"""
         cropped_barcode_list = list(cropped_barcode_dict.keys())
 
         if query in cropped_barcode_list:
-            #is a perfect match
+            # is a perfect match
             return 1, cropped_barcode_dict[query]
 
         else:
@@ -560,15 +589,15 @@ Enter the sequence that represents barcoding reads of an empty vector"""
         result = [
             (
                 "Image",
-                "_".join([C_CALL_BARCODES,"MeanBarcodeScore"]),
-                cellprofiler_core.constants.measurement.COLTYPE_FLOAT
+                "_".join([C_CALL_BARCODES, "MeanBarcodeScore"]),
+                cellprofiler_core.constants.measurement.COLTYPE_FLOAT,
             ),
             (
                 "Image",
-                "_".join([C_CALL_BARCODES,"MeanQualityScore"]),
-                cellprofiler_core.constants.measurement.COLTYPE_FLOAT
+                "_".join([C_CALL_BARCODES, "MeanQualityScore"]),
+                cellprofiler_core.constants.measurement.COLTYPE_FLOAT,
             ),
-            ]
+        ]
 
         result += [
             (
