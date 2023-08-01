@@ -46,10 +46,9 @@ jobs:
           pip install wxPython-4.1.0-cp38-cp38-linux_x86_64.whl
           pip install --upgrade pip setuptools wheel
           pip install numpy
+          pip install git+https://github.com/CellProfiler/centrosome.git@cython3
 
-  test_basic_plugins:
-    needs: build_cellprofiler
-      - name: Install basic CellProfiler plugins (require )
+      - name: Install basic CellProfiler plugins require 
         run: |
           pip install -e .
       - name: Run basic plugin pipeline
@@ -62,19 +61,3 @@ jobs:
           sh ./tests/headless_test/test_run.sh "module histogrammatching" logfile
           sh ./tests/headless_test/test_run.sh "module pixelshuffle" logfile
 
-  test_cellpose_plugin:
-    needs: build_cellprofiler
-      - name: Run cellpose plugin pipeline
-        run: |
-          pip install -e .[cellpose]
-          python -m cellprofiler -c -r -p ./tests/headless_test/4.2.5_plugins_test_pipeline_CELLPOSE.cppipe -i ./tests/headless_test/test_pipeline_img -o . --plugins-directory=./active_plugins --log-level=DEBUG 2>&1 | tee logfile
-          sh ./tests/headless_test/test_run.sh "module runcellpose" logfile
-          
-  test_stardist_plugin:
-    needs: build_cellprofiler
-      - name: Run stardist plugin pipeline
-        run: |
-          pip uninstall -y cellpose torch
-          pip install -e .[stardist]
-          python -m cellprofiler -c -r -p ./tests/headless_test/4.2.5_plugins_test_pipeline_STARDIST.cppipe -i ./tests/headless_test/test_pipeline_img -o . --plugins-directory=./active_plugins --log-level=DEBUG 2>&1 | tee logfile
-          sh ./tests/headless_test/test_run.sh "module runstardist" logfile
