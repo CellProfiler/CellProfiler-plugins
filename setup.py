@@ -23,6 +23,7 @@ stardist_deps = [
 deepprofiler_deps = [
     "numpy==1.23.0",
     "inflect==6.0.0"
+]
 
 imagejscript_deps = [
     "pyimagej"
