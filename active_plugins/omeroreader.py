@@ -55,6 +55,7 @@ import io
 import os
 import collections
 import atexit
+import string
 from io import BytesIO
 import requests
 import urllib.parse
@@ -790,7 +791,7 @@ if not get_headless():
         def __init__(self, *args, **kwargs):
             super(self.__class__, self).__init__(*args,
                                                  style=wx.RESIZE_BORDER | wx.CAPTION | wx.CLOSE_BOX,
-                                                 size=(800, 600),
+                                                 size=(900, 600),
                                                  **kwargs)
             self.credentials = CREDENTIALS
             self.admin_service = self.credentials.session.getAdminService()
@@ -811,6 +812,7 @@ if not get_headless():
             self.levels = {'projects': 'datasets',
                            'datasets': 'images',
                            'screens': 'plates',
+                           'plates': 'wells',
                            'orphaned': 'images'
                            }
 
@@ -829,17 +831,19 @@ if not get_headless():
             self.container = self.credentials.session.getContainerService()
 
             self.tree = wx.TreeCtrl(self.browse_controls, style=wx.TR_HAS_BUTTONS | wx.TR_HIDE_ROOT)
-            image_list = wx.ImageList(16, 12)
+            image_list = wx.ImageList(16, 13)
             image_data = {
                 'projects': 'iVBORw0KGgoAAAANSUhEUgAAABAAAAANCAYAAACgu+4kAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAA5NpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMy1jMDExIDY2LjE0NTY2MSwgMjAxMi8wMi8wNi0xNDo1NjoyNyAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wTU09Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9tbS8iIHhtbG5zOnN0UmVmPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvc1R5cGUvUmVzb3VyY2VSZWYjIiB4bWxuczp4bXA9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8iIHhtcE1NOk9yaWdpbmFsRG9jdW1lbnRJRD0ieG1wLmRpZDpDNDk5ODU0N0U5MjA2ODExODhDNkJBNzRDM0U2QkE2NyIgeG1wTU06RG9jdW1lbnRJRD0ieG1wLmRpZDpFNjZDNDcxNzc5NEUxMUUxOTY2OEJEQjhGOUExQ0Y3RCIgeG1wTU06SW5zdGFuY2VJRD0ieG1wLmlpZDpFNjZDNDcxNjc5NEUxMUUxOTY2OEJEQjhGOUExQ0Y3RCIgeG1wOkNyZWF0b3JUb29sPSJBZG9iZSBQaG90b3Nob3AgQ1M2ICgxMy4wIDIwMTIwMzA1Lm0uNDE1IDIwMTIvMDMvMDU6MjE6MDA6MDApICAoTWFjaW50b3NoKSI+IDx4bXBNTTpEZXJpdmVkRnJvbSBzdFJlZjppbnN0YW5jZUlEPSJ4bXAuaWlkOkM1NzAxRDEzMjkyMTY4MTE4OEM2QkE3NEMzRTZCQTY3IiBzdFJlZjpkb2N1bWVudElEPSJ4bXAuZGlkOkM0OTk4NTQ3RTkyMDY4MTE4OEM2QkE3NEMzRTZCQTY3Ii8+IDwvcmRmOkRlc2NyaXB0aW9uPiA8L3JkZjpSREY+IDwveDp4bXBtZXRhPiA8P3hwYWNrZXQgZW5kPSJyIj8+vd9MhwAAALhJREFUeNpi/P//P0NEXsd/BhxgxaQKRgY8gAXGMNbVwpA8e/kaAyHAGJhWe5iNnctGVkoaQ/Lxs6cMv35+w6f/CMvfP39svDytscrqaijgtX3t5u02IAMYXrx5z0AOAOll+fPnF8Ov37/IMgCkl+XP799Af5JpAFAv0IBfDD9//STTAKALfgMJcl0A0gvxwi8KvPAXFIhkGvAXHIjAqPjx4zuZsQCMxn9//my9eOaEFQN54ChAgAEAzRBnWnEZWFQAAAAASUVORK5CYII=',
                 'datasets': 'iVBORw0KGgoAAAANSUhEUgAAABAAAAANCAYAAACgu+4kAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAA5NpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMy1jMDExIDY2LjE0NTY2MSwgMjAxMi8wMi8wNi0xNDo1NjoyNyAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wTU09Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9tbS8iIHhtbG5zOnN0UmVmPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvc1R5cGUvUmVzb3VyY2VSZWYjIiB4bWxuczp4bXA9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8iIHhtcE1NOk9yaWdpbmFsRG9jdW1lbnRJRD0ieG1wLmRpZDpDNDk5ODU0N0U5MjA2ODExODhDNkJBNzRDM0U2QkE2NyIgeG1wTU06RG9jdW1lbnRJRD0ieG1wLmRpZDpFNjZGMDA2ODc5NEUxMUUxOTY2OEJEQjhGOUExQ0Y3RCIgeG1wTU06SW5zdGFuY2VJRD0ieG1wLmlpZDpFNjZDNDcxQTc5NEUxMUUxOTY2OEJEQjhGOUExQ0Y3RCIgeG1wOkNyZWF0b3JUb29sPSJBZG9iZSBQaG90b3Nob3AgQ1M2ICgxMy4wIDIwMTIwMzA1Lm0uNDE1IDIwMTIvMDMvMDU6MjE6MDA6MDApICAoTWFjaW50b3NoKSI+IDx4bXBNTTpEZXJpdmVkRnJvbSBzdFJlZjppbnN0YW5jZUlEPSJ4bXAuaWlkOkM1NzAxRDEzMjkyMTY4MTE4OEM2QkE3NEMzRTZCQTY3IiBzdFJlZjpkb2N1bWVudElEPSJ4bXAuZGlkOkM0OTk4NTQ3RTkyMDY4MTE4OEM2QkE3NEMzRTZCQTY3Ii8+IDwvcmRmOkRlc2NyaXB0aW9uPiA8L3JkZjpSREY+IDwveDp4bXBtZXRhPiA8P3hwYWNrZXQgZW5kPSJyIj8+l9tKdwAAAKZJREFUeNpi/P//P0NUm+d/BhxgWdV2RgY8gAXGMNMwwpA8deMcAyHAEljsdJhTmJ3h1YfnWBUA5f/j0X+E5d+//zYhrv5YZU108du+cNlKG6AB/xjefn7FQA4A6WX59/cfw5/ff8gz4C/IAKApf/78pswFv3/9Jt8Ff8FeIM+AvzAv/KbUC/8oC8T/DN9//iLTBf8ZWP7/+7f18MELVgzkgaMAAQYAgLlmT8qQW/sAAAAASUVORK5CYII=',
-                'screens': 'iVBORw0KGgoAAAANSUhEUgAAABEAAAANCAYAAABPeYUaAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAA5NpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMy1jMDExIDY2LjE0NTY2MSwgMjAxMi8wMi8wNi0xNDo1NjoyNyAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wTU09Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9tbS8iIHhtbG5zOnN0UmVmPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvc1R5cGUvUmVzb3VyY2VSZWYjIiB4bWxuczp4bXA9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8iIHhtcE1NOk9yaWdpbmFsRG9jdW1lbnRJRD0ieG1wLmRpZDpDNDk5ODU0N0U5MjA2ODExODhDNkJBNzRDM0U2QkE2NyIgeG1wTU06RG9jdW1lbnRJRD0ieG1wLmRpZDo5NkU0QUUzNjc4NEExMUUxOTY2OEJEQjhGOUExQ0Y3RCIgeG1wTU06SW5zdGFuY2VJRD0ieG1wLmlpZDo5NkU0QUUzNTc4NEExMUUxOTY2OEJEQjhGOUExQ0Y3RCIgeG1wOkNyZWF0b3JUb29sPSJBZG9iZSBQaG90b3Nob3AgQ1M2ICgxMy4wIDIwMTIwMzA1Lm0uNDE1IDIwMTIvMDMvMDU6MjE6MDA6MDApICAoTWFjaW50b3NoKSI+IDx4bXBNTTpEZXJpdmVkRnJvbSBzdFJlZjppbnN0YW5jZUlEPSJ4bXAuaWlkOkM1NzAxRDEzMjkyMTY4MTE4OEM2QkE3NEMzRTZCQTY3IiBzdFJlZjpkb2N1bWVudElEPSJ4bXAuZGlkOkM0OTk4NTQ3RTkyMDY4MTE4OEM2QkE3NEMzRTZCQTY3Ii8+IDwvcmRmOkRlc2NyaXB0aW9uPiA8L3JkZjpSREY+IDwveDp4bXBtZXRhPiA8P3hwYWNrZXQgZW5kPSJyIj8+wkwZRwAAAQxJREFUeNpi/P//PwMjIyODqbHhfwYc4PTZ84y45ED6WZAFPFxdwQYig+27djEQAowgk6wtLcGu4GBnY0C38vvPX3gNOHr8OCPcJaHh4QwsLCwYiv78+YNV87+/fxnWrlkDZsN1PXr0iGHPnj1wRS4uLnj5jg4OcDYTjPH7928w3WxmhcJ3zmtC4Zc2mUH4SC6EG/LrF8TvtaeOofD3TqpD4XfXnULho3gHJOjt7Q2XePHiBV7+s6dPsRuydetWuISuri5evra2Nm7vVKUZoPDTratR+EZV1RjewTCkbdYFFP7Mo60o/HNtrSgBjeEdMzMzuMRToJ/x8Z88eYJpyKcPH8AYGRDiwwBAgAEAvXKdXsBF6t8AAAAASUVORK5CYII='
+                'screens': 'iVBORw0KGgoAAAANSUhEUgAAABEAAAANCAYAAABPeYUaAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAA5NpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMy1jMDExIDY2LjE0NTY2MSwgMjAxMi8wMi8wNi0xNDo1NjoyNyAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wTU09Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9tbS8iIHhtbG5zOnN0UmVmPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvc1R5cGUvUmVzb3VyY2VSZWYjIiB4bWxuczp4bXA9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8iIHhtcE1NOk9yaWdpbmFsRG9jdW1lbnRJRD0ieG1wLmRpZDpDNDk5ODU0N0U5MjA2ODExODhDNkJBNzRDM0U2QkE2NyIgeG1wTU06RG9jdW1lbnRJRD0ieG1wLmRpZDo5NkU0QUUzNjc4NEExMUUxOTY2OEJEQjhGOUExQ0Y3RCIgeG1wTU06SW5zdGFuY2VJRD0ieG1wLmlpZDo5NkU0QUUzNTc4NEExMUUxOTY2OEJEQjhGOUExQ0Y3RCIgeG1wOkNyZWF0b3JUb29sPSJBZG9iZSBQaG90b3Nob3AgQ1M2ICgxMy4wIDIwMTIwMzA1Lm0uNDE1IDIwMTIvMDMvMDU6MjE6MDA6MDApICAoTWFjaW50b3NoKSI+IDx4bXBNTTpEZXJpdmVkRnJvbSBzdFJlZjppbnN0YW5jZUlEPSJ4bXAuaWlkOkM1NzAxRDEzMjkyMTY4MTE4OEM2QkE3NEMzRTZCQTY3IiBzdFJlZjpkb2N1bWVudElEPSJ4bXAuZGlkOkM0OTk4NTQ3RTkyMDY4MTE4OEM2QkE3NEMzRTZCQTY3Ii8+IDwvcmRmOkRlc2NyaXB0aW9uPiA8L3JkZjpSREY+IDwveDp4bXBtZXRhPiA8P3hwYWNrZXQgZW5kPSJyIj8+wkwZRwAAAQxJREFUeNpi/P//PwMjIyODqbHhfwYc4PTZ84y45ED6WZAFPFxdwQYig+27djEQAowgk6wtLcGu4GBnY0C38vvPX3gNOHr8OCPcJaHh4QwsLCwYiv78+YNV87+/fxnWrlkDZsN1PXr0iGHPnj1wRS4uLnj5jg4OcDYTjPH7928w3WxmhcJ3zmtC4Zc2mUH4SC6EG/LrF8TvtaeOofD3TqpD4XfXnULho3gHJOjt7Q2XePHiBV7+s6dPsRuydetWuISuri5evra2Nm7vVKUZoPDTratR+EZV1RjewTCkbdYFFP7Mo60o/HNtrSgBjeEdMzMzuMRToJ/x8Z88eYJpyKcPH8AYGRDiwwBAgAEAvXKdXsBF6t8AAAAASUVORK5CYII=',
+                'plates': 'iVBORw0KGgoAAAANSUhEUgAAAA8AAAANCAYAAAB2HjRBAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAASBJREFUeNpiZAACRVXNhnfv3tX//v2bgQjwAIgDv316d4FR38hM4MHDh++trSwZ+Pn4COr8+OkTw4GDhx4ANSuygARANj59+ozhxNFDKAplFVQYHj+4gyEGBAogguniuVMfkCUf7Z4IxsjgyqOJYIwOWGCM////g+mfj68woIt9/Ikphqr53z8wrZo0mwFdzFoVUwxF8z+giRbWDijOevjwAVYxrDafOHoARaGElBxWMRhgQvgF4px98x+BMbLYPSD/HpoYqrP/QQLi2Y2fDOhi37CIoYU2xMSYTlUGdDEdLGIgwAgiNHUM/r9//55BR1sbxX+PHj1kkJOTR43zq1cZBAUFGa5fuQDWy3D69Jn7IAO4+IQIYpA6kHqQPoAAAwCQE6mYLjTwJwAAAABJRU5ErkJggg=='
             }
             self.image_codes = {}
             for name, dat in image_data.items():
                 decodedImgData = base64.b64decode(dat)
                 bio = BytesIO(decodedImgData)
                 img = wx.Image(bio)
+                img = img.Scale(16, 13)
                 self.image_codes[name] = image_list.Add(img.ConvertToBitmap())
             self.tree.AssignImageList(image_list)
 
@@ -873,7 +877,7 @@ if not get_headless():
             add_button.Bind(wx.EVT_BUTTON, self.add_selected_to_pipeline)
             vert_sizer.Add(add_button, 0, wx.ALIGN_RIGHT | wx.ALL, 5)
             self.image_controls.SetSizer(vert_sizer)
-            splitter.SplitVertically(self.browse_controls, self.image_controls, 200)
+            splitter.SplitVertically(self.browse_controls, self.image_controls, 300)
 
             self.Layout()
 
@@ -956,11 +960,12 @@ if not get_headless():
             self.members_box.Clear()
             self.members_box.AppendItems(list(self.users_in_group.keys()))
 
-
         def fetch_children(self, event):
             target_id = event.GetItem()
+            if self.tree.GetChildrenCount(target_id, recursively=False) > 0:
+                # Already loaded
+                return
             data = self.tree.GetItemData(target_id)
-            self.tree.DeleteChildren(target_id)
             subject_type = data['type']
             target_type = self.levels.get(subject_type, None)
             if target_type is None:
@@ -971,20 +976,29 @@ if not get_headless():
                 sub_str = "orphaned=true&"
             else:
                 sub_str = f"id={subject}&"
-            url = f"https://{self.credentials.server}/webclient/api/{target_type}/?{sub_str}experimenter_id=-1&page=0&group={self.current_group}&bsession={self.credentials.session_key}"
-
+            if target_type == 'wells':
+                url = f"https://{self.credentials.server}/api/v0/m/plates/{subject}/wells/?bsession={self.credentials.session_key}"
+            else:
+                url = f"https://{self.credentials.server}/webclient/api/{target_type}/?{sub_str}experimenter_id=-1&page=0&group={self.current_group}&bsession={self.credentials.session_key}"
             try:
                 result = requests.get(url, timeout=5)
             except requests.exceptions.ConnectTimeout:
                 LOGGER.error("Server request timed out")
                 return
-            result.raise_for_status()
+            except Exception:
+                LOGGER.error("Server request failed", exc_info=True)
+                return
             result = result.json()
             if 'images' in result:
                 image_map = {entry['id']: entry['name'] for entry in result['images']}
                 data['images'] = image_map
                 self.tree.SetItemData(target_id, data)
-            self.populate_tree(result, target_id)
+            if 'meta' in result:
+                # This is the plates API
+                self.populate_tree_screen(result, target_id)
+                result = result['data']
+            else:
+                self.populate_tree(result, target_id)
 
         def fetch_containers(self):
             url = f"https://{self.credentials.server}/webclient/api/containers/?id={self.current_user}&page=0&group={self.current_group}&bsession={self.credentials.session_key}"
@@ -1097,8 +1111,30 @@ if not get_headless():
                     new_id = self.tree.AppendItem(parent, f"{entry['name']}", data=entry)
                     if image is not None:
                         self.tree.SetItemImage(new_id, image, wx.TreeItemIcon_Normal)
-                    if entry.get('childCount', 0) > 0:
+                    if entry.get('childCount', 0) > 0 or item_type == 'plates':
                         self.tree.SetItemHasChildren(new_id)
+
+        def populate_tree_screen(self, data, parent=None):
+            # Tree data from screens API
+            wells = data['data']
+            rows = string.ascii_uppercase
+            for well_dict in wells:
+                name = f"Well {rows[well_dict['Row']]}{well_dict['Column'] + 1:02}"
+                well_dict['type'] = 'wells'
+                well_id = self.tree.AppendItem(parent, name)
+                well_dict['images'] = {}
+                for field_dict in well_dict['WellSamples']:
+                    image_data = field_dict['Image']
+                    image_id = image_data['@id']
+                    image_name = image_data['Name']
+                    refined_image_data = {
+                        'type': 'images',
+                        'id': image_id,
+                        'name': image_name
+                    }
+                    well_dict['images'][image_id] = image_name
+                    self.tree.AppendItem(well_id, image_name, data=refined_image_data)
+                self.tree.SetItemData(well_id, well_dict)
 
 
     class ImagePanel(wx.Panel):
@@ -1171,4 +1207,4 @@ if not get_headless():
 
 # Todo: Make better drag selection
 # Todo: Split GUI into a helper module
-# Todo: Handle wells/fields
+# Todo: Thumbnail queue
