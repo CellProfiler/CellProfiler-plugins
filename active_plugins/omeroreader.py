@@ -863,7 +863,7 @@ if not get_headless():
 
             vert_sizer = wx.BoxSizer(wx.VERTICAL)
 
-            self.tile_panel = wx.ScrolledWindow(self.image_controls, 1)
+            self.tile_panel = TilePanel(self.image_controls, 1)
             self.tile_panel.url_loader = self.url_loader
 
             self.tiler_sizer = wx.WrapSizer(wx.HORIZONTAL)
@@ -1166,11 +1166,19 @@ if not get_headless():
             self.Bind(wx.EVT_LEFT_DOWN, self.select)
             self.Bind(wx.EVT_RIGHT_DOWN, self.right_click)
             self.SetClientSize((self.size_x, self.size_y))
+            # We need to pass these events up to the parent panel.
+            self.Bind(wx.EVT_MOTION, self.pass_event)
+            self.Bind(wx.EVT_LEFT_UP, self.pass_event)
 
         def select(self, e):
             self.selected = not self.selected
             self.Refresh()
             e.StopPropagation()
+            e.Skip()
+
+        @staticmethod
+        def pass_event(e):
+            e.ResumePropagation(1)
             e.Skip()
 
         def right_click(self, event):
@@ -1205,6 +1213,54 @@ if not get_headless():
                 dc.DrawRectangle(0, 0, self.size_x, self.size_y)
             return dc
 
-# Todo: Make better drag selection
+
+    class TilePanel(wx.ScrolledWindow):
+
+        def __init__(self, *args, **kwargs):
+            super(self.__class__, self).__init__(*args, **kwargs)
+            self.select_source = None
+            self.select_box = None
+            self.Bind(wx.EVT_MOTION, self.on_motion)
+            self.Bind(wx.EVT_PAINT, self.on_paint)
+            self.Bind(wx.EVT_LEFT_UP, self.on_release)
+
+        def deselect_all(self):
+            for child in self.GetChildren():
+                if isinstance(child, ImagePanel):
+                    child.selected = False
+
+        def on_motion(self, evt):
+            if not evt.LeftIsDown():
+                self.select_source = None
+                self.select_box = None
+                return
+            self.SetFocusIgnoringChildren()
+            if self.select_source is None:
+                self.select_source = evt.Position
+                if not evt.ShiftDown():
+                    self.deselect_all()
+                return
+            else:
+                self.select_box = wx.Rect(self.select_source, evt.Position)
+            for child in self.GetChildren():
+                if isinstance(child, ImagePanel):
+                    if not evt.ShiftDown():
+                        child.selected = False
+                    if child.GetRect().Intersects(self.select_box):
+                        child.selected = True
+            self.Refresh()
+
+        def on_release(self, e):
+            self.select_source = None
+            self.select_box = None
+            self.Refresh()
+
+        def on_paint(self, e):
+            dc = wx.PaintDC(self)
+            dc.SetPen(wx.Pen("BLUE", 3, style=wx.PENSTYLE_SHORT_DASH))
+            dc.SetBrush(wx.Brush("BLUE", style=wx.TRANSPARENT))
+            if self.select_box is not None:
+                dc.DrawRectangle(self.select_box)
+
 # Todo: Split GUI into a helper module
 # Todo: Thumbnail queue
