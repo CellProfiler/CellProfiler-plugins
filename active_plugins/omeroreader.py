@@ -2,6 +2,10 @@
 An image reader which connects to OMERO to load data
 
 # Installation -
+Add this file plus the `omero_helper` directory into your CellProfiler plugins folder. Install dependencies into
+your CellProfiler Python environment.
+
+## Installing dependencies -
 This depends on platform. At the most basic level you'll need the `omero-py` package. For headless run and
 more convenient server login you'll also want the `omero_user_token` package.
 
@@ -14,6 +18,11 @@ Ubuntu 22.04 - https://github.com/glencoesoftware/zeroc-ice-py-ubuntu2204-x86_64
 Download the .whl file from whichever is most appropriate and run `pip install </path/to/my.whl>`.
 
 From there pip install omero-py should do the rest.
+
+You'll probably also want the `omero_user_token` package to help manage logins (`pip install omero_user_token`).
+This allows you to set reusable login tokens for quick reconnection to a server. These tokens are required for using
+headless mode.
+
 
 # Usage -
 Like the old functionality from <=CP4, connection to OMERO is triggered through a login dialog within the GUI which
@@ -34,6 +43,20 @@ of the right side panel.
 To get these into the CellProfiler GUI, there are a few options. Previously this was primarily achieved by using
 *File->Import->File List* to load a text file containing one image per line. A LoadData CSV can also be used.
 As of CP5 it is also now possible to copy and paste text (e.g. URLs) directly into the file list in the Images module.
+
+In the Plugins menu you'll also find an option to browse an OMERO server for images and add them to your file list.
+This provides an alternative method for constructing your file list. Images will be added to the list in the
+OMERO URL format.
+
+# Tokens -
+omero_user_token creates a long-lasting session token based on your login credentials, which can then be reconnected to
+at a later time. The CellProfiler plugin will detect and use these tokens to connect to a server automatically. Use the
+`Connect to OMERO (No token)` option in the Plugins menu if you need to switch servers.
+
+Within the connect dialog you'll find a new 'Set Token' button which allows you to create these tokens after making a
+successful connection. These tokens are important when working in headless mode, but also mean that you no longer
+need to enter your credentials each time you login via the GUI. Current omero_user_token builds support a single token
+at a time, which will be stored in your user home directory.
 
 # Working with data -
 Unlike previous iterations of this integration, the CP5 plugin has full support for channel and plane indexing.
