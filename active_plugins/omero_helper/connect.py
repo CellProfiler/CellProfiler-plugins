@@ -9,6 +9,7 @@ import omero
 
 LOGGER = logging.getLogger(__name__)
 
+# Is omero_user_token installed and available?
 TOKEN_MODULE = importlib.util.find_spec("omero_user_token")
 TOKENS_AVAILABLE = TOKEN_MODULE is not None
 if TOKENS_AVAILABLE:
@@ -18,6 +19,7 @@ if TOKENS_AVAILABLE:
 
 
 def login(e=None, server=None):
+    # Attempt to connect to the server, first using a token, then via GUI
     CREDENTIALS.get_tokens()
     if CREDENTIALS.tokens:
         if server is None:
@@ -36,6 +38,19 @@ def login(e=None, server=None):
 
 
 class LoginHelper:
+    """
+    This class stores our working set of OMERO credentials and connection objects.
+
+    It behaves as a singleton, so multiple OMERO-using plugins will share credentials.
+    """
+    _instance = None
+
+    def __new__(cls):
+        # We only allow one instance of this class within CellProfiler
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
     def __init__(self):
         self.server = get_omero_server()
         self.port = get_omero_port()
@@ -46,10 +61,12 @@ class LoginHelper:
         self.client = None
         self.container_service = None
         self.tokens = {}
+        # Any OMERO browser GUI which is connected to this object
         self.browser_window = None
         atexit.register(self.shutdown)
 
     def get_tokens(self, path=None):
+        # Load all tokens from omero_user_token
         self.tokens.clear()
         # Future versions of omero_user_token may support multiple tokens, so we code with that in mind.
         if not TOKENS_AVAILABLE:
@@ -76,6 +93,7 @@ class LoginHelper:
             os.environ['HOME'] = py_home
 
     def try_token(self, address):
+        # Attempt to use an omero token to connect to a specific server
         if address not in self.tokens:
             LOGGER.error(f"Token {address} not found")
             return False
@@ -84,6 +102,7 @@ class LoginHelper:
             return self.login(server=server, port=port, session_key=session_key)
 
     def login(self, server=None, port=None, user=None, passwd=None, session_key=None):
+        # Attempt to connect to the server
         self.client = omero.client(host=server, port=port)
         if session_key is not None:
             try:
@@ -123,6 +142,7 @@ class LoginHelper:
         return True
 
     def shutdown(self):
+        # Disconnect from the server
         if self.client is not None:
             try:
                 self.client.closeSession()

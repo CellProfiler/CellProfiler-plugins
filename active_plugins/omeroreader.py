@@ -72,6 +72,7 @@ if not get_headless():
     from omero_helper.gui import inject_plugin_menu_entries
     inject_plugin_menu_entries()
 
+# Isolates image numbers from OMERO URLs
 REGEX_INDEX_FROM_FILE_NAME = re.compile(r'\?show=image-(\d+)')
 
 # Inject omero as a URI scheme which CellProfiler should accept as an image entry.
@@ -79,6 +80,7 @@ PASSTHROUGH_SCHEMES.append('omero')
 
 LOGGER = logging.getLogger(__name__)
 
+# Maps OMERO pixel types to numpy
 PIXEL_TYPES = {
         "int8": ['b', numpy.int8, (-128, 127)],
         "uint8": ['B', numpy.uint8, (0, 255)],
@@ -264,9 +266,9 @@ class OMEROReader(Reader):
         )
 
     def read_planes(self, z=0, c=None, t=0, tile=None):
-        '''
+        """
         Creates RawPixelsStore and reads planes from the OMERO server.
-        '''
+        """
         channels = []
         if c is None:
             channel_count = self.pixels.getSizeC().val
@@ -313,9 +315,9 @@ class OMEROReader(Reader):
             raw_pixels_store.close()
 
     def read_planes_volumetric(self, z=None, c=None, t=None, tile=None):
-        '''
+        """
         Creates RawPixelsStore and reads planes from the OMERO server.
-        '''
+        """
         if t is not None and z is not None:
             raise ValueError(f"Specified parameters {z=}, {t=} would not produce a 3D image")
         if z is None:
@@ -383,7 +385,7 @@ class OMEROReader(Reader):
             # Yes please
             return 1
         elif "?show=image" in image_file.url.lower():
-            # Looks enough like an OMERO URL that I'll have a go.
+            # Looks enough like an OMERO URL that we'll have a go.
             return 2
         return -1
 

@@ -17,6 +17,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 def get_display_server():
+    # Should we display the 'connection successful' message after using a token?
     return config_read_typed(f"Reader.OMERO.show_server", bool)
 
 
@@ -25,6 +26,7 @@ def set_display_server(value):
 
 
 def login_gui(connected, server=None):
+    # Login via GUI or display a prompt notifying that we're already connected
     if connected:
         from cellprofiler.gui.errordialog import show_warning
         show_warning("Connected to OMERO",
@@ -35,22 +37,21 @@ def login_gui(connected, server=None):
     show_login_dlg(server=server)
 
 
-def show_login_dlg(token=True, server=None):
+def show_login_dlg(e=None, server=None):
+    # Show the login GUI
     app = wx.GetApp()
     frame = app.GetTopWindow()
-    with OmeroLoginDlg(frame, title="Log into Omero", token=token, server=server) as dlg:
+    with OmeroLoginDlg(frame, title="Log into Omero", server=server) as dlg:
         dlg.ShowModal()
 
 
-def login_no_token(e):
-    show_login_dlg()
-
-
 def browse(e):
+    # Show the browser dialog
     if CREDENTIALS.client is None:
         login()
     app = wx.GetApp()
     frame = app.GetTopWindow()
+    # Only allow a single instance, raise the window if it already exists.
     if CREDENTIALS.browser_window is None:
         CREDENTIALS.browser_window = OmeroBrowseDlg(frame, title=f"Browse OMERO: {CREDENTIALS.server}")
         CREDENTIALS.browser_window.Show()
@@ -59,16 +60,19 @@ def browse(e):
 
 
 def inject_plugin_menu_entries():
+    # Add plugin menu entries to the main CellProfiler GUI
     cellprofiler.gui.plugins_menu.PLUGIN_MENU_ENTRIES.extend([
         (login, wx.NewId(), "Connect to OMERO", "Establish an OMERO connection"),
-        (login_no_token, wx.NewId(), "Connect to OMERO (no token)", "Establish an OMERO connection,"
+        (show_login_dlg, wx.NewId(), "Connect to OMERO (no token)", "Establish an OMERO connection,"
                                                                     " but without using user tokens"),
         (browse, wx.NewId(), "Browse OMERO for images", "Browse an OMERO server and add images to the pipeline")
     ])
 
 
 class OmeroLoginDlg(wx.Dialog):
-
+    """
+    A dialog pane to provide and use OMERO login credentials.
+    """
     def __init__(self, *args, token=True, server=None, **kwargs):
         super(self.__class__, self).__init__(*args, **kwargs)
         self.credentials = CREDENTIALS
@@ -249,6 +253,9 @@ class OmeroLoginDlg(wx.Dialog):
 
 
 class OmeroBrowseDlg(wx.Frame):
+    """
+    An OMERO server browser intended for browsing images and adding them to the main file list
+    """
     def __init__(self, *args, **kwargs):
         super(self.__class__, self).__init__(*args,
                                              style=wx.RESIZE_BORDER | wx.CAPTION | wx.CLOSE_BOX,
@@ -343,10 +350,12 @@ class OmeroBrowseDlg(wx.Frame):
         self.Layout()
 
     def close_browser(self, event):
+        # Disconnect the browser window from the login helper
         self.credentials.browser_window = None
         event.Skip()
 
     def add_selected_to_pipeline(self, e=None):
+        # Add selected images to the pipeline as URLs
         displayed = self.tile_panel.GetChildren()
         all_urls = []
         selected_urls = []
@@ -361,7 +370,8 @@ class OmeroBrowseDlg(wx.Frame):
             self.url_loader(all_urls)
 
     def process_drag(self, event):
-        # We have our own custom handler here
+        # CellProfiler's file list uses a custom handler.
+        # This will mimic dropping actual files onto it.
         data = wx.FileDataObject()
         for file_url in self.fetch_file_list_from_tree(event):
             data.AddFile(file_url)
@@ -370,9 +380,11 @@ class OmeroBrowseDlg(wx.Frame):
         drop_src.DoDragDrop(wx.Drag_CopyOnly)
 
     def fetch_file_list_from_tree(self, event):
+        # Generate a list of OMERO URLs when the user tries to drag an entry.
         files = []
 
         def recurse_for_images(tree_id):
+            # Search the tree for images and add to a list of URLs
             if not self.tree.IsExpanded(tree_id):
                 self.tree.Expand(tree_id)
             data = self.tree.GetItemData(tree_id)
@@ -392,13 +404,12 @@ class OmeroBrowseDlg(wx.Frame):
         return files
 
     def select_tree(self, event):
+        # The tree is fetched as it's being expanded. Clicking on an object needs to trigger child expansion.
         target_id = event.GetItem()
         self.tree.Expand(target_id)
 
-    def next_level(self, level):
-        return self.levels.get(level, None)
-
     def switch_group(self, e=None):
+        # Change OMERO group
         new_group = self.groups_box.GetCurrentSelection()
         self.current_group = self.groups[new_group].id.getValue()
         self.current_user = -1
@@ -407,12 +418,14 @@ class OmeroBrowseDlg(wx.Frame):
         self.populate_tree(data)
 
     def switch_member(self, e=None):
+        # Change OMERO user filter
         new_member = self.members_box.GetStringSelection()
         self.current_user = self.users_in_group.get(new_member, -1)
         data = self.fetch_containers()
         self.populate_tree(data)
 
     def refresh_group_members(self):
+        # Update the available user list when the group changes
         self.users_in_group = {'All Members': -1}
         group = self.groups[self.groups_box.GetCurrentSelection()]
         self.users_in_group.update({
@@ -422,6 +435,7 @@ class OmeroBrowseDlg(wx.Frame):
         self.members_box.AppendItems(list(self.users_in_group.keys()))
 
     def fetch_children(self, event):
+        # Load the next level in the tree for a target object.
         target_id = event.GetItem()
         if self.tree.GetChildrenCount(target_id, recursively=False) > 0:
             # Already loaded
@@ -462,6 +476,7 @@ class OmeroBrowseDlg(wx.Frame):
             self.populate_tree(result, target_id)
 
     def fetch_containers(self):
+        # Grab the base project/dataset structure for the tree view.
         url = f"https://{self.credentials.server}/webclient/api/containers/?id={self.current_user}&page=0&group={self.current_group}&bsession={self.credentials.session_key}"
         try:
             data = requests.get(url, timeout=5)
@@ -472,6 +487,7 @@ class OmeroBrowseDlg(wx.Frame):
         return data.json()
 
     def fetch_thumbnails(self, id_list):
+        # Get thumbnails for images
         if not id_list:
             return {}
         id_list = [str(x) for x in id_list]
@@ -492,9 +508,9 @@ class OmeroBrowseDlg(wx.Frame):
         return buffer
 
     @functools.lru_cache(maxsize=20)
-    def fetch_large_thumbnail(self, id):
+    def fetch_large_thumbnail(self, image_id):
         # Get a large thumbnail for single image display mode. We cache the last 20.
-        url = f"https://{self.credentials.server}/webgateway/render_thumbnail/{id}/450/450/?bsession={self.credentials.session_key}"
+        url = f"https://{self.credentials.server}/webgateway/render_thumbnail/{image_id}/450/450/?bsession={self.credentials.session_key}"
         LOGGER.debug(f"Fetching {url}")
         try:
             data = requests.get(url, timeout=5)
@@ -510,6 +526,7 @@ class OmeroBrowseDlg(wx.Frame):
         return wx.Image(io_bytes)
 
     def update_thumbnails(self, event=None):
+        # Show image previews when objects in the tree are clicked on.
         self.tiler_sizer.Clear(delete_windows=True)
         if not event:
             return
@@ -560,6 +577,7 @@ class OmeroBrowseDlg(wx.Frame):
         return artist.GetBitmap(wx.ART_WARNING, size=(size, size))
 
     def populate_tree(self, data, parent=None):
+        # Build the tree view
         if parent is None:
             self.tree.DeleteAllItems()
             parent = self.tree.AddRoot("Server")
@@ -576,7 +594,7 @@ class OmeroBrowseDlg(wx.Frame):
                     self.tree.SetItemHasChildren(new_id)
 
     def populate_tree_screen(self, data, parent=None):
-        # Tree data from screens API
+        # Fill the tree data from the screens API
         wells = data['data']
         rows = string.ascii_uppercase
         for well_dict in wells:
@@ -599,16 +617,18 @@ class OmeroBrowseDlg(wx.Frame):
 
 
 class ImagePanel(wx.Panel):
-    '''
-    ImagePanels are wxPanels that display a wxBitmap and store multiple
-    image channels which can be recombined to mix different bitmaps.
-    '''
+    """
+    The ImagePanel displays an image's name and a preview thumbnail as a wx.Bitmap.
+    """
 
     def __init__(self, thumbnail, parent, omero_id, name, server, size=128):
         """
-        thumbnail -- wx Bitmap
-        parent -- parent window to the wx.Panel
-
+        thumbnail - wx.Bitmap
+        parent - parent window to the wx.Panel
+        omero_id - OMERO id of the image
+        name - name to display
+        server - the server the image lives on
+        size - int dimension of the thumbnail to display
         """
         self.parent = parent
         self.bitmap = thumbnail
@@ -632,19 +652,24 @@ class ImagePanel(wx.Panel):
         self.Bind(wx.EVT_LEFT_UP, self.pass_event)
 
     def select(self, e):
+        # Mark a panel as selected
         self.selected = not self.selected
         self.Refresh()
         e.StopPropagation()
         e.Skip()
 
     def pass_event(self, e):
+        # We need to pass mouse events up to the containing TilePanel.
+        # To do this we need to correct the event position to be relative to the parent.
         x, y = e.GetPosition()
         w, h = self.GetPosition()
         e.SetPosition((x + w, y + h))
+        # Now we send the event upwards to be caught by the parent.
         e.ResumePropagation(1)
         e.Skip()
 
     def right_click(self, event):
+        # Show right click menu
         popupmenu = wx.Menu()
         add_file_item = popupmenu.Append(-1, "Add to file list")
         self.Bind(wx.EVT_MENU, self.add_to_pipeline, add_file_item)
@@ -654,12 +679,15 @@ class ImagePanel(wx.Panel):
         self.PopupMenu(popupmenu, event.GetPosition())
 
     def add_to_pipeline(self, e):
+        # Add image to the pipeline
         self.parent.url_loader([self.url])
 
     def open_in_browser(self, e):
+        # Open in OMERO.web
         wx.LaunchDefaultBrowser(self.url)
 
     def OnPaint(self, evt):
+        # Custom paint handler to display image/label/selection marker.
         dc = wx.PaintDC(self)
         dc.Clear()
         dc.DrawBitmap(self.bitmap, (self.size_x - self.bitmap.Width) // 2,
@@ -671,20 +699,22 @@ class ImagePanel(wx.Panel):
         dc.DrawRectangle(rect)
         # Outline the whole image
         if self.selected:
-            dc.SetPen(wx.Pen("BLUE", 3))
-            dc.SetBrush(wx.Brush("BLACK", style=wx.TRANSPARENT))
+            dc.SetPen(wx.Pen("SLATE BLUE", 3))
             dc.DrawRectangle(0, 0, self.size_x, self.size_y)
         return dc
 
 
 class TilePanel(wx.ScrolledWindow):
+    """
+    A scrollable window which will contain image panels and allow selection of them by drawing a rectangle.
+    """
 
     def __init__(self, *args, **kwargs):
         super(self.__class__, self).__init__(*args, **kwargs)
         self.select_source = None
         self.select_box = None
-        self.Bind(wx.EVT_MOTION, self.on_motion)
-        self.Bind(wx.EVT_PAINT, self.on_paint)
+        self.Bind(wx.EVT_MOTION, self.OnMotion)
+        self.Bind(wx.EVT_PAINT, self.OnPaint)
         self.Bind(wx.EVT_LEFT_UP, self.on_release)
 
     def deselect_all(self):
@@ -692,19 +722,22 @@ class TilePanel(wx.ScrolledWindow):
             if isinstance(child, ImagePanel):
                 child.selected = False
 
-    def on_motion(self, evt):
+    def OnMotion(self, evt):
+        # Handle drag selection
         if not evt.LeftIsDown():
+            # Not dragging
             self.select_source = None
             self.select_box = None
             return
         self.SetFocusIgnoringChildren()
         if self.select_source is None:
             self.select_source = evt.Position
-            if not evt.ShiftDown():
-                self.deselect_all()
             return
         else:
             self.select_box = wx.Rect(self.select_source, evt.Position)
+        if self.select_box.Width < 5 and self.select_box.Height < 5:
+            # Don't start selecting until a reasonable box size is drawn
+            return
         for child in self.GetChildren():
             if isinstance(child, ImagePanel):
                 if not evt.ShiftDown():
@@ -714,11 +747,13 @@ class TilePanel(wx.ScrolledWindow):
         self.Refresh()
 
     def on_release(self, e):
+        # Cease dragging
         self.select_source = None
         self.select_box = None
         self.Refresh()
 
-    def on_paint(self, e):
+    def OnPaint(self, e):
+        # Draw selection box.
         dc = wx.PaintDC(self)
         dc.SetPen(wx.Pen("BLUE", 3, style=wx.PENSTYLE_SHORT_DASH))
         dc.SetBrush(wx.Brush("BLUE", style=wx.TRANSPARENT))
