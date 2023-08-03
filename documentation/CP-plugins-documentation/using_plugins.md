@@ -71,6 +71,8 @@ pip install -e .[FLAG]
 ```
 e.g. To install Cellpose the pip install command would be `pip install -e .[cellpose]`
 
+If using Mac and getting an error saying `zsh: no matches found: .[somepackage]`, put the dot and square brackets in single quotes, ie `pip install -e '.[cellpose]'`
+
 5. **Open and use CellProfiler.**  
 
 Please note that plugins that have separate install flags may have conflicting dependencies so we recommend making a separate python environment in which to run separate installations.
