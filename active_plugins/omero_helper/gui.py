@@ -3,7 +3,10 @@ import functools
 import io
 import logging
 import os
+import queue
 import string
+import threading
+import time
 
 import requests
 import wx
@@ -352,6 +355,8 @@ class OmeroBrowseDlg(wx.Frame):
     def close_browser(self, event):
         # Disconnect the browser window from the login helper
         self.credentials.browser_window = None
+        # Tell the thumbnail generator to shut down
+        self.tile_panel.active = False
         event.Skip()
 
     def add_selected_to_pipeline(self, e=None):
@@ -455,13 +460,11 @@ class OmeroBrowseDlg(wx.Frame):
             url = f"https://{self.credentials.server}/api/v0/m/plates/{subject}/wells/?bsession={self.credentials.session_key}"
         else:
             url = f"https://{self.credentials.server}/webclient/api/{target_type}/?{sub_str}experimenter_id=-1&page=0&group={self.current_group}&bsession={self.credentials.session_key}"
+        LOGGER.debug(f"Fetching {url}")
         try:
-            result = requests.get(url, timeout=5)
-        except requests.exceptions.ConnectTimeout:
+            result = requests.get(url, timeout=15)
+        except requests.exceptions.Timeout:
             LOGGER.error("Server request timed out")
-            return
-        except Exception:
-            LOGGER.error("Server request failed", exc_info=True)
             return
         result = result.json()
         if 'images' in result:
@@ -480,101 +483,40 @@ class OmeroBrowseDlg(wx.Frame):
         url = f"https://{self.credentials.server}/webclient/api/containers/?id={self.current_user}&page=0&group={self.current_group}&bsession={self.credentials.session_key}"
         try:
             data = requests.get(url, timeout=5)
-        except requests.exceptions.ConnectTimeout:
+        except requests.exceptions.Timeout:
             LOGGER.error("Server request timed out")
             return {}
         data.raise_for_status()
         return data.json()
 
-    def fetch_thumbnails(self, id_list):
-        # Get thumbnails for images
-        if not id_list:
-            return {}
-        id_list = [str(x) for x in id_list]
-        chunk_size = 10
-        buffer = {x: "" for x in id_list}
-        for i in range(0, len(id_list), chunk_size):
-            ids_to_get = '&id='.join(id_list[i:i + chunk_size])
-            url = f"https://{self.credentials.server}/webclient/get_thumbnails/128/?&bsession={self.credentials.session_key}&id={ids_to_get}"
-            LOGGER.debug(f"Fetching {url}")
-            try:
-                data = requests.get(url, timeout=5)
-            except requests.exceptions.ConnectTimeout:
-                continue
-            if data.status_code != 200:
-                LOGGER.warning(f"Server error: {data.status_code} - {data.reason}")
-            else:
-                buffer.update(data.json())
-        return buffer
-
-    @functools.lru_cache(maxsize=20)
-    def fetch_large_thumbnail(self, image_id):
-        # Get a large thumbnail for single image display mode. We cache the last 20.
-        url = f"https://{self.credentials.server}/webgateway/render_thumbnail/{image_id}/450/450/?bsession={self.credentials.session_key}"
-        LOGGER.debug(f"Fetching {url}")
-        try:
-            data = requests.get(url, timeout=5)
-        except requests.exceptions.ConnectTimeout:
-            LOGGER.error("Thumbnail request timed out")
-            return False
-        if data.status_code != 200:
-            LOGGER.warning("Server error:", data.status_code, data.reason)
-            return False
-        elif not data.content:
-            return False
-        io_bytes = io.BytesIO(data.content)
-        return wx.Image(io_bytes)
-
     def update_thumbnails(self, event=None):
         # Show image previews when objects in the tree are clicked on.
         self.tiler_sizer.Clear(delete_windows=True)
+        # Empty out any pending tile thumbnails
+        with self.tile_panel.thumbnail_queue.mutex:
+            self.tile_panel.thumbnail_queue.queue.clear()
         if not event:
             return
         target_id = event.GetItem()
         item_data = self.tree.GetItemData(target_id)
         if item_data.get('type', None) == 'images':
+            # We're displaying a single image
             image_id = item_data['id']
             img_name = item_data['name']
-            thumb_img = self.fetch_large_thumbnail(image_id)
-            if not thumb_img or not thumb_img.IsOk():
-                thumb_img = self.get_error_thumbnail(450)
-            else:
-                thumb_img = thumb_img.ConvertToBitmap()
-            tile = ImagePanel(thumb_img, self.tile_panel, image_id, img_name, self.credentials.server, size=450)
+            tile = ImagePanel(self.tile_panel, image_id, img_name, self.credentials.server, size=450)
             tile.selected = True
             self.tiler_sizer.Add(tile, 0, wx.ALL, 5)
         else:
+            # We're displaying a series of images
             image_targets = item_data.get('images', {})
             if not image_targets:
                 return
-
-            id_list = list(image_targets.keys())
-            data = self.fetch_thumbnails(id_list)
-            for image_id, image_data in data.items():
-                img_name = image_targets[int(image_id)]
-                start_data = image_data.find('/9')
-                if start_data == -1:
-                    img = self.get_error_thumbnail(128)
-                else:
-                    decoded = base64.b64decode(image_data[start_data:])
-                    bio = io.BytesIO(decoded)
-                    img = wx.Image(bio)
-                    if not img.IsOk():
-                        img = self.get_error_thumbnail(128)
-                    else:
-                        img = img.ConvertToBitmap()
-                tile = ImagePanel(img, self.tile_panel, image_id, img_name, self.credentials.server)
+            for image_id, image_name in image_targets.items():
+                tile = ImagePanel(self.tile_panel, image_id, image_name, self.credentials.server)
                 self.tiler_sizer.Add(tile, 0, wx.ALL, 5)
         self.tiler_sizer.Layout()
         self.image_controls.Layout()
         self.image_controls.Refresh()
-
-    @functools.lru_cache(maxsize=10)
-    def get_error_thumbnail(self, size):
-        # Draw an image with an error icon. Cache the result since we may need the error icon repeatedly.
-        artist = wx.ArtProvider()
-        size //= 2
-        return artist.GetBitmap(wx.ART_WARNING, size=(size, size))
 
     def populate_tree(self, data, parent=None):
         # Build the tree view
@@ -619,11 +561,12 @@ class OmeroBrowseDlg(wx.Frame):
 class ImagePanel(wx.Panel):
     """
     The ImagePanel displays an image's name and a preview thumbnail as a wx.Bitmap.
+
+    Tiles are initialised with a loading icon, call update_thumbnail once image data has arrived for display.
     """
 
-    def __init__(self, thumbnail, parent, omero_id, name, server, size=128):
+    def __init__(self, parent, omero_id, name, server, size=128):
         """
-        thumbnail - wx.Bitmap
         parent - parent window to the wx.Panel
         omero_id - OMERO id of the image
         name - name to display
@@ -631,18 +574,27 @@ class ImagePanel(wx.Panel):
         size - int dimension of the thumbnail to display
         """
         self.parent = parent
-        self.bitmap = thumbnail
+        self.bitmap = None
         self.selected = False
         self.omero_id = omero_id
         self.url = f"https://{server}/webclient/?show=image-{omero_id}"
         self.name = name
-        if len(name) > 17:
-            self.shortname = name[:14] + '...'
+        max_len = int(17 / 128 * size)
+        if len(name) > max_len:
+            self.shortname = name[:max_len - 3] + '...'
         else:
             self.shortname = name
         self.size_x = size
         self.size_y = size + 30
         wx.Panel.__init__(self, parent, wx.NewId(), size=(self.size_x, self.size_y))
+        indicator_size = 64
+        self.loading = wx.ActivityIndicator(self,
+                                            size=wx.Size(indicator_size, indicator_size),
+                                            pos=((self.size_x - indicator_size) // 2,
+                                                 ((self.size_x - indicator_size) // 2) + 20)
+                                            )
+        self.loading.Start()
+        self.parent.thumbnail_queue.put((omero_id, size, self.update_thumbnail))
         self.Bind(wx.EVT_PAINT, self.OnPaint)
         self.Bind(wx.EVT_LEFT_DOWN, self.select)
         self.Bind(wx.EVT_RIGHT_DOWN, self.right_click)
@@ -686,21 +638,32 @@ class ImagePanel(wx.Panel):
         # Open in OMERO.web
         wx.LaunchDefaultBrowser(self.url)
 
+    def update_thumbnail(self, bitmap):
+        # Replace the temporary loading icon with a thumbnail image
+        if not self.__nonzero__() or self.IsBeingDeleted():
+            # Skip update if the tile has already been deleted from the panel
+            return
+        if self.loading is not None:
+            # Remove the loading widget
+            self.loading.Destroy()
+        self.bitmap = bitmap
+        self.Refresh()
+
     def OnPaint(self, evt):
         # Custom paint handler to display image/label/selection marker.
         dc = wx.PaintDC(self)
         dc.Clear()
-        dc.DrawBitmap(self.bitmap, (self.size_x - self.bitmap.Width) // 2,
-                      ((self.size_x - self.bitmap.Height) // 2) + 20)
+        if self.bitmap is not None:
+            dc.DrawBitmap(self.bitmap, (self.size_x - self.bitmap.Width) // 2,
+                          ((self.size_x - self.bitmap.Height) // 2) + 20)
         rect = wx.Rect(0, 0, self.size_x, self.size_x + 20)
         dc.DrawLabel(self.shortname, rect, alignment=wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_TOP)
-        dc.SetPen(wx.Pen("GREY", style=wx.PENSTYLE_SOLID))
+        if self.selected:
+            dc.SetPen(wx.Pen("SLATE BLUE", 3, style=wx.PENSTYLE_SOLID))
+        else:
+            dc.SetPen(wx.Pen("GREY", 1, style=wx.PENSTYLE_SOLID))
         dc.SetBrush(wx.Brush("BLACK", wx.TRANSPARENT))
         dc.DrawRectangle(rect)
-        # Outline the whole image
-        if self.selected:
-            dc.SetPen(wx.Pen("SLATE BLUE", 3))
-            dc.DrawRectangle(0, 0, self.size_x, self.size_y)
         return dc
 
 
@@ -713,9 +676,68 @@ class TilePanel(wx.ScrolledWindow):
         super(self.__class__, self).__init__(*args, **kwargs)
         self.select_source = None
         self.select_box = None
+
+        self.credentials = CREDENTIALS
+
+        self.active = True
+        self.thumbnail_queue = queue.Queue()
+        self.thumbnail_thread = threading.Thread(name="ThumbnailProvider", target=self.thumbnail_loader, daemon=True)
+        self.thumbnail_thread.start()
+
         self.Bind(wx.EVT_MOTION, self.OnMotion)
         self.Bind(wx.EVT_PAINT, self.OnPaint)
         self.Bind(wx.EVT_LEFT_UP, self.on_release)
+
+    def thumbnail_loader(self):
+        # Spin and monitor queue
+        # Jobs will arrive as tuples of (omero id, thumbnail size, tile update function).
+        chunk_size = 10
+        LOGGER.debug("Starting thumbnail loader")
+        size = 0
+        callback_map = {}
+        while self.active:
+            if self.thumbnail_queue.empty():
+                time.sleep(0.1)
+            for _ in range(chunk_size):
+                if not self.thumbnail_queue.empty():
+                    omero_id, size, callback = self.thumbnail_queue.get()
+                    callback_map[str(omero_id)] = callback
+                else:
+                    break
+            if callback_map:
+                ids_to_fetch = list(callback_map.keys())
+                ids_str = '&id='.join(ids_to_fetch)
+                url = f"https://{self.credentials.server}/webclient/get_thumbnails/{size}/?&bsession={self.credentials.session_key}&id={ids_str}"
+                LOGGER.debug(f"Fetching {url}")
+                result = {}
+                try:
+                    data = requests.get(url, timeout=10)
+                    if data.status_code != 200:
+                        LOGGER.warning(f"Server error: {data.status_code} - {data.reason}")
+                    else:
+                        result.update(data.json())
+                except requests.exceptions.Timeout:
+                    LOGGER.error("URL fetch timed out")
+                except Exception:
+                    LOGGER.error("Unable to retrieve data", exc_info=True)
+                for omero_id, callback in callback_map.items():
+                    image_data = result.get(omero_id, "")
+                    start_data = image_data.find('/9')
+                    if start_data == -1:
+                        LOGGER.info(f"No thumbnail data was returned for image {omero_id}")
+                        img = self.get_error_thumbnail(size)
+                    else:
+                        decoded = base64.b64decode(image_data[start_data:])
+                        bio = io.BytesIO(decoded)
+                        img = wx.Image(bio)
+                        if not img.IsOk():
+                            LOGGER.info(f"Thumbnail data was invalid for image {omero_id}")
+                            img = self.get_error_thumbnail(size)
+                        else:
+                            img = img.ConvertToBitmap()
+                    # Update the tile in question. This must be scheduled on the main GUI thread to avoid crashes.
+                    wx.CallAfter(callback, img)
+                callback_map = {}
 
     def deselect_all(self):
         for child in self.GetChildren():
@@ -759,3 +781,12 @@ class TilePanel(wx.ScrolledWindow):
         dc.SetBrush(wx.Brush("BLUE", style=wx.TRANSPARENT))
         if self.select_box is not None:
             dc.DrawRectangle(self.select_box)
+
+    @functools.lru_cache(maxsize=10)
+    def get_error_thumbnail(self, size):
+        # Draw an image with an error icon. Cache the result since we may need the error icon repeatedly.
+        artist = wx.ArtProvider()
+        size //= 2
+        return artist.GetBitmap(wx.ART_WARNING, size=(size, size))
+
+# TODO: Paginate well loading

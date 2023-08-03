@@ -452,6 +452,3 @@ class OMEROReader(Reader):
              bool,
              True)
         ]
-
-
-# Todo: Thumbnail queue
