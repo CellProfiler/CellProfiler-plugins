@@ -470,7 +470,7 @@ The default is set to "Yes".
 
         if self.docker_or_python.value == "Python":
             from cellpose import models, io, core, utils
-            self.self.cellpose_ver = importlib.metadata.version('cellpose')
+            self.cellpose_ver = importlib.metadata.version('cellpose')
             if float(self.cellpose_ver[0:3]) >= 0.6 and int(self.cellpose_ver[0])<2:
                 if self.mode.value != 'custom':
                     model = models.Cellpose(model_type= self.mode.value,
