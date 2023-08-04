@@ -24,6 +24,8 @@ It is the simplest option that only requires download of Docker Desktop; the mod
 It is currently only supported for the RunCellpose plugin but will be available in other plugins soon.
 See [Using Docker to Bypass Installation Requirements](#using-docker-to-bypass-installation-requirements).
 
+If using RunDeepProfiler, check for alternative installation instructions in [RunDeepProfiler](RunDeepProfiler.md).
+
 ### Installing plugins without dependencies
 
 1. **Install CellProfiler.**  
