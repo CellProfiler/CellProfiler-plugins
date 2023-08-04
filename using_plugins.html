@@ -154,7 +154,9 @@ const thebe_selector_output = ".output, .cell_output"
         </ul>
         <p aria-level="2" class="caption" role="heading"><span class="caption-text">Overview</span></p>
 <ul class="current nav bd-sidenav">
-<li class="toctree-l1 current active"><a class="current reference internal" href="#">Using plugins</a></li>
+<li class="toctree-l1 current active has-children"><a class="current reference internal" href="#">Using plugins</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" type="checkbox"/><label class="toctree-toggle" for="toctree-checkbox-1"><i class="fa-solid fa-chevron-down"></i></label><ul class="simple">
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="supported_plugins.html">Supported Plugins</a></li>
 <li class="toctree-l1"><a class="reference internal" href="unsupported_plugins.html">Currently Unsupported Plugins</a></li>
 <li class="toctree-l1"><a class="reference internal" href="contributing_plugins.html">Contributing New Plugins</a></li>
@@ -376,6 +378,7 @@ document.write(`
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#installing-plugins-without-dependencies">Installing plugins without dependencies</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#installing-plugins-with-dependencies-using-cellprofiler-from-source">Installing plugins with dependencies, using CellProfiler from source</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#installing-plugins-with-dependencies-using-pre-built-cellprofiler">Installing plugins with dependencies, using pre-built CellProfiler</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#using-docker-to-bypass-installation-requirements">Using Docker to bypass installation requirements</a></li>
 </ul>
 </li>
 </ul>
@@ -402,11 +405,17 @@ Please report any installation issues or bugs related to plugins in the <a class
 <h2>Installation<a class="headerlink" href="#installation" title="Permalink to this heading">#</a></h2>
 <p>If the plugin you would like to use does not have any additional dependencies outside of those required for running CellProfiler (this is most plugins), using plugins is very simple.
 See <span class="xref myst">Installing plugins without dependencies</span>.</p>
-<p>If the plugin you would like to use has dependencies, you have two separate options for installation.
-The first option requires building CellProfiler from source, but plugin installation is simpler.
-See <span class="xref myst">Installing plugins with dependencies, using CellProfiler from source</span>.
-The second option allows you to use pre-built CellProfiler, but plugin installation is more complex.
-See <span class="xref myst">Installing plugins with dependencies, using pre-built CellProfiler</span>.</p>
+<p>If the plugin you would like to use has dependencies, you have three separate options for installation.</p>
+<ul class="simple">
+<li><p>The first option requires building CellProfiler from source, but plugin installation is simpler.
+See <span class="xref myst">Installing plugins with dependencies, using CellProfiler from source</span>.</p></li>
+<li><p>The second option allows you to use pre-built CellProfiler, but plugin installation is more complex.
+See <span class="xref myst">Installing plugins with dependencies, using pre-built CellProfiler</span>.</p></li>
+<li><p>The third option uses Docker to bypass installation requirements.
+It is the simplest option that only requires download of Docker Desktop; the module that has dependencies will automatically download a Docker that has all of the dependencies upon run and access that Docker while running the plugin.
+It is currently only supported for the RunCellpose plugin but will be available in other plugins soon.
+See <span class="xref myst">Using Docker to Bypass Installation Requirements</span>.</p></li>
+</ul>
 <section id="installing-plugins-without-dependencies">
 <h3>Installing plugins without dependencies<a class="headerlink" href="#installing-plugins-without-dependencies" title="Permalink to this heading">#</a></h3>
 <ol class="arabic simple">
@@ -560,7 +569,23 @@ When you try to run your plugin in your pipeline, if you have missed copying ove
 This information is not available in Mac machines.</p></li>
 </ol>
 </section>
+<section id="using-docker-to-bypass-installation-requirements">
+<h3>Using Docker to bypass installation requirements<a class="headerlink" href="#using-docker-to-bypass-installation-requirements" title="Permalink to this heading">#</a></h3>
+<ol class="arabic simple">
+<li><p><strong>Download Docker</strong>
+Download Docker Desktop from <a class="reference external" href="https://www.docker.com/products/docker-desktop/">Docker.com</a>.</p></li>
+<li><p><strong>Run Docker Desktop</strong>
+Open Docker Desktop.
+Docker Desktop will need to be open every time you use a plugin with Docker.</p></li>
+<li><p><strong>Select “Run with Docker”</strong>
+In your plugin, select <code class="docutils literal notranslate"><span class="pre">Docker</span></code> for “Run module in docker or local python environment” setting.
+On the first run of the plugin, the Docker container will be downloaded, however, this slow downloading process will only have to happen
+once.</p></li>
+</ol>
 </section>
+</section>
+<div class="toctree-wrapper compound">
+</div>
 </section>
 
     <script type="text/x-thebe-config">
@@ -634,6 +659,7 @@ This information is not available in Mac machines.</p></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#installing-plugins-without-dependencies">Installing plugins without dependencies</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#installing-plugins-with-dependencies-using-cellprofiler-from-source">Installing plugins with dependencies, using CellProfiler from source</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#installing-plugins-with-dependencies-using-pre-built-cellprofiler">Installing plugins with dependencies, using pre-built CellProfiler</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#using-docker-to-bypass-installation-requirements">Using Docker to bypass installation requirements</a></li>
 </ul>
 </li>
 </ul>

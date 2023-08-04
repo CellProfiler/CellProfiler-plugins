@@ -14,11 +14,15 @@ Please report any installation issues or bugs related to plugins in the [CellPro
 If the plugin you would like to use does not have any additional dependencies outside of those required for running CellProfiler (this is most plugins), using plugins is very simple. 
 See [Installing plugins without dependencies](#installing-plugins-without-dependencies).
 
-If the plugin you would like to use has dependencies, you have two separate options for installation. 
-The first option requires building CellProfiler from source, but plugin installation is simpler.
+If the plugin you would like to use has dependencies, you have three separate options for installation. 
+- The first option requires building CellProfiler from source, but plugin installation is simpler.
 See [Installing plugins with dependencies, using CellProfiler from source](#installing-plugins-with-dependencies-using-cellprofiler-from-source).
-The second option allows you to use pre-built CellProfiler, but plugin installation is more complex.
+- The second option allows you to use pre-built CellProfiler, but plugin installation is more complex.
 See [Installing plugins with dependencies, using pre-built CellProfiler](#installing-plugins-with-dependencies-using-pre-built-cellprofiler).
+- The third option uses Docker to bypass installation requirements. 
+It is the simplest option that only requires download of Docker Desktop; the module that has dependencies will automatically download a Docker that has all of the dependencies upon run and access that Docker while running the plugin.
+It is currently only supported for the RunCellpose plugin but will be available in other plugins soon.
+See [Using Docker to Bypass Installation Requirements](#using-docker-to-bypass-installation-requirements).
 
 ### Installing plugins without dependencies
 
@@ -158,3 +162,17 @@ These are all the folders you need to copy over:
 7. **Open and use CellProfiler.**
 When you try to run your plugin in your pipeline, if you have missed copying over any specific requirements, it will give you an error message that will tell you what dependency is missing in the terminal window that opens with CellProfiler on Windows machines.
 This information is not available in Mac machines.
+
+### Using Docker to bypass installation requirements
+
+1. **Download Docker**
+Download Docker Desktop from [Docker.com](https://www.docker.com/products/docker-desktop/).
+
+2. **Run Docker Desktop**
+Open Docker Desktop.
+Docker Desktop will need to be open every time you use a plugin with Docker.
+
+3. **Select "Run with Docker"**
+In your plugin, select `Docker` for "Run module in docker or local python environment" setting.
+On the first run of the plugin, the Docker container will be downloaded, however, this slow downloading process will only have to happen
+once.
