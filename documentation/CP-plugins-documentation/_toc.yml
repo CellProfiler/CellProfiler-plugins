@@ -6,6 +6,8 @@ parts:
 - caption: Overview
   chapters:
   - file: using_plugins
+    sections: 
+    - file: RunCellpose
   - file: supported_plugins
   - file: unsupported_plugins
   - file: contributing_plugins

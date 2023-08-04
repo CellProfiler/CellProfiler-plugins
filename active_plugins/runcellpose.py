@@ -6,9 +6,13 @@
 
 import numpy
 import os
-from cellpose import models, io, core, utils
-from skimage.transform import resize
+import skimage
 import importlib.metadata
+import subprocess
+import uuid
+import shutil
+import logging
+import sys
 
 #################################
 #
@@ -19,10 +23,11 @@ import importlib.metadata
 from cellprofiler_core.image import Image
 from cellprofiler_core.module.image_segmentation import ImageSegmentation
 from cellprofiler_core.object import Objects
-from cellprofiler_core.setting import Binary
+from cellprofiler_core.setting import Binary, ValidationError
 from cellprofiler_core.setting.choice import Choice
 from cellprofiler_core.setting.do_something import DoSomething
 from cellprofiler_core.setting.subscriber import ImageSubscriber
+from cellprofiler_core.preferences import get_default_output_directory
 from cellprofiler_core.setting.text import (
     Integer,
     ImageName,
@@ -34,7 +39,7 @@ from cellprofiler_core.setting.text import (
 CUDA_LINK = "https://pytorch.org/get-started/locally/"
 Cellpose_link = " https://doi.org/10.1038/s41592-020-01018-x"
 Omnipose_link = "https://doi.org/10.1101/2021.11.03.467199"
-cellpose_ver = importlib.metadata.version("cellpose")
+LOGGER = logging.getLogger(__name__)
 
 __doc__ = f"""\
 RunCellpose
@@ -78,8 +83,11 @@ YES          YES          NO
 
 """
 
-model_dic = models.MODEL_NAMES
-model_dic.append("custom")
+CELLPOSE_DOCKER_NO_PRETRAINED = "cellprofiler/runcellpose_no_pretrained:0.1"
+CELLPOSE_DOCKER_IMAGE_WITH_PRETRAINED = "cellprofiler/runcellpose_with_pretrained:0.1"
+
+MODEL_NAMES = ['cyto','nuclei','tissuenet','livecell', 'cyto2', 'general',
+                'CP', 'CPx', 'TN1', 'TN2', 'TN3', 'LC1', 'LC2', 'LC3', 'LC4', 'custom']
 
 
 class RunCellpose(ImageSegmentation):
@@ -87,7 +95,7 @@ class RunCellpose(ImageSegmentation):
 
     module_name = "RunCellpose"
 
-    variable_revision_number = 3
+    variable_revision_number = 4
 
     doi = {
         "Please cite the following when using RunCellPose:": "https://doi.org/10.1038/s41592-020-01018-x",
@@ -97,9 +105,42 @@ class RunCellpose(ImageSegmentation):
     def create_settings(self):
         super(RunCellpose, self).create_settings()
 
+        self.docker_or_python = Choice(
+            text="Run CellPose in docker or local python environment",
+            choices=["Docker", "Python"],
+            value="Docker",
+            doc="""\
+If Docker is selected, ensure that Docker Desktop is open and running on your
+computer. On first run of the RunCellpose plugin, the Docker container will be
+downloaded. However, this slow downloading process will only have to happen
+once.
+
+If Python is selected, the Python environment in which CellProfiler and Cellpose
+are installed will be used.
+""",
+        )
+
+        self.docker_image = Choice(
+            text="Select Cellpose docker image",
+            choices=[CELLPOSE_DOCKER_IMAGE_WITH_PRETRAINED, CELLPOSE_DOCKER_NO_PRETRAINED],
+            value=CELLPOSE_DOCKER_IMAGE_WITH_PRETRAINED,
+            doc="""\
+Select which Docker image to use for running Cellpose.
+
+If you are not using a custom model, you can select
+**"{CELLPOSE_DOCKER_IMAGE_WITH_PRETRAINED}"**. If you are using a custom model,
+you can use either **"{CELLPOSE_DOCKER_NO_PRETRAINED}"** or
+**"{CELLPOSE_DOCKER_IMAGE_WITH_PRETRAINED}"**, but the latter will be slightly
+larger (~500 MB) due to including all of the pretrained models.
+""".format(
+            **{"CELLPOSE_DOCKER_NO_PRETRAINED": CELLPOSE_DOCKER_NO_PRETRAINED, 
+               "CELLPOSE_DOCKER_IMAGE_WITH_PRETRAINED": CELLPOSE_DOCKER_IMAGE_WITH_PRETRAINED}
+),
+        )
+
         self.expected_diameter = Integer(
             text="Expected object diameter",
-            value=15,
+            value=30,
             minval=0,
             doc="""\
 The average diameter of the objects to be detected. Setting this to 0 will attempt to automatically detect object size.
@@ -113,8 +154,8 @@ detect much smaller objects it may be more efficient to resize the image first u
 
         self.mode = Choice(
             text="Detection mode",
-            choices=model_dic,
-            value="cyto2",
+            choices=MODEL_NAMES,
+            value=MODEL_NAMES[0],
             doc="""\
 CellPose comes with models for detecting nuclei or cells. Alternatively, you can supply a custom-trained model
 generated using the command line or Cellpose GUI. Custom models can be useful if working with unusual cell types.
@@ -154,7 +195,7 @@ GPU memory.
 
         self.use_averaging = Binary(
             text="Use averaging",
-            value=True,
+            value=False,
             doc="""\
 If enabled, CellPose will run it's 4 inbuilt models and take a consensus to determine the results. If disabled, only a
 single model will be called to produce results. Disabling averaging is faster to run but less accurate.""",
@@ -299,6 +340,8 @@ The default is set to "Yes".
     def settings(self):
         return [
             self.x_name,
+            self.docker_or_python,
+            self.docker_image,
             self.expected_diameter,
             self.mode,
             self.y_name,
@@ -322,10 +365,15 @@ The default is set to "Yes".
         ]
 
     def visible_settings(self):
-        if float(cellpose_ver[0:3]) >= 0.6 and int(cellpose_ver[0]) < 2:
-            vis_settings = [self.mode, self.omni, self.x_name]
-        else:
-            vis_settings = [self.mode, self.x_name]
+        vis_settings = [self.docker_or_python]
+
+        if self.docker_or_python.value == "Docker":
+            vis_settings += [self.docker_image]
+
+        vis_settings += [self.mode, self.x_name]
+
+        if self.docker_or_python.value == "Python":
+            vis_settings += [self.omni]
 
         if self.mode.value != "nuclei":
             vis_settings += [self.supply_nuclei]
@@ -357,8 +405,9 @@ The default is set to "Yes".
 
         vis_settings += [self.use_averaging, self.use_gpu]
 
-        if self.use_gpu.value:
-            vis_settings += [self.gpu_test, self.manual_GPU_memory_share]
+        if self.docker_or_python.value == 'Python':
+            if self.use_gpu.value:
+                vis_settings += [self.gpu_test, self.manual_GPU_memory_share]
 
         return vis_settings
 
@@ -375,48 +424,16 @@ The default is set to "Yes".
                     "Failed to load custom file: %s " % model_path,
                     self.model_file_name,
                 )
-            try:
-                model = models.CellposeModel(
-                    pretrained_model=model_path, gpu=self.use_gpu.value
-                )
-            except:
-                raise ValidationError(
-                    "Failed to load custom model: %s " % model_path,
-                    self.model_file_name,
-                )
+            if self.docker_or_python.value == "Python":
+                try:
+                    model = models.CellposeModel(pretrained_model=model_path, gpu=self.use_gpu.value)
+                except:
+                    raise ValidationError(
+                        "Failed to load custom model: %s "
+                        % model_path, self.model_file_name,
+                    )
 
     def run(self, workspace):
-        if float(cellpose_ver[0:3]) >= 0.6 and int(cellpose_ver[0]) < 2:
-            if self.mode.value != "custom":
-                model = models.Cellpose(
-                    model_type=self.mode.value, gpu=self.use_gpu.value
-                )
-            else:
-                model_file = self.model_file_name.value
-                model_directory = self.model_directory.get_absolute_path()
-                model_path = os.path.join(model_directory, model_file)
-                model = models.CellposeModel(
-                    pretrained_model=model_path, gpu=self.use_gpu.value
-                )
-
-        else:
-            if self.mode.value != "custom":
-                model = models.CellposeModel(
-                    model_type=self.mode.value, gpu=self.use_gpu.value
-                )
-            else:
-                model_file = self.model_file_name.value
-                model_directory = self.model_directory.get_absolute_path()
-                model_path = os.path.join(model_directory, model_file)
-                model = models.CellposeModel(
-                    pretrained_model=model_path, gpu=self.use_gpu.value
-                )
-
-        if self.use_gpu.value and model.torch:
-            from torch import cuda
-
-            cuda.set_per_process_memory_fraction(self.manual_GPU_memory_share.value)
-
         x_name = self.x_name.value
         y_name = self.y_name.value
         images = workspace.image_set
@@ -424,9 +441,10 @@ The default is set to "Yes".
         dimensions = x.dimensions
         x_data = x.pixel_data
         anisotropy = 0.0
-
         if self.do_3D.value:
             anisotropy = x.spacing[0] / x.spacing[1]
+
+        diam = self.expected_diameter.value if self.expected_diameter.value > 0 else None
 
         if x.multichannel:
             raise ValueError(
@@ -450,59 +468,142 @@ The default is set to "Yes".
         else:
             channels = [0, 0]
 
-        diam = (
-            self.expected_diameter.value if self.expected_diameter.value > 0 else None
-        )
+        if self.docker_or_python.value == "Python":
+            from cellpose import models, io, core, utils
+            self.cellpose_ver = importlib.metadata.version('cellpose')
+            if float(self.cellpose_ver[0:3]) >= 0.6 and int(self.cellpose_ver[0])<2:
+                if self.mode.value != 'custom':
+                    model = models.Cellpose(model_type= self.mode.value,
+                                            gpu=self.use_gpu.value)
+                else:
+                    model_file = self.model_file_name.value
+                    model_directory = self.model_directory.get_absolute_path()
+                    model_path = os.path.join(model_directory, model_file)
+                    model = models.CellposeModel(pretrained_model=model_path, gpu=self.use_gpu.value)
 
-        try:
-            if float(cellpose_ver[0:3]) >= 0.7 and int(cellpose_ver[0]) < 2:
-                y_data, flows, *_ = model.eval(
-                    x_data,
-                    channels=channels,
-                    diameter=diam,
-                    net_avg=self.use_averaging.value,
-                    do_3D=self.do_3D.value,
-                    anisotropy=anisotropy,
-                    flow_threshold=self.flow_threshold.value,
-                    cellprob_threshold=self.cellprob_threshold.value,
-                    stitch_threshold=self.stitch_threshold.value,
-                    min_size=self.min_size.value,
-                    omni=self.omni.value,
-                    invert=self.invert.value,
-                )
             else:
-                y_data, flows, *_ = model.eval(
-                    x_data,
-                    channels=channels,
-                    diameter=diam,
-                    net_avg=self.use_averaging.value,
-                    do_3D=self.do_3D.value,
-                    anisotropy=anisotropy,
-                    flow_threshold=self.flow_threshold.value,
-                    cellprob_threshold=self.cellprob_threshold.value,
-                    stitch_threshold=self.stitch_threshold.value,
-                    min_size=self.min_size.value,
-                    invert=self.invert.value,
+                if self.mode.value != 'custom':
+                    model = models.CellposeModel(model_type= self.mode.value,
+                                            gpu=self.use_gpu.value)
+                else:
+                    model_file = self.model_file_name.value
+                    model_directory = self.model_directory.get_absolute_path()
+                    model_path = os.path.join(model_directory, model_file)
+                    model = models.CellposeModel(pretrained_model=model_path, gpu=self.use_gpu.value)
+
+            if self.use_gpu.value and model.torch:
+                from torch import cuda
+                cuda.set_per_process_memory_fraction(self.manual_GPU_memory_share.value)
+
+            try:
+                if float(self.cellpose_ver[0:3]) >= 0.7 and int(self.cellpose_ver[0])<2:
+                    y_data, flows, *_ = model.eval(
+                        x_data,
+                        channels=channels,
+                        diameter=diam,
+                        net_avg=self.use_averaging.value,
+                        do_3D=self.do_3D.value,
+                        anisotropy=anisotropy,
+                        flow_threshold=self.flow_threshold.value,
+                        cellprob_threshold=self.cellprob_threshold.value,
+                        stitch_threshold=self.stitch_threshold.value,
+                        min_size=self.min_size.value,
+                        omni=self.omni.value,
+                        invert=self.invert.value,
+                )
+                else:
+                    y_data, flows, *_ = model.eval(
+                        x_data,
+                        channels=channels,
+                        diameter=diam,
+                        net_avg=self.use_averaging.value,
+                        do_3D=self.do_3D.value,
+                        anisotropy=anisotropy,
+                        flow_threshold=self.flow_threshold.value,
+                        cellprob_threshold=self.cellprob_threshold.value,
+                        stitch_threshold=self.stitch_threshold.value,
+                        min_size=self.min_size.value,
+                        invert=self.invert.value,
                 )
 
-            if self.remove_edge_masks:
-                y_data = utils.remove_edge_masks(y_data)
+                if self.remove_edge_masks:
+                    y_data = utils.remove_edge_masks(y_data)
 
-            y = Objects()
-            y.segmented = y_data
+            except Exception as a:
+                        print(f"Unable to create masks. Check your module settings. {a}")
+            finally:
+                if self.use_gpu.value and model.torch:
+                    # Try to clear some GPU memory for other worker processes.
+                    try:
+                        cuda.empty_cache()
+                    except Exception as e:
+                        print(f"Unable to clear GPU memory. You may need to restart CellProfiler to change models. {e}")
 
-        except Exception as a:
-            print(f"Unable to create masks. Check your module settings. {a}")
-        finally:
-            if self.use_gpu.value and model.torch:
-                # Try to clear some GPU memory for other worker processes.
+        elif self.docker_or_python.value == "Docker":
+            # Define how to call docker
+            docker_path = "docker" if sys.platform.lower().startswith("win") else "/usr/local/bin/docker"
+            # Create a UUID for this run
+            unique_name = str(uuid.uuid4())
+            # Directory that will be used to pass images to the docker container
+            temp_dir = os.path.join(get_default_output_directory(), ".cellprofiler_temp", unique_name)
+            temp_img_dir = os.path.join(temp_dir, "img")
+            
+            os.makedirs(temp_dir, exist_ok=True)
+            os.makedirs(temp_img_dir, exist_ok=True)
+
+            temp_img_path = os.path.join(temp_img_dir, unique_name+".tiff")
+            if self.mode.value == "custom":
+                model_file = self.model_file_name.value
+                model_directory = self.model_directory.get_absolute_path()
+                model_path = os.path.join(model_directory, model_file)
+                temp_model_dir = os.path.join(temp_dir, "model")
+
+                os.makedirs(temp_model_dir, exist_ok=True)
+                # Copy the model
+                shutil.copy(model_path, os.path.join(temp_model_dir, model_file))
+
+            # Save the image to the Docker mounted directory
+            skimage.io.imsave(temp_img_path, x_data)
+
+            cmd = f"""
+            {docker_path} run --rm -v {temp_dir}:/data
+            {self.docker_image.value}
+            {'--gpus all' if self.use_gpu.value else ''}
+            cellpose
+            --dir /data/img
+            {'--pretrained_model ' + self.mode.value if self.mode.value != 'custom' else '--pretrained_model /data/model/' + model_file}
+            --chan {channels[0]}
+            --chan2 {channels[1]}
+            --diameter {diam}
+            {'--net_avg' if self.use_averaging.value else ''}
+            {'--do_3D' if self.do_3D.value else ''}
+            --anisotropy {anisotropy}
+            --flow_threshold {self.flow_threshold.value}
+            --cellprob_threshold {self.cellprob_threshold.value}
+            --stitch_threshold {self.stitch_threshold.value}
+            --min_size {self.min_size.value}
+            {'--invert' if self.invert.value else ''}
+            {'--exclude_on_edges' if self.remove_edge_masks.value else ''}
+            --verbose
+            """
+
+            try:
+                subprocess.run(cmd.split(), text=True)
+                cellpose_output = numpy.load(os.path.join(temp_img_dir, unique_name + "_seg.npy"), allow_pickle=True).item()
+
+                y_data = cellpose_output["masks"]
+                flows = cellpose_output["flows"]
+            finally:      
+                # Delete the temporary files
                 try:
-                    cuda.empty_cache()
-                except Exception as e:
-                    print(
-                        f"Unable to clear GPU memory. You may need to restart CellProfiler to change models. {e}"
-                    )
+                    shutil.rmtree(temp_dir)
+                except:
+                    LOGGER.error("Unable to delete temporary directory, files may be in use by another program.")
+                    LOGGER.error("Temp folder is subfolder {tempdir} in your Default Output Folder.\nYou may need to remove it manually.")
 
+
+        y = Objects()
+        y.segmented = y_data
         y.parent_image = x.parent_image
         objects = workspace.object_set
         objects.add_objects(y, y_name)
@@ -510,7 +611,7 @@ The default is set to "Yes".
         if self.save_probabilities.value:
             # Flows come out sized relative to CellPose's inbuilt model size.
             # We need to slightly resize to match the original image.
-            size_corrected = resize(flows[2], y_data.shape)
+            size_corrected = skimage.transform.resize(flows[2], y_data.shape)
             prob_image = Image(
                 size_corrected,
                 parent_image=x.parent_image,
@@ -571,10 +672,9 @@ The default is set to "Yes".
 
     def do_check_gpu(self):
         import importlib.util
-
-        torch_installed = importlib.util.find_spec("torch") is not None
-        # if the old version of cellpose <2.0, then use istorch kwarg
-        if float(cellpose_ver[0:3]) >= 0.7 and int(cellpose_ver[0]) < 2:
+        torch_installed = importlib.util.find_spec('torch') is not None
+        #if the old version of cellpose <2.0, then use istorch kwarg
+        if float(self.cellpose_ver[0:3]) >= 0.7 and int(self.cellpose_ver[0])<2:
             GPU_works = core.use_gpu(istorch=torch_installed)
         else:  # if new version of cellpose, use use_torch kwarg
             GPU_works = core.use_gpu(use_torch=torch_installed)
@@ -595,4 +695,7 @@ The default is set to "Yes".
         if variable_revision_number == 2:
             setting_values = setting_values + ["0.0", False, "15", "1.0", False, False]
             variable_revision_number = 3
+        if variable_revision_number == 3:
+            setting_values = [setting_values[0]] + ["Python",CELLPOSE_DOCKER_IMAGE_WITH_PRETRAINED] + setting_values[1:]
+            variable_revision_number = 4
         return setting_values, variable_revision_number
