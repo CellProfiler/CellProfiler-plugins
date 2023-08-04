@@ -346,12 +346,10 @@ Prevent overlapping
         y.parent_image = x.parent_image
         objects = workspace.object_set
         objects.add_objects(y, self.y_name.value)
-       
-      
 
         self.add_measurements(workspace)
-       
-        cuda.current_context().memory_manager.deallocations.clear()
+        if cuda.is_available():
+            cuda.current_context().memory_manager.deallocations.clear()
 
         if self.show_window:
             workspace.display_data.x_data = x_data
