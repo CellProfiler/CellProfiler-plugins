@@ -1,6 +1,10 @@
-# RunCellPose
+# RunCellpose
 
-## Using RunCellPose with a GPU
+RunCellpose is one of the modules that has additional dependencies that are not packaged with the built CellProfiler. 
+Therefore, you must additionally download RunCellpose's dependencies.
+See [Using Plugins](using_plugins.md) for more information.
+
+## Using RunCellpose with a GPU
 
 If you want to use a GPU to run the model (this is recommended for speed), you'll need a compatible version of PyTorch and a supported GPU. 
 General instructions are available at this [link](https://pytorch.org/get-started/locally/).
