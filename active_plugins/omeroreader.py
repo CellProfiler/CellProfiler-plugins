@@ -2,6 +2,11 @@
 An image reader which connects to OMERO to load data
 
 # Installation -
+Easy mode - clone the plugins repository and point your CellProfiler plugins folder to this folder.
+Navigate to /active_plugins/ and run `pip install -e .[omero]` to install dependencies.
+
+## Manual Installation
+
 Add this file plus the `omero_helper` directory into your CellProfiler plugins folder. Install dependencies into
 your CellProfiler Python environment.
 
