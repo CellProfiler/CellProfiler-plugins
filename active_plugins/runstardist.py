@@ -9,6 +9,7 @@ from skimage.transform import resize
 from stardist.models import StarDist2D, StarDist3D
 from csbdeep.utils import normalize
 from numba import cuda
+import tensorflow as tf
 
 #################################
 #
@@ -210,6 +211,25 @@ Prevent overlapping
 """,
         )
 
+        self.manage_gpu = Binary(
+            text="Manually set how much GPU memory each worker can use?",
+            value=False,
+            doc="""
+If enabled, you can manually set how much of the GPU memory each worker can use.
+This is likely to provide the most benefit on Macs. Do not use in a multi-GPU setup.""",
+        )
+
+        self.manual_GPU_memory_GB = Float(
+            text="GPU memory (in GB) for each worker",
+            value=0.5,
+            minval=0.0000001,
+            maxval=30,
+            doc="""\
+GPU memory in GB available to each worker. Value should be set such that this number times the number
+of workers in each copy of CellProfiler times the number of copies of CellProfiler running (if applicable) is <1
+""",
+        )
+
     def settings(self):
         return [
             self.x_name,
@@ -225,6 +245,8 @@ Prevent overlapping
             self.model_choice3D,
             self.prob_thresh,
             self.nms_thresh,
+            self.manage_gpu,
+            self.manual_GPU_memory_GB,
         ]
 
     def visible_settings(self):
@@ -251,7 +273,10 @@ Prevent overlapping
         if self.tile_image.value:
             vis_settings += [self.n_tiles_x, self.n_tiles_y]
 
-        vis_settings += [self.prob_thresh, self.nms_thresh, self.gpu_test]
+        vis_settings += [self.prob_thresh, self.nms_thresh, self.gpu_test, self.manage_gpu]
+
+        if self.manage_gpu.value:
+            vis_settings += [self.manual_GPU_memory_GB]
 
         return vis_settings
 
@@ -272,6 +297,23 @@ Prevent overlapping
             raise ValueError(
                 "Greyscale images are not supported by this model. Please provide a color overlay."
             )
+        
+        # Stolen nearly wholesale from https://wiki.ncsa.illinois.edu/display/ISL20/Managing+GPU+memory+when+using+Tensorflow+and+Pytorch
+        if self.manage_gpu.value:
+            # First, Get a list of GPU devices
+            gpus = tf.config.list_physical_devices('GPU')
+            if len(gpus) > 0:            
+                # Restrict to only the first GPU.
+                tf.config.set_visible_devices(gpus[:1], device_type='GPU')
+                # Create a LogicalDevice with the appropriate memory limit
+                log_dev_conf = tf.config.LogicalDeviceConfiguration(
+                    memory_limit=self.manual_GPU_memory_GB.value*1024 # 2 GB
+                )
+                # Apply the logical device configuration to the first GPU
+                tf.config.set_logical_device_configuration(
+                    gpus[0],
+                    [log_dev_conf])
+
 
         if self.model.value == CUSTOM_MODEL:
             model_directory, model_name = os.path.split(
@@ -392,11 +434,9 @@ Prevent overlapping
             )
 
     def do_check_gpu(self):
-        import tensorflow
-
-        if len(tensorflow.config.list_physical_devices("GPU")) > 0:
+        if len(tf.config.list_physical_devices("GPU")) > 0:
             message = "GPU appears to be working correctly!"
-            print("GPUs:", tensorflow.config.list_physical_devices("GPU"))
+            print("GPUs:", tf.config.list_physical_devices("GPU"))
         else:
             message = (
                 "GPU test failed. There may be something wrong with your configuration."
