@@ -11,8 +11,7 @@ Add this file plus the `omero_helper` directory into your CellProfiler plugins f
 your CellProfiler Python environment.
 
 ## Installing dependencies -
-This depends on platform. At the most basic level you'll need the `omero-py` package. For headless run and
-more convenient server login you'll also want the `omero_user_token` package.
+This depends on platform. At the most basic level you'll need the `omero-py` package and the `omero_user_token` package.
 
 Both should be possible to pip install on Windows. On MacOS, you'll probably have trouble with the zeroc-ice dependency.
 omero-py uses an older version and so needs specific wheels. Fortunately we've built some for you.

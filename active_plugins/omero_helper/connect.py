@@ -1,40 +1,63 @@
 import atexit
 import os
 import logging
-import importlib.util
+import tempfile
 
-from cellprofiler_core.preferences import config_read_typed, get_headless
+from cellprofiler_core.preferences import config_read_typed, get_headless, get_temporary_directory
 from cellprofiler_core.preferences import get_omero_server, get_omero_port, get_omero_user
 import omero
+from omero.gateway import BlitzGateway
+import omero_user_token
 
 LOGGER = logging.getLogger(__name__)
-
-# Is omero_user_token installed and available?
-TOKEN_MODULE = importlib.util.find_spec("omero_user_token")
-TOKENS_AVAILABLE = TOKEN_MODULE is not None
-if TOKENS_AVAILABLE:
-    # Only load and enable user tokens if dependency is installed
-    omero_user_token = importlib.util.module_from_spec(TOKEN_MODULE)
-    TOKEN_MODULE.loader.exec_module(omero_user_token)
+OMERO_CREDENTIAL_FILE = os.path.join(get_temporary_directory(), "OMERO_CP.token")
 
 
-def login(e=None, server=None):
+def login(e=None, server=None, token_path=None):
     # Attempt to connect to the server, first using a token, then via GUI
-    CREDENTIALS.get_tokens()
+    CREDENTIALS.get_tokens(token_path)
     if CREDENTIALS.tokens:
         if server is None:
             # URL didn't specify which server we want. Just try whichever token is available
             server = list(CREDENTIALS.tokens.keys())[0]
         connected = CREDENTIALS.try_token(server)
-        if get_headless():
-            if connected:
-                LOGGER.info("Connected to ", CREDENTIALS.server)
-            else:
-                LOGGER.warning("Failed to connect, was user token invalid?")
-            return connected
+    else:
+        connected = CREDENTIALS.client is not None
+    if get_headless():
+        if connected:
+            LOGGER.info(f"Connected to {CREDENTIALS.server}")
+        elif CREDENTIALS.try_temp_token():
+            connected = True
+            LOGGER.info(f"Connected to {CREDENTIALS.server}")
         else:
-            from .gui import login_gui
-            login_gui(connected, server=None)
+            LOGGER.warning("Failed to connect, was user token invalid?")
+        return connected
+    else:
+        from .gui import login_gui
+        login_gui(connected, server=None)
+
+
+def get_temporary_dir():
+    temporary_directory = get_temporary_directory()
+    if not (
+        os.path.exists(temporary_directory) and os.access(temporary_directory, os.W_OK)
+    ):
+        temporary_directory = tempfile.gettempdir()
+    return temporary_directory
+
+
+def clear_temporary_file():
+    LOGGER.debug("Checking for OMERO credential file to delete")
+    if os.path.exists(OMERO_CREDENTIAL_FILE):
+        os.unlink(OMERO_CREDENTIAL_FILE)
+        LOGGER.debug(f"Cleared {OMERO_CREDENTIAL_FILE}")
+
+
+if not get_headless():
+    if os.path.exists(OMERO_CREDENTIAL_FILE):
+        LOGGER.warning("Existing credential file was found")
+    # Main GUI process should clear any temporary tokens
+    atexit.register(clear_temporary_file)
 
 
 class LoginHelper:
@@ -59,18 +82,25 @@ class LoginHelper:
         self.session_key = None
         self.session = None
         self.client = None
+        self.gateway = None
         self.container_service = None
         self.tokens = {}
         # Any OMERO browser GUI which is connected to this object
         self.browser_window = None
         atexit.register(self.shutdown)
 
+    def get_gateway(self):
+        if self.client is None:
+            raise Exception("Client connection not initialised")
+        if self.gateway is None:
+            LOGGER.debug("Constructing BlitzGateway")
+            self.gateway = BlitzGateway(client_obj=self.client)
+        return self.gateway
+
     def get_tokens(self, path=None):
         # Load all tokens from omero_user_token
         self.tokens.clear()
         # Future versions of omero_user_token may support multiple tokens, so we code with that in mind.
-        if not TOKENS_AVAILABLE:
-            return
         # Check the reader setting which disables tokens.
         tokens_enabled = config_read_typed(f"Reader.OMERO.allow_token", bool)
         if tokens_enabled is not None and not tokens_enabled:
@@ -101,8 +131,37 @@ class LoginHelper:
             server, port, session_key = self.tokens[address]
             return self.login(server=server, port=port, session_key=session_key)
 
+    def create_temp_token(self):
+        # Store a temporary OMERO token based on our active session
+        # This allows the workers to use that session in Analysis mode.
+        if self.client is None:
+            raise ValueError("Client not initialised, cannot make token")
+        if os.path.exists(OMERO_CREDENTIAL_FILE):
+            LOGGER.warning(f"Token already exists at {OMERO_CREDENTIAL_FILE}, overwriting")
+            os.unlink(OMERO_CREDENTIAL_FILE)
+        try:
+            token = f"{self.session_key}@{self.server}:{self.port}"
+            with open(OMERO_CREDENTIAL_FILE, 'w') as token_file:
+                token_file.write(token)
+            LOGGER.debug(f"Made temp token for {self.server}")
+        except:
+            LOGGER.error("Unable to write temporary token", exc_info=True)
+
+    def try_temp_token(self):
+        # Look for and attempt to connect to OMERO using a temporary token.
+        if not os.path.exists(OMERO_CREDENTIAL_FILE):
+            LOGGER.error(f"No temporary OMERO token found. Cannot connect to server.")
+            return False
+        with open(OMERO_CREDENTIAL_FILE, 'r') as token_path:
+            token = token_path.read().strip()
+        server, port = token[token.find('@') + 1:].split(':')
+        port = int(port)
+        session_key = token[:token.find('@')]
+        LOGGER.info(f"Using connection details for {self.server}")
+        return self.login(server=server, port=port, session_key=session_key)
+
     def login(self, server=None, port=None, user=None, passwd=None, session_key=None):
-        # Attempt to connect to the server
+        # Attempt to connect to the server using provided connection credentials
         self.client = omero.client(host=server, port=port)
         if session_key is not None:
             try:

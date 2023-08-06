@@ -14,7 +14,7 @@ import cellprofiler.gui.plugins_menu
 from cellprofiler_core.preferences import config_read_typed, config_write_typed, \
     set_omero_server, set_omero_port, set_omero_user
 
-from .connect import CREDENTIALS, TOKENS_AVAILABLE, login
+from .connect import CREDENTIALS, login
 
 LOGGER = logging.getLogger(__name__)
 
@@ -46,6 +46,8 @@ def show_login_dlg(e=None, server=None):
     frame = app.GetTopWindow()
     with OmeroLoginDlg(frame, title="Log into Omero", server=server) as dlg:
         dlg.ShowModal()
+    if CREDENTIALS.client is not None:
+        CREDENTIALS.create_temp_token()
 
 
 def browse(e):
@@ -183,7 +185,7 @@ class OmeroLoginDlg(wx.Dialog):
         self.connect()
 
     def on_set_pressed(self, event):
-        if self.credentials.client is None or not TOKENS_AVAILABLE:
+        if self.credentials.client is None:
             return
         import omero_user_token
         token_path = omero_user_token.assert_and_get_token_path()
