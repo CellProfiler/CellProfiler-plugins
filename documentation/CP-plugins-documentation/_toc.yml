@@ -15,4 +15,4 @@ parts:
 
 - caption: Extra information about specific plugins
   chapters:
-  - file: RunCellPose
+  - file: runcellpose
