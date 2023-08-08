@@ -23,9 +23,9 @@ Download the .whl file from whichever is most appropriate and run `pip install <
 
 From there pip install omero-py should do the rest.
 
-You'll probably also want the `omero_user_token` package to help manage logins (`pip install omero_user_token`).
+You'll also want the `omero_user_token` package to help manage logins (`pip install omero_user_token`).
 This allows you to set reusable login tokens for quick reconnection to a server. These tokens are required for using
-headless mode.
+headless mode/analysis moe.
 
 
 # Usage -
