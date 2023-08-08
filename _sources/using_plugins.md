@@ -75,6 +75,8 @@ pip install -e .[FLAG]
 ```
 e.g. To install Cellpose the pip install command would be `pip install -e .[cellpose]`
 
+If using Mac and getting an error saying `zsh: no matches found: .[somepackage]`, put the dot and square brackets in single quotes, ie `pip install -e '.[cellpose]'`
+
 5. **Open and use CellProfiler.**  
 
 Please note that plugins that have separate install flags may have conflicting dependencies so we recommend making a separate python environment in which to run separate installations.
@@ -163,6 +165,7 @@ These are all the folders you need to copy over:
 When you try to run your plugin in your pipeline, if you have missed copying over any specific requirements, it will give you an error message that will tell you what dependency is missing in the terminal window that opens with CellProfiler on Windows machines.
 This information is not available in Mac machines.
 
+
 ### Using Docker to bypass installation requirements
 
 1. **Download Docker**
@@ -176,3 +179,4 @@ Docker Desktop will need to be open every time you use a plugin with Docker.
 In your plugin, select `Docker` for "Run module in docker or local python environment" setting.
 On the first run of the plugin, the Docker container will be downloaded, however, this slow downloading process will only have to happen
 once.
+
