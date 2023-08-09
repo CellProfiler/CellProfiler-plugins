@@ -461,7 +461,7 @@ in the Per\_Object and Per\_Well(s) OMERO tables.
 
         # Build a list of tables to create
         column_defs = shared_state[D_MEASUREMENT_COLUMNS]
-        desired_tables = ["Image"]
+        desired_tables = ["Image", "Relationships"]
         if self.objects_choice == O_SELECT:
             desired_tables += self.objects_list.value
         elif self.objects_choice == O_ALL:
@@ -487,6 +487,23 @@ in the Per\_Object and Per\_Well(s) OMERO tables.
             if table_name == "Image":
                 # Add any aggregate measurements
                 table_cols.extend(self.get_aggregate_columns(workspace.pipeline))
+            elif table_name == "Relationships":
+                # Hacky, but relationships are totally different from standard measurements
+                relationships = pipeline.get_object_relationships()
+                if not relationships:
+                    # No need for table
+                    continue
+                table_cols = [
+                    ("", "Module", COLTYPE_VARCHAR),
+                    ("", "Module Number", COLTYPE_INTEGER),
+                    ("", "Relationship", COLTYPE_VARCHAR),
+                    ("", "First Object Name", COLTYPE_VARCHAR),
+                    ("", "First Image Number", COLTYPE_INTEGER),
+                    ("", "First Object Number", COLTYPE_INTEGER),
+                    ("", "Second Object Name", COLTYPE_VARCHAR),
+                    ("", "Second Image Number", COLTYPE_INTEGER),
+                    ("", "Second Object Number", COLTYPE_INTEGER),
+                ]
             omero_id = self.create_omero_table(parent, true_name, table_cols)
             omero_table_list.append((table_name, true_name, omero_id, table_cols))
             table_path = f"https://{CREDENTIALS.server}/webclient/omero_table/{omero_id}"
@@ -629,6 +646,38 @@ in the Per\_Object and Per\_Well(s) OMERO tables.
             extra_data.update(measurements.compute_aggregate_measurements(
                 measurements.image_set_number, self.agg_names
             ))
+        elif table_type == "Relationships":
+            # We build the Relationships table in the extra data buffer
+            modules = workspace.pipeline.modules()
+            # Initialise table variables as empty
+            extra_data["First Image Number"] = []
+            extra_data["Second Image Number"] = []
+            extra_data["First Object Number"] = []
+            extra_data["Second Object Number"] = []
+            extra_data["Module"] = []
+            extra_data["Module Number"] = []
+            extra_data["Relationship"] = []
+            extra_data["First Object Name"] = []
+            extra_data["Second Object Name"] = []
+            for key in measurements.get_relationship_groups():
+                # Add records for each relationship
+                records = measurements.get_relationships(
+                    key.module_number,
+                    key.relationship,
+                    key.object_name1,
+                    key.object_name2,
+                )
+                module_name = modules[key.module_number].module_name
+                extra_data["First Image Number"] += list(records["ImageNumber_First"])
+                extra_data["Second Image Number"] += list(records["ImageNumber_Second"])
+                extra_data["First Object Number"] += list(records["ObjectNumber_First"])
+                extra_data["Second Object Number"] += list(records["ObjectNumber_Second"])
+                num_records = len(records["ImageNumber_First"])
+                extra_data["Module"] += [module_name] * num_records
+                extra_data["Module Number"] += [key.module_number] * num_records
+                extra_data["Relationship"] += [key.relationship] * num_records
+                extra_data["First Object Name"] += [key.object_name1] * num_records
+                extra_data["Second Object Name"] += [key.object_name2] * num_records
         else:
             extra_data[C_OBJECT_NUMBER] = measurements.get_measurement(table_type, M_NUMBER_OBJECT_NUMBER)
             extra_data[C_IMAGE_NUMBER] = [extra_data[C_IMAGE_NUMBER]] * len(extra_data[C_OBJECT_NUMBER])
