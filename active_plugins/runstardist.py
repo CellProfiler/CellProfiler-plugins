@@ -225,8 +225,10 @@ This is likely to provide the most benefit on Macs. Do not use in a multi-GPU se
             minval=0.0000001,
             maxval=30,
             doc="""\
-GPU memory in GB available to each worker. Value should be set such that this number times the number
-of workers in each copy of CellProfiler times the number of copies of CellProfiler running (if applicable) is <1
+Gigabytes of GPU memory available to each worker. Value should be set such that this number times the number
+of workers in each copy of CellProfiler times the number of copies of CellProfiler running (if applicable) is <1. 
+The "correct" value will depend on your system's GPU, the number of workers you want to run in parallel, and 
+the size of the model that you want to run; some experimentation may be needed.
 """,
         )
 
