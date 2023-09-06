@@ -294,9 +294,11 @@ class OmeroBrowseDlg(wx.Frame):
         b = wx.BoxSizer(wx.VERTICAL)
 
         self.groups_box = wx.Choice(self.browse_controls, choices=self.group_names)
+        self.groups_box.SetSelection(0)
         self.groups_box.Bind(wx.EVT_CHOICE, self.switch_group)
 
         self.members_box = wx.Choice(self.browse_controls, choices=list(self.users_in_group.keys()))
+        self.members_box.SetSelection(0)
         self.members_box.Bind(wx.EVT_CHOICE, self.switch_member)
 
         b.Add(self.groups_box, 0, wx.EXPAND)
@@ -440,6 +442,7 @@ class OmeroBrowseDlg(wx.Frame):
         })
         self.members_box.Clear()
         self.members_box.AppendItems(list(self.users_in_group.keys()))
+        self.members_box.SetSelection(0)
 
     def fetch_children(self, event):
         # Load the next level in the tree for a target object.
