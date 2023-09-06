@@ -84,7 +84,7 @@ class OmeroLoginDlg(wx.Dialog):
         self.token = token
         self.SetSizer(wx.BoxSizer(wx.VERTICAL))
         if server is None:
-            server = self.credentials.server
+            server = self.credentials.server or ""
         sizer = wx.BoxSizer(wx.VERTICAL)
         self.Sizer.Add(sizer, 1, wx.EXPAND | wx.ALL, 6)
         sub_sizer = wx.BoxSizer(wx.HORIZONTAL)
