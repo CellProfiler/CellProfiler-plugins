@@ -44,7 +44,7 @@ def show_login_dlg(e=None, server=None):
     # Show the login GUI
     app = wx.GetApp()
     frame = app.GetTopWindow()
-    with OmeroLoginDlg(frame, title="Log into Omero", server=server) as dlg:
+    with OmeroLoginDlg(frame, title="Login to OMERO", server=server) as dlg:
         dlg.ShowModal()
     if CREDENTIALS.client is not None:
         CREDENTIALS.create_temp_token()

@@ -178,7 +178,7 @@ class LoginHelper:
                 self.client = None
                 self.session = None
                 return False
-        elif self.username is not None:
+        elif user is not None:
             try:
                 self.session = self.client.createSession(
                     username=user, password=passwd)
