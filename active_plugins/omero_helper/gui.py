@@ -120,7 +120,7 @@ class OmeroLoginDlg(wx.Dialog):
         sub_sizer.Add(
             wx.StaticText(self, label="User:", size=lsize),
             0, wx.ALIGN_CENTER_VERTICAL)
-        self.omero_user_ctrl = wx.TextCtrl(self, value=self.credentials.username)
+        self.omero_user_ctrl = wx.TextCtrl(self, value=self.credentials.username or "")
         sub_sizer.Add(self.omero_user_ctrl, 1, wx.EXPAND)
 
         sizer.AddSpacer(5)
