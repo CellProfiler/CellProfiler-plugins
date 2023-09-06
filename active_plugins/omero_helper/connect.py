@@ -1,6 +1,7 @@
 import atexit
 import os
 import logging
+import sys
 import tempfile
 
 from cellprofiler_core.preferences import config_read_typed, get_headless, get_temporary_directory
@@ -106,9 +107,10 @@ class LoginHelper:
         if tokens_enabled is not None and not tokens_enabled:
             return
         # User tokens sadly default to the home directory. This would override that location.
-        py_home = os.environ['HOME']
+        home_key = "USERPROFILE" if sys.platform == "win32" else "HOME"
+        py_home = os.environ.get(home_key, "")
         if path is not None:
-            os.environ['HOME'] = path
+            os.environ[home_key] = path
         try:
             LOGGER.info("Requesting token info")
             token = omero_user_token.get_token()
@@ -120,7 +122,7 @@ class LoginHelper:
         except Exception:
             LOGGER.error("Failed to get user token", exc_info=True)
         if path is not None:
-            os.environ['HOME'] = py_home
+            os.environ[home_key] = py_home
 
     def try_token(self, address):
         # Attempt to use an omero token to connect to a specific server
