@@ -9,6 +9,7 @@ See [using plugins](using_plugins.md) for how to set up CellProfiler for plugin 
 Most plugin documentation can be found within the plugin itself and can be accessed through CellProfiler help.
 Those plugins that do have extra documentation contain links below.
 
+
 | Plugin | Description | Requires installation of dependencies? | Install flag | Docker version currently available? |
 |--------|-------------|----------------------------------------|--------------|-------------------------------------|
 | CalculateMoments      | CalculateMoments extracts moments statistics from a given distribution of pixel values. | No | | N/A |
@@ -21,7 +22,7 @@ Those plugins that do have extra documentation contain links below.
 | PixelShuffle          | PixelShuffle takes the intensity of each pixel in an image and randomly shuffles its position. | No | | N/A |
 | Predict               | Predict allows you to use an ilastik pixel classifier to generate a probability image. CellProfiler supports two types of ilastik projects: Pixel Classification and Autocontext (2-stage). | No |  | N/A |
 | [RunCellpose](RunCellPose.md) | RunCellpose allows you to run Cellpose within CellProfiler. Cellpose is a generalist machine-learning algorithm for cellular segmentation and is a great starting point for segmenting non-round cells. You can use pre-trained Cellpose models or your custom model with this plugin. You can use a GPU with this module to dramatically increase your speed/efficiency. | Yes | `cellpose` | Yes |
-| RunImageJScript       | RunImageJScript allows you to run any supported ImageJ script directly within CellProfiler. It is significantly more performant than RunImageJMacro, and is also less likely to leave behind temporary files. | Yes | XXXXX | No |
+| RunImageJScript       | RunImageJScript allows you to run any supported ImageJ script directly within CellProfiler. It is significantly more performant than RunImageJMacro, and is also less likely to leave behind temporary files. | Yes | `imagejscript` , though note that conda installation may be preferred, see [this link](https://py.imagej.net/en/latest/Install.html#installing-via-pip) for more information | No |
 | RunOmnipose           | RunOmnipose allows you to run Omnipose within CellProfiler. Omnipose is a general image segmentation tool that builds on Cellpose. | Yes | `omnipose` | No |
 | RunStarDist           | RunStarDist allows you to run StarDist within CellProfiler. StarDist is a machine-learning algorithm for object detection with star-convex shapes making it best suited for nuclei or round-ish cells. You can use pre-trained StarDist models or your custom model with this plugin. You can use a GPU with this module to dramatically increase your speed/efficiency. RunStarDist is generally faster than RunCellpose. | Yes | `stardist` | No |
 | VarianceTransform     | This module allows you to calculate the variance of an image, using a determined window size. It also has the option to find the optimal window size from a predetermined range to obtain the maximum variance of an image. | No | | N/A |
