@@ -34,7 +34,10 @@ def login(e=None, server=None, token_path=None):
             LOGGER.warning("Failed to connect, was user token invalid?")
         return connected
     else:
-        from .gui import login_gui
+        from .gui import login_gui, configure_for_safe_shutdown
+        if not CREDENTIALS.bound:
+            configure_for_safe_shutdown()
+            CREDENTIALS.bound = True
         login_gui(connected, server=None)
 
 
@@ -86,6 +89,8 @@ class LoginHelper:
         self.gateway = None
         self.container_service = None
         self.tokens = {}
+        # Whether we've already hooked into the main GUI frame
+        self.bound = False
         # Any OMERO browser GUI which is connected to this object
         self.browser_window = None
         atexit.register(self.shutdown)
@@ -201,6 +206,10 @@ class LoginHelper:
                 "Not enough details to create a server connection.")
         self.container_service = self.session.getContainerService()
         return True
+
+    def handle_exit(self, e):
+        self.shutdown()
+        e.Skip()
 
     def shutdown(self):
         # Disconnect from the server

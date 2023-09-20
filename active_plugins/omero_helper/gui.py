@@ -74,6 +74,13 @@ def inject_plugin_menu_entries():
     ])
 
 
+def configure_for_safe_shutdown():
+    # When GUI is running we need to capture wx exit events and close the OMERO connection
+    app = wx.GetApp()
+    frame = app.GetTopWindow()
+    frame.Bind(wx.EVT_CLOSE, CREDENTIALS.handle_exit)
+
+
 class OmeroLoginDlg(wx.Dialog):
     """
     A dialog pane to provide and use OMERO login credentials.
@@ -257,7 +264,7 @@ class OmeroLoginDlg(wx.Dialog):
         self.EndModal(wx.OK)
 
 
-class OmeroBrowseDlg(wx.Frame):
+class OmeroBrowseDlg(wx.Dialog):
     """
     An OMERO server browser intended for browsing images and adding them to the main file list
     """
