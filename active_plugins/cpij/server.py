@@ -196,7 +196,13 @@ def _convert_java_to_python_type(ij, return_value):
         # TODO actualize changes in a virtual ImagePlus. Remove this when pyimagej does this innately
         if issubclass(return_class, jpype.JClass("ij.ImagePlus")):
             ij.py.synchronize_ij1_to_ij2(return_value)
-        return ij.py.from_java(return_value)
+        py_img = ij.py.from_java(return_value)
+
+        # HACK
+        # Workaround for DataArrays potentially coming back with Java names. Fixed upstream in:
+        # https://github.com/imagej/pyimagej/commit/a1861b6c1658d6751fa314650b13411f956549ab
+        py_img.name = ij.py.from_java(py_img.name)
+        return py_img
 
     # Not a supported type
     return None
