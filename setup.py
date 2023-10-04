@@ -1,10 +1,10 @@
-from setuptools import setup
 import setuptools
+from setuptools import setup
 
 install_deps = [
     "cellprofiler",
     "cellprofiler-core",
-            ]
+]
 
 cellpose_deps = [
     "cellpose>=1.0.2"
@@ -36,7 +36,6 @@ omero_deps = [
     "omero-py",
     "omero-user-token",
 ]
-
 
 setup(
     name="cellprofiler_plugins",
