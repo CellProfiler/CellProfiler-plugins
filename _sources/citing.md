@@ -2,7 +2,7 @@
 
 If using CellProfiler Plugins in a pipeline used in a publication, please cite our CellProfiler Plugins paper:
 
-ENTER CITATION
+Weisbart, E., Tromans-Coia, C., Diaz-Rohrer, B., Stirling, D. R., Garcia-Fossa, F., Senft, R. A., Hiner, M. C., de Jesus, M. B., Eliceiri, K. W., & Cimini, B. A. (2023). CellProfiler plugins - an easy image analysis platform integration for containers and Python tools. Journal of Microscopy. https://doi.org/10.1111/jmi.13223
 
 Additionally, some plugins require citation themselves if used.
 You can determine which plugins require citation by reading the Help information for each plugin, accessible through CellProfiler, or by using the Citation generator built into CellProfiler (since CellProfiler 5).
