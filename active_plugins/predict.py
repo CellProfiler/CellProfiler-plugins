@@ -35,37 +35,6 @@ processing. For example, use **IdentifyPrimaryObjects** on a
 of the channels in **ColorToGray** is the same as the order of the
 labels within the ilastik project.
 
-CellProfiler automatically scales grayscale and color images to the
-[0.0, 1.0] range on load. Your ilastik classifier should be trained on
-images with the same scale as the prediction images. You can ensure
-consistent scales by:
-
--  using **ImageMath** to convert the images loaded by CellProfiler back
-   to their original scale. Use these settings to rescale an image:
-
-   -  **Operation**: *None*
-   -  **Multiply the first image by**: *RESCALE_VALUE*
-   -  **Set values greater than 1 equal to 1?**: *No*
-
-   where *RESCALE_VALUE* is determined by your image data and the value
-   of *Set intensity range from* in **NamesAndTypes**. For example, the
-   *RESCALE_VALUE* for 32-bit images rescaled by "*Image bit-depth*" is
-   65535 (the maximum value allowed by this data type). Please refer to
-   the help for the setting *Set intensity range from* in
-   **NamesAndTypes** for more information.
-
-   This option is best when your training and prediction images do not
-   require any preprocessing by CellProfiler.
-
--  preprocessing any training images with CellProfiler (e.g.,
-   **RescaleIntensity**) and applying the same pre-processing steps to
-   your analysis pipeline. You can use **SaveImages** to export training
-   images as 32-bit TIFFs.
-
-   This option requires two CellProfiler pipelines, but is effective
-   when your training and prediction images require preprocessing by
-   CellProfiler.
-
 Additionally, please ensure CellProfiler is configured to load images in
 the same format as ilastik. For example, if your ilastik classifier is
 trained on RGB images, use **NamesAndTypes** to load images as RGB by
@@ -139,13 +108,19 @@ Select the project type which matches the project file specified by
         image = workspace.image_set.get_image(self.x_name.value)
 
         x_data = image.pixel_data
+        x_data = x_data*image.scale
 
         fin = tempfile.NamedTemporaryFile(suffix=".h5", delete=False)
 
         fout = tempfile.NamedTemporaryFile(suffix=".h5", delete=False)
 
+        if self.executable.value[-4:] == ".app":
+            executable = os.path.join(self.executable.value, "Contents/MacOS/ilastik")
+        else:
+            executable = self.executable.value
+
         cmd = [
-            self.executable.value,
+            executable,
             "--headless",
             "--project",
             self.project_file.value,
@@ -156,9 +131,6 @@ Select the project type which matches the project file specified by
         if self.project_type.value in ["Pixel Classification"]:
             cmd += ["--export_source", "Probabilities"]
         elif self.project_type.value in ["Autocontext (2-stage)"]:
-            x_data = skimage.img_as_ubyte(
-                x_data
-            )  # ilastik requires UINT8. Might be relaxed in future.
 
             cmd += ["--export_source", "probabilities stage 2"]
             # cmd += ["--export_source", "probabilities all stages"]
