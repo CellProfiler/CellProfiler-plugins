@@ -131,9 +131,6 @@ Select the project type which matches the project file specified by
         if self.project_type.value in ["Pixel Classification"]:
             cmd += ["--export_source", "Probabilities"]
         elif self.project_type.value in ["Autocontext (2-stage)"]:
-            x_data = skimage.img_as_ubyte(
-                x_data
-            )  # ilastik requires UINT8. Might be relaxed in future.
 
             cmd += ["--export_source", "probabilities stage 2"]
             # cmd += ["--export_source", "probabilities all stages"]
