@@ -158,11 +158,8 @@ Select the project type which matches the project file specified by
         
         with h5py.File(fin.name, "w") as f:
             shape = x_data.shape
-
-            if x_data.ndim == 2:
-                # ilastik appears to add a channel dimension
-                # even if the image is grayscale
-                shape += (1,)
+            # Previously, code lived here that added an explicit channel dimension in grayscale
+            # It now seems to harm rather than help, but may need to be resurrected in some corner case not thoroughly tested
             
             f.create_dataset("data", shape, data=x_data)
 
