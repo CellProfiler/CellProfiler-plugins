@@ -20,7 +20,7 @@ import tempfile
 ##################################
 
 from cellprofiler_core.image import Image
-from cellprofiler_core.module.image_processing import ImageProcessing
+from cellprofiler_core.module import ImageProcessing
 from cellprofiler_core.setting.choice import Choice
 from cellprofiler_core.preferences import get_default_output_directory
 from cellprofiler_core.setting.text import (
@@ -58,7 +58,7 @@ Add more documentation.
 ILASTIK_DOCKER = "biocontainers/ilastik:1.4.0_cv2"
 
 class Runilastik(ImageProcessing):
-    module_name = "Runilastik"
+    module_name = "Rceunilastik"
 
     variable_revision_number = 1  
 
@@ -173,8 +173,8 @@ Select the project type which matches the project file specified by
             docker_path = "docker" if sys.platform.lower().startswith("win") else "/usr/local/bin/docker"
                        
             model_file = self.project_file.value
-            model_directory = self.project_file.get_absolute_path()
-
+            model_directory = os.path.dirname(os.path.abspath(model_file)) 
+            
             cmd = [f"{docker_path}", "run", "--rm", "-v", f"{temp_dir}:/data",
             "-v", f"{model_directory}:/model",
             f"{ILASTIK_DOCKER}", "/opt/ilastik-1.4.0-Linux/run_ilastik.sh", "--headless",
