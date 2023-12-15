@@ -4,7 +4,6 @@
 #
 #################################
 
-import numpy
 import os
 import skimage
 import subprocess
@@ -23,7 +22,7 @@ import tempfile
 ##################################
 
 from cellprofiler_core.image import Image
-from cellprofiler_core.module import Module
+from cellprofiler_core.module.image_processing import ImageProcessing
 from cellprofiler_core.setting.choice import Choice
 from cellprofiler_core.preferences import get_default_output_directory
 from cellprofiler_core.setting.text import (
@@ -60,7 +59,7 @@ Add more documentation.
 
 ILASTIK_DOCKER = "biocontainers/ilastik:1.4.0_cv2"
 
-class Runilastik(cellprofiler_core.module.ImageProcessing):
+class Runilastik(ImageProcessing):
     module_name = "Runilastik"
 
     variable_revision_number = 1  
@@ -130,7 +129,7 @@ Select the project type which matches the project file specified by
     def visible_settings(self):
         vis_settings = [self.docker_or_local]
 
-        if self.docker_or_python.value == "Local":
+        if self.docker_or_local.value == "Local":
             vis_settings += [self.executable]
 
         vis_settings += [self.x_name, self.y_name, self.project_file, self.project_type]
@@ -141,58 +140,63 @@ Select the project type which matches the project file specified by
         image = workspace.image_set.get_image(self.x_name.value)
 
         x_data = image.pixel_data
-        x_data = x_data*image.scale
+        x_data = x_data*image.scale    #rescale 
 
-        fin = tempfile.NamedTemporaryFile(suffix=".h5", delete=False)
+        # preparing the data
+        
+        # Directory that will be used to pass images to the docker container
 
-        fout = tempfile.NamedTemporaryFile(suffix=".h5", delete=False)
+        
+        temp_dir = os.path.join(get_default_output_directory(), ".cellprofiler_temp")
 
-        if self.executable.value[-4:] == ".app":
-            executable = os.path.join(self.executable.value, "Contents/MacOS/ilastik")
-        else:
-            executable = self.executable.value
+        os.makedirs(temp_dir, exist_ok=True)
+
+        fin = tempfile.NamedTemporaryFile(suffix=".h5", dir=temp_dir, delete=False)
+
+        fout = tempfile.NamedTemporaryFile(suffix=".h5", dir=temp_dir, delete=False)
+
+        
+        with h5py.File(fin.name, "w") as f:
+            shape = x_data.shape
+
+            if x_data.ndim == 2:
+                # ilastik appears to add a channel dimension
+                # even if the image is grayscale
+                shape += (1,)
+            
+            f.create_dataset("data", shape, data=x_data)
+
+        fin.close()
+
+        fout.close()
 
         if self.docker_or_local.value == "Docker":
             # Define how to call docker
             docker_path = "docker" if sys.platform.lower().startswith("win") else "/usr/local/bin/docker"
-            # Create a UUID for this run
-            unique_name = str(uuid.uuid4())
-            # Directory that will be used to pass images to the docker container
-            temp_dir = os.path.join(get_default_output_directory(), ".cellprofiler_temp", unique_name)
-            temp_img_dir = os.path.join(temp_dir, "img")
-            
-            os.makedirs(temp_dir, exist_ok=True)
-            os.makedirs(temp_img_dir, exist_ok=True)
-
-            temp_img_path = os.path.join(temp_img_dir, unique_name+".tiff")
-            
+                       
             model_file = self.project_file.value
             model_directory = self.project_file.get_absolute_path()
-            model_path = os.path.join(model_directory, model_file)
-            temp_model_dir = os.path.join(temp_dir, "model")
 
-            os.makedirs(temp_model_dir, exist_ok=True)
-            # Copy the model
-            shutil.copy(model_path, os.path.join(temp_model_dir, model_file))
-
-            # Save the image to the Docker mounted directory
-            skimage.io.imsave(temp_img_path, x_data)
-
-            cmd = f"""
-            {docker_path} run --rm -v {ILASTIK_DOCKER} /opt/ilastik-1.4.0-Linux/run_ilastik.sh {temp_dir}:/data
-            {'--project'+temp_model_dir+model_file} # {temp_model_dir}
-            {"--headless"}
-            {"--output_format", "hdf5"}
-            """
+            cmd = [f"{docker_path}", "run", "--rm", "-v", f"{temp_dir}:/data",
+            "-v", f"{model_directory}:/model",
+            f"{ILASTIK_DOCKER}", "/opt/ilastik-1.4.0-Linux/run_ilastik.sh", "--headless",
+            "--project", f"/model/{model_file}"
+            ]
 
         if self.docker_or_local.value == "Local":
 
+            if self.executable.value[-4:] == ".app":
+                executable = os.path.join(self.executable.value, "Contents/MacOS/ilastik")
+            else:
+                executable = self.executable.value
+
             cmd = [
-            self.executable.value,
+            executable,
             "--headless",
-            "--project", self.project_file.value,
-            "--output_format", "hdf5"
-        ]
+            "--project", self.project_file.value]
+
+        cmd += ["--output_format", "hdf5"]
+        
 
         if self.project_type.value in ["Pixel Classification"]:
             cmd += ["--export_source", "Probabilities"]
@@ -208,26 +212,13 @@ Select the project type which matches the project file specified by
         ]
 
         try:
-            with h5py.File(fin.name, "w") as f:
-                shape = x_data.shape
-
-                if x_data.ndim == 2:
-                  # ilastik appears to add a channel dimension
-                  # even if the image is grayscale
-                  shape += (1,)
-                
-                f.create_dataset("data", shape, data=x_data)
-
-            fin.close()
-
-            fout.close()
-
             subprocess.check_call(cmd)
+
 
             with h5py.File(fout.name, "r") as f:
                 y_data = f["exported_data"].value
 
-            y = cellprofiler_core.image.Image(y_data)
+            y = Image(y_data)
 
             workspace.image_set.add(self.y_name.value, y)
 
@@ -238,7 +229,7 @@ Select the project type which matches the project file specified by
 
                 workspace.display_data.dimensions = image.dimensions
         except subprocess.CalledProcessError as cpe:
-            logger.error("Command {} exited with status {}".format(cpe.output, cpe.returncode), cpe)
+            LOGGER.error("Command {} exited with status {}".format(cpe.output, cpe.returncode), cpe)
 
             raise cpe
         except IOError as ioe:
