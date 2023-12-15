@@ -7,6 +7,7 @@
 import os
 import subprocess
 import shutil
+import uuid
 import logging
 import sys
 import h5py 
@@ -143,9 +144,10 @@ Select the project type which matches the project file specified by
         # preparing the data
         
         # Directory that will be used to pass images to the docker container
-
+        # Create a UUID for this run
+        unique_name = str(uuid.uuid4())
         
-        temp_dir = os.path.join(get_default_output_directory(), ".cellprofiler_temp")
+        temp_dir = os.path.join(get_default_output_directory(), ".cellprofiler_temp", unique_name)
 
         os.makedirs(temp_dir, exist_ok=True)
 
@@ -175,10 +177,13 @@ Select the project type which matches the project file specified by
             model_file = self.project_file.value
             model_directory = os.path.dirname(os.path.abspath(model_file)) 
 
+            fout_name = f"/data/{os.path.basename(fout.name)}"
+            fin_name = f"/data/{os.path.basename(fin.name)}"
+
             cmd = [f"{docker_path}", "run", "--rm", "-v", f"{temp_dir}:/data",
             "-v", f"{model_directory}:/model",
             f"{ILASTIK_DOCKER}", "/opt/ilastik-1.4.0-Linux/run_ilastik.sh", "--headless",
-            "--project", f"/model/{model_file}"
+            "--project", f"/model/{os.path.basename(model_file)}"
             ]
 
         if self.docker_or_local.value == "Local":
@@ -187,6 +192,9 @@ Select the project type which matches the project file specified by
                 executable = os.path.join(self.executable.value, "Contents/MacOS/ilastik")
             else:
                 executable = self.executable.value
+
+            fout_name = fout.name
+            fin_name = fin.name
 
             cmd = [
             executable,
@@ -202,17 +210,14 @@ Select the project type which matches the project file specified by
             cmd += ["--export_source", "probabilities stage 2"]
             #cmd += ["--export_source", "probabilities all stages"]
 
-        cmd += [
-            "--output_filename_format", fout.name,
-            fin.name
-        ]
+        cmd += ["--output_filename_format", fout_name, fin_name]
 
         try:
             subprocess.check_call(cmd)
 
 
             with h5py.File(fout.name, "r") as f:
-                y_data = f["exported_data"].value
+                y_data = f["exported_data"][()]
 
             y = Image(y_data)
 
