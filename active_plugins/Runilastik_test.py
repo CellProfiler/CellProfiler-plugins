@@ -48,43 +48,14 @@ processing. For example, use **IdentifyPrimaryObjects** on a
 of the channels in **ColorToGray** is the same as the order of the
 labels within the ilastik project.
 
-CellProfiler automatically scales grayscale and color images to the
-[0.0, 1.0] range on load. Your ilastik classifier should be trained on
-images with the same scale as the prediction images. You can ensure
-consistent scales by:
-
--  using **ImageMath** to convert the images loaded by CellProfiler back
-   to their original scale. Use these settings to rescale an image:
-
-   -  **Operation**: *None*
-   -  **Multiply the first image by**: *RESCALE_VALUE*
-   -  **Set values greater than 1 equal to 1?**: *No*
-
-   where *RESCALE_VALUE* is determined by your image data and the value
-   of *Set intensity range from* in **NamesAndTypes**. For example, the
-   *RESCALE_VALUE* for 32-bit images rescaled by "*Image bit-depth*" is
-   65535 (the maximum value allowed by this data type). Please refer to
-   the help for the setting *Set intensity range from* in
-   **NamesAndTypes** for more information.
-
-   This option is best when your training and prediction images do not
-   require any preprocessing by CellProfiler.
-
--  preprocessing any training images with CellProfiler (e.g.,
-   **RescaleIntensity**) and applying the same pre-processing steps to
-   your analysis pipeline. You can use **SaveImages** to export training
-   images as 32-bit TIFFs.
-
-   This option requires two CellProfiler pipelines, but is effective
-   when your training and prediction images require preprocessing by
-   CellProfiler.
-
 Additionally, please ensure CellProfiler is configured to load images in
 the same format as ilastik. For example, if your ilastik classifier is
 trained on RGB images, use **NamesAndTypes** to load images as RGB by
 selecting "*Color image*" from the *Select the image type* dropdown. If
 your classifier expects grayscale images, use **NamesAndTypes** to load
 images as "*Grayscale image*".
+
+Add more documentation.
 """
 
 ILASTIK_DOCKER = "biocontainers/ilastik:1.4.0_cv2"
@@ -92,7 +63,7 @@ ILASTIK_DOCKER = "biocontainers/ilastik:1.4.0_cv2"
 class Runilastik(cellprofiler_core.module.ImageProcessing):
     module_name = "Runilastik"
 
-    variable_revision_number = 1  #did not understand what this means 
+    variable_revision_number = 1  
 
     doi = {
         "Please cite the following when using Runilastik:": "https://doi.org/10.1038/s41592-019-0582-9",
@@ -194,23 +165,27 @@ Select the project type which matches the project file specified by
             os.makedirs(temp_img_dir, exist_ok=True)
 
             temp_img_path = os.path.join(temp_img_dir, unique_name+".tiff")
-            if self.mode.value == "custom":
-                model_file = self.model_file_name.value
-                model_directory = self.model_directory.get_absolute_path()
-                model_path = os.path.join(model_directory, model_file)
-                temp_model_dir = os.path.join(temp_dir, "model")
+            
+            model_file = self.project_file.value
+            model_directory = self.project_file.get_absolute_path()
+            model_path = os.path.join(model_directory, model_file)
+            temp_model_dir = os.path.join(temp_dir, "model")
 
-                os.makedirs(temp_model_dir, exist_ok=True)
-                # Copy the model
-                shutil.copy(model_path, os.path.join(temp_model_dir, model_file))
+            os.makedirs(temp_model_dir, exist_ok=True)
+            # Copy the model
+            shutil.copy(model_path, os.path.join(temp_model_dir, model_file))
 
             # Save the image to the Docker mounted directory
             skimage.io.imsave(temp_img_path, x_data)
 
             cmd = f"""
             {docker_path} run --rm -v {ILASTIK_DOCKER} /opt/ilastik-1.4.0-Linux/run_ilastik.sh {temp_dir}:/data
-            {'--project'+temp_model_dir+model_file}
+            {'--project'+temp_model_dir+model_file} # {temp_model_dir}
+            {"--headless"}
+            {"--output_format", "hdf5"}
             """
+
+        if self.docker_or_local.value == "Local":
 
             cmd = [
             self.executable.value,
