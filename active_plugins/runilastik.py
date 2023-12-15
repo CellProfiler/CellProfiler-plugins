@@ -58,7 +58,7 @@ Add more documentation.
 ILASTIK_DOCKER = "biocontainers/ilastik:1.4.0_cv2"
 
 class Runilastik(ImageProcessing):
-    module_name = "Rceunilastik"
+    module_name = "Runilastik"
 
     variable_revision_number = 1  
 
@@ -174,7 +174,7 @@ Select the project type which matches the project file specified by
                        
             model_file = self.project_file.value
             model_directory = os.path.dirname(os.path.abspath(model_file)) 
-            
+
             cmd = [f"{docker_path}", "run", "--rm", "-v", f"{temp_dir}:/data",
             "-v", f"{model_directory}:/model",
             f"{ILASTIK_DOCKER}", "/opt/ilastik-1.4.0-Linux/run_ilastik.sh", "--headless",
