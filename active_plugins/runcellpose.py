@@ -673,6 +673,7 @@ The default is set to "Yes".
     def do_check_gpu(self):
         import importlib.util
         torch_installed = importlib.util.find_spec('torch') is not None
+        self.cellpose_ver = importlib.metadata.version('cellpose')
         #if the old version of cellpose <2.0, then use istorch kwarg
         if float(self.cellpose_ver[0:3]) >= 0.7 and int(self.cellpose_ver[0])<2:
             GPU_works = core.use_gpu(istorch=torch_installed)
