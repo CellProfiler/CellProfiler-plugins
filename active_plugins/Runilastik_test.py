@@ -5,9 +5,7 @@
 #################################
 
 import os
-import skimage
 import subprocess
-import uuid
 import shutil
 import logging
 import sys
@@ -201,8 +199,6 @@ Select the project type which matches the project file specified by
         if self.project_type.value in ["Pixel Classification"]:
             cmd += ["--export_source", "Probabilities"]
         elif self.project_type.value in ["Autocontext (2-stage)"]:
-            x_data = skimage.img_as_ubyte(x_data)  # ilastik requires UINT8. Might be relaxed in future.
-
             cmd += ["--export_source", "probabilities stage 2"]
             #cmd += ["--export_source", "probabilities all stages"]
 
@@ -238,4 +234,12 @@ Select the project type which matches the project file specified by
             os.unlink(fin.name)
 
             os.unlink(fout.name)
+
+            # Delete the temporary files
+            try:
+                shutil.rmtree(temp_dir)
+            except:
+                LOGGER.error("Unable to delete temporary directory, files may be in use by another program.")
+                LOGGER.error("Temp folder is subfolder {tempdir} in your Default Output Folder.\nYou may need to remove it manually.")
+
             
