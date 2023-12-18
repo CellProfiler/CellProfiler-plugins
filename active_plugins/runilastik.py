@@ -54,8 +54,11 @@ selecting "*Color image*" from the *Select the image type* dropdown. If
 your classifier expects grayscale images, use **NamesAndTypes** to load
 images as "*Grayscale image*".
 
-Runilastik module will not run analysis on local installation of ilastik on a Windows system. Please use Docker instead. 
+Runilastik module will not run analysis mode on local installation of ilastik on a Windows system. Please use Docker instead. 
 
+A note to the mac users - this module takes a longer time to run using the Docker. 
+
+The Docker that is used to run this module can be found here - https://hub.docker.com/layers/biocontainers/ilastik/1.4.0_cv2/images/sha256-0ccbca62d9efc63918d9de3b9b2bb5b1265a084f8b6410fd8c34e62869549791?context=explore
 """
 
 #Link to the ilastik biocontainer. We should make changes in the module such that the user will be able to choose any ilastik docker they would like. 
