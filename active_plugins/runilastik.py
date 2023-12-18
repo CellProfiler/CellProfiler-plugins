@@ -24,6 +24,7 @@ from cellprofiler_core.image import Image
 from cellprofiler_core.module import ImageProcessing
 from cellprofiler_core.setting.choice import Choice
 from cellprofiler_core.preferences import get_default_output_directory
+from cellprofiler_core.setting import ValidationError
 from cellprofiler_core.setting.text import (
     Directory,
     Filename,
@@ -53,23 +54,25 @@ selecting "*Color image*" from the *Select the image type* dropdown. If
 your classifier expects grayscale images, use **NamesAndTypes** to load
 images as "*Grayscale image*".
 
-Add more documentation.
+Runilastik module will not run analysis on local installation of ilastik on a Windows system. Please use Docker instead. 
+
 """
 
+#Link to the ilastik biocontainer. We should make changes in the module such that the user will be able to choose any ilastik docker they would like. 
 ILASTIK_DOCKER = "biocontainers/ilastik:1.4.0_cv2"
 
 class Runilastik(ImageProcessing):
     module_name = "Runilastik"
 
-    variable_revision_number = 1  
+    variable_revision_number = 1  # the number of variations made to this module 
 
     doi = {
-        "Please cite the following when using Runilastik:": "https://doi.org/10.1038/s41592-019-0582-9",
+        "Please cite the following when using Runilastik:": "https://doi.org/10.1038/s41592-019-0582-9", # doi ias added such that it is easier for citations
     }
 
     def create_settings(self):
         super(Runilastik, self).create_settings()
-
+        
         self.docker_or_local = Choice(
             text="Run ilastik in docker or local environment",
             choices=["Docker", "Local"],
@@ -125,7 +128,8 @@ Select the project type which matches the project file specified by
             self.project_file,
             self.project_type,
         ]
-    def visible_settings(self):
+    # A function to define what settings should be displayed if an user chooses specific setting 
+    def visible_settings(self): 
         vis_settings = [self.docker_or_local]
 
         if self.docker_or_local.value == "Local":
@@ -135,6 +139,22 @@ Select the project type which matches the project file specified by
         
         return vis_settings
     
+    # Give a warning if the user chooses "analysis mode"
+    def validate_module_warnings(self, docker_or_local):
+        """Warn user re: Analysis mode"""
+        if self.docker_or_local.value == "Docker":
+            if not sys.platform.lower().startswith("win"):
+                raise ValidationError(
+                    "Analysis mode will take a long time to run using Docker",
+                    self.docker_or_local,
+                )
+        if self.docker_or_local.value == "Local":
+            if self.executable.value[-4:] == ".exe":
+                raise ValidationError(
+                    "Sorry, analysis will not run on Windows with the local installation of the ilastik. Please try Docker instead.",
+                    self.docker_or_local,
+                )
+
     def run(self, workspace):
         image = workspace.image_set.get_image(self.x_name.value)
 
@@ -142,15 +162,15 @@ Select the project type which matches the project file specified by
         x_data = x_data*image.scale    #rescale 
 
         # preparing the data
-        
-        # Directory that will be used to pass images to the docker container
         # Create a UUID for this run
         unique_name = str(uuid.uuid4())
         
+        # Directory that will be used to pass images to the docker container
         temp_dir = os.path.join(get_default_output_directory(), ".cellprofiler_temp", unique_name)
 
         os.makedirs(temp_dir, exist_ok=True)
 
+        #The input image files are converted into h5 format and saved in the temporary directory 
         fin = tempfile.NamedTemporaryFile(suffix=".h5", dir=temp_dir, delete=False)
 
         fout = tempfile.NamedTemporaryFile(suffix=".h5", dir=temp_dir, delete=False)
@@ -170,7 +190,7 @@ Select the project type which matches the project file specified by
         if self.docker_or_local.value == "Docker":
             # Define how to call docker
             docker_path = "docker" if sys.platform.lower().startswith("win") else "/usr/local/bin/docker"
-                       
+            # The project file is stored in a directory which can be pointed to the docker            
             model_file = self.project_file.value
             model_directory = os.path.dirname(os.path.abspath(model_file)) 
 
@@ -181,7 +201,7 @@ Select the project type which matches the project file specified by
             "-v", f"{model_directory}:/model",
             f"{ILASTIK_DOCKER}", "/opt/ilastik-1.4.0-Linux/run_ilastik.sh", "--headless",
             "--project", f"/model/{os.path.basename(model_file)}"
-            ]
+            ] # '"/opt/ilastik-1.4.0-Linux/run_ilastik.sh"' this command is specific to the ilastik biocontainer
 
         if self.docker_or_local.value == "Local":
 
