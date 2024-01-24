@@ -130,8 +130,11 @@ conda activate ENV_NAME
 pip install REQUIREMENT
 ```
 ```{admonition} e.g. using RunImageJScript plugin
+
 conda create --name cp-ij python=3.8
+
 conda activate cp-ij
+
 pip install pyimagej
 ```
 
