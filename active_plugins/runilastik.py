@@ -63,6 +63,7 @@ The Docker that is used to run this module can be found here - https://hub.docke
 
 #Link to the ilastik biocontainer. We should make changes in the module such that the user will be able to choose any ilastik docker they would like. 
 ILASTIK_DOCKER = "biocontainers/ilastik:1.4.0_cv2"
+#TODO - this becomes a dictionary, with the current docker name and the executable as a key/value pair, as well as a key (value not important) for "select your own"
 
 class Runilastik(ImageProcessing):
     module_name = "Runilastik"
@@ -90,6 +91,10 @@ If Local is selected, the local install of ilastik will be used.
 """,
         )
 
+        #TODO- add a setting for picking the docker name, with the dict keys as choices, visible only when the user is using Docker
+        #TODO- add a setting for putting in the docker name, visible only when the user is using Docker and picked they want to choose their own
+        #TODO- add a setting for the inside-the-docker executable path, visible at same time as above
+        
         self.executable = Pathname(
             "Executable",
             doc="ilastik command line executable name, or location if it is not on your path."
@@ -133,6 +138,7 @@ Select the project type which matches the project file specified by
         ]
     # A function to define what settings should be displayed if an user chooses specific setting 
     def visible_settings(self): 
+        #TODO - add logic around "which Docker" settings
         vis_settings = [self.docker_or_local]
 
         if self.docker_or_local.value == "Local":
@@ -200,6 +206,10 @@ Select the project type which matches the project file specified by
             fout_name = f"/data/{os.path.basename(fout.name)}"
             fin_name = f"/data/{os.path.basename(fin.name)}"
 
+            #TODO - set the ilastik docker variable based on the setting above's .value if in our dictionary, otherwise, the setting where the user typed it in 's .value
+            #TODO- if statement that says "if the ilastik Docker's name came from our dictionary, set the runpath to the the value of the dictionary, otherwise, get it from the setting where the user can type it
+            #TODO - then put the variable from that if statement into the cmd below
+            
             cmd = [f"{docker_path}", "run", "--rm", "-v", f"{temp_dir}:/data",
             "-v", f"{model_directory}:/model",
             f"{ILASTIK_DOCKER}", "/opt/ilastik-1.4.0-Linux/run_ilastik.sh", "--headless",
