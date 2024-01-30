@@ -29,6 +29,7 @@ from cellprofiler_core.setting.text import (
     Directory,
     Filename,
     Pathname,
+    Text,
 )
 
 ilastik_link = "https://doi.org/10.1038/s41592-019-0582-9"
@@ -62,7 +63,8 @@ The Docker that is used to run this module can be found here - https://hub.docke
 """
 
 #Link to the ilastik biocontainer. We should make changes in the module such that the user will be able to choose any ilastik docker they would like. 
-ILASTIK_DOCKER = "biocontainers/ilastik:1.4.0_cv2"
+ILASTIK_DOCKER = {"biocontainers/ilastik:1.4.0_cv2":'/opt/ilastik-1.4.0-Linux/run_ilastik.sh', "select your own":''}
+ILASTIK_DOCKER_1 = "biocontainers/ilastik:1.4.0_cv2"
 #TODO - this becomes a dictionary, with the current docker name and the executable as a key/value pair, as well as a key (value not important) for "select your own"
 
 class Runilastik(ImageProcessing):
@@ -94,7 +96,31 @@ If Local is selected, the local install of ilastik will be used.
         #TODO- add a setting for picking the docker name, with the dict keys as choices, visible only when the user is using Docker
         #TODO- add a setting for putting in the docker name, visible only when the user is using Docker and picked they want to choose their own
         #TODO- add a setting for the inside-the-docker executable path, visible at same time as above
-        
+               
+        self.docker_choice = Choice(
+            text="Choose the docker",
+            choices = list(ILASTIK_DOCKER.keys()),
+            doc="""
+Choose the docker that you would like to use for running ilastik
+"""
+        )
+
+        self.custom_docker_name = Text(
+            "Enter the docker name ",
+            value="",
+            doc="""
+Please give your docker name
+"""
+        )
+
+        self.docker_executable = Text(
+            "Enter the executable command needed to run the docker",
+            value="",
+            doc="""
+Please provide the executable command that is needed to run the docker command. You can find this in the github page of the docker.
+"""
+        )
+
         self.executable = Pathname(
             "Executable",
             doc="ilastik command line executable name, or location if it is not on your path."
@@ -140,6 +166,11 @@ Select the project type which matches the project file specified by
     def visible_settings(self): 
         #TODO - add logic around "which Docker" settings
         vis_settings = [self.docker_or_local]
+        if self.docker_or_local.value == "Docker":
+            vis_settings += [self.docker_choice]
+
+            if self.docker_choice == "select your own":
+                vis_settings += [self.custom_docker_name, self.docker_executable]
 
         if self.docker_or_local.value == "Local":
             vis_settings += [self.executable]
@@ -210,11 +241,15 @@ Select the project type which matches the project file specified by
             #TODO- if statement that says "if the ilastik Docker's name came from our dictionary, set the runpath to the the value of the dictionary, otherwise, get it from the setting where the user can type it
             #TODO - then put the variable from that if statement into the cmd below
             
-            cmd = [f"{docker_path}", "run", "--rm", "-v", f"{temp_dir}:/data",
-            "-v", f"{model_directory}:/model",
-            f"{ILASTIK_DOCKER}", "/opt/ilastik-1.4.0-Linux/run_ilastik.sh", "--headless",
-            "--project", f"/model/{os.path.basename(model_file)}"
-            ] # '"/opt/ilastik-1.4.0-Linux/run_ilastik.sh"' this command is specific to the ilastik biocontainer
+            if self.docker_choice.value == "select your own":
+                ILASTIK_DOCKER_choice = self.custom_docker_name.value 
+                ILASTIK_command = self.docker_executable.value
+
+                cmd = [f"{docker_path}", "run", "--rm", "-v", f"{temp_dir}:/data",
+                "-v", f"{model_directory}:/model",
+                f"{ILASTIK_DOCKER_choice}", f"{ILASTIK_command}", "--headless",
+                "--project", f"/model/{os.path.basename(model_file)}"
+                ] # '"/opt/ilastik-1.4.0-Linux/run_ilastik.sh"' this command is specific to the ilastik biocontainer
 
         if self.docker_or_local.value == "Local":
 
