@@ -64,7 +64,6 @@ The Docker that is used to run this module can be found here - https://hub.docke
 
 #Link to the ilastik biocontainer. We should make changes in the module such that the user will be able to choose any ilastik docker they would like. 
 ILASTIK_DOCKER = {"biocontainers/ilastik:1.4.0_cv2":'/opt/ilastik-1.4.0-Linux/run_ilastik.sh', "select your own":''}
-ILASTIK_DOCKER_1 = "biocontainers/ilastik:1.4.0_cv2"
 #TODO - this becomes a dictionary, with the current docker name and the executable as a key/value pair, as well as a key (value not important) for "select your own"
 
 class Runilastik(ImageProcessing):
@@ -245,11 +244,15 @@ Select the project type which matches the project file specified by
                 ILASTIK_DOCKER_choice = self.custom_docker_name.value 
                 ILASTIK_command = self.docker_executable.value
 
-                cmd = [f"{docker_path}", "run", "--rm", "-v", f"{temp_dir}:/data",
-                "-v", f"{model_directory}:/model",
-                f"{ILASTIK_DOCKER_choice}", f"{ILASTIK_command}", "--headless",
-                "--project", f"/model/{os.path.basename(model_file)}"
-                ] # '"/opt/ilastik-1.4.0-Linux/run_ilastik.sh"' this command is specific to the ilastik biocontainer
+            if not self.docker_choice.value == "select your own":
+                ILASTIK_DOCKER_choice = self.docker_choice.value
+                ILASTIK_command = ILASTIK_DOCKER[ILASTIK_DOCKER_choice]
+            
+            cmd = [f"{docker_path}", "run", "--rm", "-v", f"{temp_dir}:/data",
+            "-v", f"{model_directory}:/model",
+            f"{ILASTIK_DOCKER_choice}", f"{ILASTIK_command}", "--headless",
+            "--project", f"/model/{os.path.basename(model_file)}"
+            ] # '"/opt/ilastik-1.4.0-Linux/run_ilastik.sh"' this command is specific to the ilastik biocontainer
 
         if self.docker_or_local.value == "Local":
 
