@@ -63,6 +63,7 @@ The Docker that is used to run this module can be found here - https://hub.docke
 """
 
 #Link to the ilastik biocontainer. We should make changes in the module such that the user will be able to choose any ilastik docker they would like. 
+#ILASTIK_DOCKER is a dictionary where the keys are the names of the different docker containers and the values are the commands that are needed to run the respective docker container. 
 ILASTIK_DOCKER = {"biocontainers/ilastik:1.4.0_cv2":'/opt/ilastik-1.4.0-Linux/run_ilastik.sh', "select your own":''}
 #TODO - this becomes a dictionary, with the current docker name and the executable as a key/value pair, as well as a key (value not important) for "select your own"
 
@@ -113,7 +114,7 @@ Please give your docker name
         )
 
         self.docker_executable = Text(
-            "Enter the executable command needed to run the docker",
+            "Enter the executable command to run the docker",
             value="",
             doc="""
 Please provide the executable command that is needed to run the docker command. You can find this in the github page of the docker.
