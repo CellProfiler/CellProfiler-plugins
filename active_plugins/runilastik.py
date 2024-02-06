@@ -59,13 +59,14 @@ Runilastik module will not run analysis mode on local installation of ilastik on
 
 A note to the mac users - this module takes a longer time to run using the Docker. 
 
-The Docker that is used to run this module can be found here - https://hub.docker.com/layers/biocontainers/ilastik/1.4.0_cv2/images/sha256-0ccbca62d9efc63918d9de3b9b2bb5b1265a084f8b6410fd8c34e62869549791?context=explore
+Links to the Docker containers,
+ biocontainers/ilastik:1.4.0_cv2 - https://hub.docker.com/layers/biocontainers/ilastik/1.4.0_cv2/images/sha256-0ccbca62d9efc63918d9de3b9b2bb5b1265a084f8b6410fd8c34e62869549791?context=explore
+ ilastik/ilastik-from-binary:1.4.0b13 - https://hub.docker.com/layers/ilastik/ilastik-from-binary/1.4.0b13/images/sha256-e3a4044a5ac6f2086f4bf006c8a95e2bd6a6fbfb68831bb4ba47baf2fafba988?context=explore
 """
 
-#Link to the ilastik biocontainer. We should make changes in the module such that the user will be able to choose any ilastik docker they would like. 
 #ILASTIK_DOCKER is a dictionary where the keys are the names of the different docker containers and the values are the commands that are needed to run the respective docker container. 
 ILASTIK_DOCKER = {"biocontainers/ilastik:1.4.0_cv2":'/opt/ilastik-1.4.0-Linux/run_ilastik.sh','ilastik/ilastik-from-binary:1.4.0b13':'./run_ilastik.sh', "select your own":''}
-#Another container that did not work - {'ilastik/ilastik-from-source:0.0.1a1':'. ~/.bashrc && python ilastik.py'}
+#Docker container that did not work - {'ilastik/ilastik-from-source:0.0.1a1':'. ~/.bashrc && python ilastik.py'}
 
 
 class Runilastik(ImageProcessing):
@@ -169,8 +170,7 @@ Select the project type which matches the project file specified by
 
             if self.docker_choice == "select your own":
                 vis_settings += [self.custom_docker_name, self.docker_executable]
-
-        if self.docker_or_local.value == "Local":
+        else:
             vis_settings += [self.executable]
 
         vis_settings += [self.x_name, self.y_name, self.project_file, self.project_type]
@@ -186,7 +186,7 @@ Select the project type which matches the project file specified by
                     "Analysis mode will take a long time to run using Docker",
                     self.docker_or_local,
                 )
-        if self.docker_or_local.value == "Local":
+        else: 
             if self.executable.value[-4:] == ".exe":
                 raise ValidationError(
                     "Sorry, analysis will not run on Windows with the local installation of the ilastik. Please try Docker instead.",
@@ -240,7 +240,7 @@ Select the project type which matches the project file specified by
                 ILASTIK_DOCKER_choice = self.custom_docker_name.value 
                 ILASTIK_command = self.docker_executable.value
 
-            if not self.docker_choice.value == "select your own":
+            else: 
                 ILASTIK_DOCKER_choice = self.docker_choice.value
                 ILASTIK_command = ILASTIK_DOCKER[ILASTIK_DOCKER_choice]
             
@@ -248,7 +248,7 @@ Select the project type which matches the project file specified by
             "-v", f"{model_directory}:/model",
             f"{ILASTIK_DOCKER_choice}", f"{ILASTIK_command}", "--headless",
             "--project", f"/model/{os.path.basename(model_file)}"
-            ] # '"/opt/ilastik-1.4.0-Linux/run_ilastik.sh"' this command is specific to the ilastik biocontainer
+            ] 
 
         if self.docker_or_local.value == "Local":
 
