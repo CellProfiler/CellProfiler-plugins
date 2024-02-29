@@ -11,7 +11,7 @@ else:
                 ]
 
     cellpose_deps = [
-        "cellpose>=1.0.2"
+        "cellpose<3.0"
     ]
 
     omnipose_deps = [
