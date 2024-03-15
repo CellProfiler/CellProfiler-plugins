@@ -429,14 +429,16 @@ TODO. """,
         if self.save_probabilities.value:
             vis_settings += [self.probabilities_name]
 
-        vis_settings += [self.use_averaging, self.use_gpu]
+        vis_settings += [self.use_averaging, self.make_primary_secondary]
+
+        if self.make_primary_secondary.value:
+            vis_settings+=[self.primary_object_type,self.filtered_primary_object_name]
+
+        vis_settings += [self.use_gpu]
 
         if self.docker_or_python.value == 'Python':
             if self.use_gpu.value:
                 vis_settings += [self.gpu_test, self.manual_GPU_memory_share]
-
-        if self.make_primary_secondary.value:
-            vis_settings+=[self.primary_object_type,self.filtered_primary_object_name]
 
         return vis_settings
 
