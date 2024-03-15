@@ -26,7 +26,7 @@ from cellprofiler_core.object import Objects
 from cellprofiler_core.setting import Binary, ValidationError
 from cellprofiler_core.setting.choice import Choice
 from cellprofiler_core.setting.do_something import DoSomething
-from cellprofiler_core.setting.subscriber import ImageSubscriber
+from cellprofiler_core.setting.subscriber import ImageSubscriber, LabelSubscriber
 from cellprofiler_core.preferences import get_default_output_directory
 from cellprofiler_core.setting.text import (
     Integer,
@@ -34,6 +34,7 @@ from cellprofiler_core.setting.text import (
     Directory,
     Filename,
     Float,
+    LabelName,
 )
 
 CUDA_LINK = "https://pytorch.org/get-started/locally/"
@@ -95,7 +96,7 @@ class RunCellpose(ImageSegmentation):
 
     module_name = "RunCellpose"
 
-    variable_revision_number = 4
+    variable_revision_number = 5
 
     doi = {
         "Please cite the following when using RunCellPose:": "https://doi.org/10.1038/s41592-020-01018-x",
@@ -337,6 +338,28 @@ The default is set to "Yes".
 """,
         )
 
+        self.make_primary_secondary = Binary(
+            text="Bring in a previous object as a 'primary' object and make this a 'secondary' object?",
+            value=False,
+            doc="""
+TODO
+""",            
+        )
+
+        self.primary_object_type = LabelSubscriber(
+            "Primary objects",
+            doc="""\
+TODO.
+            """,
+        )
+
+        self.filtered_primary_object_name = LabelName(
+            "Name to call the filtred primary objects",
+            "FilteredPrimaryObjects",
+            doc="""\
+TODO. """,
+        )
+
     def settings(self):
         return [
             self.x_name,
@@ -362,6 +385,9 @@ The default is set to "Yes".
             self.omni,
             self.invert,
             self.remove_edge_masks,
+            self.make_primary_secondary,
+            self.primary_object_type,
+            self.filtered_primary_object_name,
         ]
 
     def visible_settings(self):
@@ -408,6 +434,9 @@ The default is set to "Yes".
         if self.docker_or_python.value == 'Python':
             if self.use_gpu.value:
                 vis_settings += [self.gpu_test, self.manual_GPU_memory_share]
+
+        if self.make_primary_secondary.value:
+            vis_settings+=[self.primary_object_type,self.filtered_primary_object_name]
 
         return vis_settings
 
@@ -699,4 +728,6 @@ The default is set to "Yes".
         if variable_revision_number == 3:
             setting_values = [setting_values[0]] + ["Python",CELLPOSE_DOCKER_IMAGE_WITH_PRETRAINED] + setting_values[1:]
             variable_revision_number = 4
+        if variable_revision_number == 4:
+            setting_values += [False,"None","FilteredPrimaryObject"]
         return setting_values, variable_revision_number
