@@ -639,15 +639,23 @@ TODO. """,
             # pull the primary object segementations
             pre_primary_objects = workspace.object_set.get_objects(self.primary_object_type.value)
             pre_primary_labels = pre_primary_objects.segmented
+            
             # for each primary object, find the secondary object it most overlaps
+            
             # tiebreaker step - if multiple primary objects pick the same secondary object, pick the one with the most % overlap with the secondary object and throw the other(s) away
             # tiebreaker step part 2 - if above still results in a tie, pick the one with the most area inside the secondary object and throw the other(s) away
             # we could write a fancier heuristic to not throw things out above but instead try to rematch them but Beth doesn't wanna
+            
             # for each primary object left, if it doesn't have a secondary object, throw it away
+            
             # for each secondary object, see if it has a primary object, if not, throw it away  
+
+            # for the two object sets now, renumber them to make the numbers sequential
+            
             # add a parent child relationship as if it were 'real' 1* and 2*
             # TODO - right variable names, but this is from IDSecondary
             # children_per_parent, parents_of_children = objects.relate_children(objects_out)
+            
             # add the filtered primary object to the workspace - we'll add the new secondary in the code below
             primary_objects = Objects()
             primary_objects.segmented = some_var #TODO -figure out what this is
