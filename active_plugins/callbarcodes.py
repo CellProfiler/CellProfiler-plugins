@@ -48,21 +48,27 @@ One column contains the known barcodes that you will be matching against.
 One column contains the corresponding gene/transcript names.
 All other columns in the .csv will be ignored.
 
-Before running this module in your pipeline, you need to identify the objects in which you will be calling your barcodes and you will need to have measured the intensities of each object in four channels corresponding to nucleotides A,C,T, and G.
+Before running this module in your pipeline, you need to identify the objects in which you will be calling your barcodes and you will need to have measured the intensities of each object in four channels corresponding to nucleotides A,C,T, and G. 
+
+Your images for each nucleotide channel per cycle must be named in a particular way for this module to work as intended. For example, 'Cycle01_A_BackSub' is a valid name. Begin with 'Cycle' then the cycle number '01, 02...', then the nucleotide and any other information can follow.
+
 If the background intensities of your four channels are not very well matched, you might want to run the **CompensateColors** module before measuring the object intensities.
 
 What do I get as output?
 ^^^^^^^^^^^^^^^^^^^^^^^^
-To be added
+Image- and object-level measurements about barcode calling and score. Optionally, images of objects color-coded by barcode call or matching score.
 
 Measurements made by this module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Within the InputObject.csv, this module outputs the following measurements:
-- BarcodeCalled is the n-cycle string of the barcode sequence that was read by the module
-- MatchedTo_Barcode is the known barcode that the module best matched to the called barcode
-- MatchedTo_ID is an ID number assigned to each known barcode
-- MatchedTo_GeneCode is the known gene/transcript name that corresponds to the known barcode
-- MatchedTo_Score is the quality of the called barcode to known barcode match, reported as (matching nucleotides)/(total nucleotides) where 1 is a perfect match
+
+-  **BarcodeCalled** is the n-cycle string of the barcode sequence that was read by the module
+-  **BarcodeCalled** is the n-cycle string of the barcode sequence that was read by the module
+-  **BarcodeCalled** is the n-cycle string of the barcode sequence that was read by the module
+-  **MatchedTo_Barcode** is the known barcode that the module best matched to the called barcode
+-  **MatchedTo_ID** is an ID number assigned to each known barcode
+-  **MatchedTo_GeneCode** is the known gene/transcript name that corresponds to the known barcode
+-  **MatchedTo_Score** is the quality of the called barcode to known barcode match, reported as (matching nucleotides)/(total nucleotides) where 1 is a perfect match
 
 Note that CellProfiler cannot create a per-parent mean measurement of a string.
 
@@ -137,22 +143,22 @@ Enter the number of cycles present in the data.
             self.input_object_name.get_value,
             "AreaShape_Area",
             doc="""\
-This measurement should be """,
+This measurement should be an intensity measure that is measured for every cycle and is of a category that distinguishes different nucleotides. If named correctly (see main module input help), this module will gather the appropriate measurement for all nucleotides. For example, choosing the maximum intensity in the channel for nucleotide A will also use max intensity for C, T, G.""",
         )
 
         self.metadata_field_barcode = cellprofiler_core.setting.choice.Choice(
-            "Select the column of barcodes to match against",
+            "Select the column containing barcodes to match against",
             ["No CSV file"],
             choices_fn=self.get_choices,
-            doc="""\Select the column of barcodes to match against.
+            doc="""\Select the column containing barcodes to match against.
 """,
         )
 
         self.metadata_field_tag = cellprofiler_core.setting.choice.Choice(
-            "Select the column with gene/transcript barcode names",
+            "Select the column containing gene/transcript barcode names",
             ["No CSV file"],
             choices_fn=self.get_choices,
-            doc="""\Select the column with gene/transcript barcode names.
+            doc="""\Select the column containing gene/transcript barcode names.
 """,
         )
 
