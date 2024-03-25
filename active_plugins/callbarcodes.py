@@ -63,8 +63,6 @@ Measurements made by this module
 Within the InputObject.csv, this module outputs the following measurements:
 
 -  **BarcodeCalled** is the n-cycle string of the barcode sequence that was read by the module
--  **BarcodeCalled** is the n-cycle string of the barcode sequence that was read by the module
--  **BarcodeCalled** is the n-cycle string of the barcode sequence that was read by the module
 -  **MatchedTo_Barcode** is the known barcode that the module best matched to the called barcode
 -  **MatchedTo_ID** is an ID number assigned to each known barcode
 -  **MatchedTo_GeneCode** is the known gene/transcript name that corresponds to the known barcode
