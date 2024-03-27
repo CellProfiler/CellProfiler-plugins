@@ -26,7 +26,7 @@ from cellprofiler_core.object import Objects
 from cellprofiler_core.setting import Binary, ValidationError
 from cellprofiler_core.setting.choice import Choice
 from cellprofiler_core.setting.do_something import DoSomething
-from cellprofiler_core.setting.subscriber import ImageSubscriber
+from cellprofiler_core.setting.subscriber import ImageSubscriber, LabelSubscriber
 from cellprofiler_core.preferences import get_default_output_directory
 from cellprofiler_core.setting.text import (
     Integer,
@@ -34,6 +34,7 @@ from cellprofiler_core.setting.text import (
     Directory,
     Filename,
     Float,
+    LabelName,
 )
 
 CUDA_LINK = "https://pytorch.org/get-started/locally/"
@@ -95,7 +96,7 @@ class RunCellpose(ImageSegmentation):
 
     module_name = "RunCellpose"
 
-    variable_revision_number = 4
+    variable_revision_number = 5
 
     doi = {
         "Please cite the following when using RunCellPose:": "https://doi.org/10.1038/s41592-020-01018-x",
@@ -337,6 +338,28 @@ The default is set to "Yes".
 """,
         )
 
+        self.make_primary_secondary = Binary(
+            text="Bring in a previous object as a 'primary' object and make this a 'secondary' object?",
+            value=False,
+            doc="""
+TODO
+""",            
+        )
+
+        self.primary_object_type = LabelSubscriber(
+            "Primary objects",
+            doc="""\
+TODO.
+            """,
+        )
+
+        self.filtered_primary_object_name = LabelName(
+            "Name to call the filtred primary objects",
+            "FilteredPrimaryObjects",
+            doc="""\
+TODO. """,
+        )
+
     def settings(self):
         return [
             self.x_name,
@@ -362,6 +385,9 @@ The default is set to "Yes".
             self.omni,
             self.invert,
             self.remove_edge_masks,
+            self.make_primary_secondary,
+            self.primary_object_type,
+            self.filtered_primary_object_name,
         ]
 
     def visible_settings(self):
@@ -403,7 +429,12 @@ The default is set to "Yes".
         if self.save_probabilities.value:
             vis_settings += [self.probabilities_name]
 
-        vis_settings += [self.use_averaging, self.use_gpu]
+        vis_settings += [self.use_averaging, self.make_primary_secondary]
+
+        if self.make_primary_secondary.value:
+            vis_settings+=[self.primary_object_type,self.filtered_primary_object_name]
+
+        vis_settings += [self.use_gpu]
 
         if self.docker_or_python.value == 'Python':
             if self.use_gpu.value:
@@ -602,6 +633,37 @@ The default is set to "Yes".
                     LOGGER.error("Temp folder is subfolder {tempdir} in your Default Output Folder.\nYou may need to remove it manually.")
 
 
+        # Do primary/secondary mapping if it's asked for
+        if self.make_primary_secondary.value:
+            
+            # pull the primary object segementations
+            pre_primary_objects = workspace.object_set.get_objects(self.primary_object_type.value)
+            pre_primary_labels = pre_primary_objects.segmented
+            
+            # for each primary object, find the secondary object it most overlaps
+            
+            # tiebreaker step - if multiple primary objects pick the same secondary object, pick the one with the most % overlap with the secondary object and throw the other(s) away
+            # tiebreaker step part 2 - if above still results in a tie, pick the one with the most area inside the secondary object and throw the other(s) away
+            # we could write a fancier heuristic to not throw things out above but instead try to rematch them but Beth doesn't wanna
+            
+            # for each primary object left, if it doesn't have a secondary object, throw it away
+            
+            # for each secondary object, see if it has a primary object, if not, throw it away  
+
+            # for the two object sets now, renumber them to make the numbers sequential
+            
+            # add a parent child relationship as if it were 'real' 1* and 2*
+            # TODO - right variable names, but this is from IDSecondary
+            # children_per_parent, parents_of_children = objects.relate_children(objects_out)
+            
+            # add the filtered primary object to the workspace - we'll add the new secondary in the code below
+            primary_objects = Objects()
+            primary_objects.segmented = some_var #TODO -figure out what this is
+            primary_objects.parent_image = pre_primary_objects.parent_image
+            objects = workspace.object_set
+            objects.add_objects(primary_objects, self.filtered_primary_object_name.value)
+            pass      
+
         y = Objects()
         y.segmented = y_data
         y.parent_image = x.parent_image
@@ -699,4 +761,6 @@ The default is set to "Yes".
         if variable_revision_number == 3:
             setting_values = [setting_values[0]] + ["Python",CELLPOSE_DOCKER_IMAGE_WITH_PRETRAINED] + setting_values[1:]
             variable_revision_number = 4
+        if variable_revision_number == 4:
+            setting_values += [False,"None","FilteredPrimaryObject"]
         return setting_values, variable_revision_number
