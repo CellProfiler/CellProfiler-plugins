@@ -632,6 +632,10 @@ TODO. """,
                     LOGGER.error("Unable to delete temporary directory, files may be in use by another program.")
                     LOGGER.error("Temp folder is subfolder {tempdir} in your Default Output Folder.\nYou may need to remove it manually.")
 
+        #instantiate the cell objects, give them some properties
+        y = Objects()
+        y.segmented = y_data
+        y.parent_image = x.parent_image
 
         # Do primary/secondary mapping if it's asked for
         if self.make_primary_secondary.value:
@@ -641,9 +645,38 @@ TODO. """,
             pre_primary_labels = pre_primary_objects.segmented
             
             # for each primary object, find the secondary object it most overlaps
+            child_count, parents_of = y.relate_children(pre_primary_objects)
+            # this gives us for each cell, how many nuclei are in it, and for each nucleus, what is the cell it most overlaps
+            """Returns two 1-d arrays. The first gives the number of children within
+            each parent. The second gives the mapping of each child to its parent's
+            object number.
+            """
+            for each_child_count in child_count: # for each cell, see if it has >1 nucleus (we'll handle 0 at the end)
+                if each_child_count > 1:
+                    #use parents_of to get the object numbers of the nuclei in question
+                    #to get percent overlap, for each nucleus, get the counts of the cell array values in it using unique, calculate fraction for this cell : unique, counts = numpy.unique(a, return_counts=True)
+                    #if there is a winner, get the index
+                    #else, we go to the second tiebreaker; for each cell, get the array values of the nuclei in it (using unique as above), pick a winner
+                    #set the nuclear segmentation array to 0s in the non-winner nuclei, in the areas where they overlap the cell
+
+
+                    
+            #How to do it in CellProfiler modules
+            # MaskObjects, mode "Keep overlapping region", masking Nuclei with Cells (MaskedNuclei)
+            # MeasureObjectSizeAndShape on MaskedNuclei
+            # RelateObjects, Cells as parents, MaskedNuclei as children
+            # FilterObjects on MaskedNuclei (FilteredMaskedNuclei)->use MaximalPerObject filtering, with Cells as the parent object and AreaShape_Area as the measurement -> FilteredMaskedNuclei will now be the largest nucleus-inside-a-given-cell's-boundary (so now all cells contain only one nucelus, but we have yet to do the inverse)
+            # MaskObjects masking Cells with FilteredMaskedNuclei, mode "Keep" -> CellsWithNuclei
+            # MaskObjects masking Nuclei with FilteredMaskedNuclei, mode "Keep" -> NucleiPassingFilter
+            # RelateObjects, parent NucleiPassingFilter, child CellsWithNuclei
+            # FilterObjects on NucleiPassingFilter, keep only NucleiPassingFilter that have between 0.9 and 1.1 Child_CellsWithNuclei -> FinalNuclei
+            # MaskObjects, mode "Keep", CellsWithNuclei with FinalNuclei -> FinalCells
+
+
             
             # tiebreaker step - if multiple primary objects pick the same secondary object, pick the one with the most % overlap with the secondary object and throw the other(s) away
             # tiebreaker step part 2 - if above still results in a tie, pick the one with the most area inside the secondary object and throw the other(s) away
+                #parent_array = numpy.where(y_data==each_child_count,pre_primary_labels,0)
             # we could write a fancier heuristic to not throw things out above but instead try to rematch them but Beth doesn't wanna
             
             # for each primary object left, if it doesn't have a secondary object, throw it away
@@ -664,9 +697,6 @@ TODO. """,
             objects.add_objects(primary_objects, self.filtered_primary_object_name.value)
             pass      
 
-        y = Objects()
-        y.segmented = y_data
-        y.parent_image = x.parent_image
         objects = workspace.object_set
         objects.add_objects(y, y_name)
 
