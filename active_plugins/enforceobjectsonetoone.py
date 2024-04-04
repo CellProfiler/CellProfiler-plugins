@@ -122,7 +122,7 @@ TODO """,
 
         secondary_seg = self.enforce_unique(pre_secondary_seg, primary_seg)
 
-        if numpy.unique(primary_seg)!=numpy.unique(secondary_seg):
+        if not numpy.array_equal(numpy.unique(primary_seg),numpy.unique(secondary_seg)):
             raise RuntimeError(f"Something is wrong, there are {numpy.unique(primary_seg).shape[0]-1} primary objects (highest value: {numpy.unique(primary_seg)[-1]}) and {numpy.unique(secondary_seg).shape[0]-1} secondary objects (highest value: {numpy.unique(secondary_seg)[-1]})")
 
         new_primary_objects = cellprofiler_core.object.Objects()
@@ -273,6 +273,7 @@ TODO """,
                     #if the cell I touch most only touches me:
                     if secondary_touchers.shape == 1:
                         secondary_match = each_secondary
+                        #print(f"{primary} won at 'the cell I touch most touches no other cell', breaking")
                         break
                     # if it's more than just me:
                     else:
@@ -285,10 +286,11 @@ TODO """,
                                 best_primary_score = score
                                 best_primary = [each_toucher]
                             elif score == best_primary_score:
-                                best_primary.append([each_toucher])
+                                best_primary+=[each_toucher]
                         # do I win?
                         if best_primary == [primary]:
                             secondary_match = each_secondary
+                            #print(f"{primary} won at 'I have the best percent inside the cell', it was {score}, breaking")
                             break
                         # do I at least tie - if so, pick the nucleus with the most inside the cell
                         elif primary in best_primary:
@@ -299,12 +301,13 @@ TODO """,
                                     best_tiebreaker_score = hist[each_primary,each_secondary]
                                     best_tiebreaker = [each_primary]
                                 elif hist[each_primary,each_secondary] == best_tiebreaker_score:
-                                    best_tiebreaker.append(each_primary)
+                                    best_tiebreaker += [each_primary]
                                 # do I win outright? If a tie, everyone loses (because otherwise 1:1 might die)
-                                if best_tiebreaker == [primary]:
-                                    # I win - otherwise, the default secondary_match of 0 still applies
-                                    secondary_match = each_secondary
-                                    break
+                            if best_tiebreaker == [primary]:
+                                # I win - otherwise, the default secondary_match of 0 still applies
+                                secondary_match = each_secondary
+                                #print(f"{primary} won at 'I am the biggest inside the cell', it was {best_tiebreaker_score}, breaking")
+                                break
             if secondary_match != 0:
                 sanity_check_list.append(secondary_match)
                 if erode_excess:
