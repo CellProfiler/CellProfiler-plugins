@@ -301,6 +301,7 @@ TODO """,
                                 if best_tiebreaker == [primary]:
                                     # I win - otherwise, the default secondary_match of 0 still applies
                                     secondary_match = each_secondary
+                                    break
             if secondary_match != 0:
                 sanity_check_list.append(secondary_match)
                 if erode_excess:
