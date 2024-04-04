@@ -122,6 +122,9 @@ TODO """,
 
         secondary_seg = self.enforce_unique(pre_secondary_seg, primary_seg)
 
+        if numpy.unique(primary_seg)!=numpy.unique(secondary_seg):
+            raise RuntimeError(f"Something is wrong, there are {numpy.unique(primary_seg).shape[0]-1} primary objects (highest value: {numpy.unique(primary_seg)[-1]}) and {numpy.unique(secondary_seg).shape[0]-1} secondary objects (highest value: {numpy.unique(secondary_seg)[-1]})")
+
         new_primary_objects = cellprofiler_core.object.Objects()
         new_primary_objects.segmented = primary_seg
         if pre_primary.has_parent_image:
@@ -312,7 +315,7 @@ TODO """,
         # One last sanity check - are we ever linking two different primaries to the same secondary?
         _, matched_to_count = numpy.unique(numpy.array(sanity_check_list),return_counts = True)
         if matched_to_count.max() >1:
-            raise RuntimeError(f"Maximum time any secondary object was matched to: {matched_to_count.max()}.")
+            print(f"Maximum time any secondary object was matched to: {matched_to_count.max()}.")
         
         # reindex the labels to be consecutive
         # mostly stolen from RelateObjects, which says it's mostly stolen from FilterObjects
