@@ -429,7 +429,7 @@ See <span class="xref myst">Installing plugins with dependencies, using CellProf
 See <span class="xref myst">Installing plugins with dependencies, using pre-built CellProfiler</span>.</p></li>
 <li><p>The third option uses Docker to bypass installation requirements.
 It is the simplest option that only requires download of Docker Desktop; the module that has dependencies will automatically download a Docker that has all of the dependencies upon run and access that Docker while running the plugin.
-It is currently only supported for the RunCellpose plugin but will be available in other plugins soon.
+It is currently supported for the RunCellpose and Runilastik plugins. Please have a look at this <a class="reference external" href="https://github.com/CellProfiler/CellProfiler-plugins/blob/master/documentation/CP-plugins-documentation/supported_plugins.md">table</a> to know about the availability of docker versions for plugins.<br />
 See <span class="xref myst">Using Docker to Bypass Installation Requirements</span>.</p></li>
 </ul>
 <section id="installing-plugins-without-dependencies">
@@ -593,7 +593,7 @@ This information is not available in Mac machines.</p></li>
 Download Docker Desktop from <a class="reference external" href="https://www.docker.com/products/docker-desktop/">Docker.com</a>.</p></li>
 <li><p><strong>Run Docker Desktop</strong>
 Open Docker Desktop.
-Docker Desktop will need to be open every time you use a plugin with Docker.</p></li>
+Docker Desktop will need to be open every time you use a plugin with Docker. Please have a look at this <a class="reference external" href="https://github.com/CellProfiler/CellProfiler-plugins/blob/master/documentation/CP-plugins-documentation/supported_plugins.md">table</a> to know if a docker version is available for a plugin.</p></li>
 <li><p><strong>Select “Run with Docker”</strong>
 In your plugin, select <code class="docutils literal notranslate"><span class="pre">Docker</span></code> for “Run module in docker or local python environment” setting.
 On the first run of the plugin, the Docker container will be downloaded, however, this slow downloading process will only have to happen
