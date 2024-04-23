@@ -1,18 +1,6 @@
-#################################
-#
-# Imports from useful Python libraries
-#
-#################################
-
 import matplotlib.pyplot as plt
 from matplotlib import patheffects
 import numpy as np
-
-#################################
-#
-# Imports from CellProfiler
-#
-##################################
 
 import cellprofiler_core.module
 import cellprofiler_core.setting.text
@@ -41,7 +29,6 @@ YES          NO            YES
 
 class HelloWorld(cellprofiler_core.module.ImageProcessing):
     module_name = "HelloWorld"
-    category = "Info"
 
     variable_revision_number = 1
 
@@ -52,9 +39,6 @@ class HelloWorld(cellprofiler_core.module.ImageProcessing):
 
     def settings(self):
         return super().settings() + [self.overlay_text]
-
-    def visible_settings(self):
-        return super().visible_settings() + [self.overlay_text]
 
     def run(self, workspace):
         self.function = self.place_text_on_image
@@ -88,4 +72,3 @@ class HelloWorld(cellprofiler_core.module.ImageProcessing):
         annotated_img = np.asarray(fig.canvas.renderer.buffer_rgba())
         plt.close(fig)
         return annotated_img
-
