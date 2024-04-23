@@ -39,6 +39,10 @@ class HelloWorld(cellprofiler_core.module.ImageProcessing):
 
     def settings(self):
         return super().settings() + [self.overlay_text]
+    
+    # normally unnecessary, but ImageProcessing defines this so we have to too
+    def visible_settings(self):
+        return self.settings()
 
     def run(self, workspace):
         self.function = self.place_text_on_image
