@@ -83,12 +83,6 @@ YES          YES          NO
 
 """
 
-"""
-Normalize images
-"""
-
-
-
 "Select Cellpose Docker Image"
 CELLPOSE_DOCKER_NO_PRETRAINED = "cellprofiler/runcellpose_no_pretrained:0.1"
 CELLPOSE_DOCKER_IMAGE_WITH_PRETRAINED = "cellprofiler/runcellpose_with_pretrained:0.1"
