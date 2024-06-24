@@ -122,24 +122,30 @@ This must be done manually, once.
         self.context = zmq.Context()
         self.server_socket = self.context.socket(zmq.PAIR)
         self.server_socket.copy_threshold = 0
+        
+        print("connecting to", socket_addr)
+
         c = self.server_socket.connect(socket_addr)
         
-        print("Setup socket at", socket_addr, "connected to", c)
+        print("setup socket at", c)
         
+        print("sending handshake, waiting for acknowledgement")
+
         self.server_socket.send_string(HELLO)
         response = self.server_socket.recv_string()
         
         if response == ACK:
-            print("Received correct response", response)
+            print("received correct response", response)
         else:
-            print("Received unexpected response", response)
+            print("received unexpected response", response)
 
     def do_server_execute(self, im_data):
         dummy_data = lambda: np.array([[]])
 
         socket = self.server_socket
         header = np.lib.format.header_data_from_array_1_0(im_data)
-        
+
+        print("sending header", header, "waiting for acknowledgement")
         socket.send_json(header)
 
         ack = socket.recv_string()
@@ -149,6 +155,7 @@ This must be done manually, once.
             print("unexpected response", ack)
             return dummy_data()
         
+        print("sending image data", im_data.shape, "waiting for acknowledgement")
         socket.send(im_data, copy=False)
 
         ack = socket.recv_string()
@@ -160,7 +167,8 @@ This must be done manually, once.
         else:
             print("unknown response to image data", ack)
             return dummy_data()
-        
+
+        print("waiting for return header")
         return_header = socket.recv_json()
         print("received return header", return_header)
 
@@ -168,8 +176,9 @@ This must be done manually, once.
         socket.send_string(ACK)
 
         print("waiting for image data")
-
         label_data_buf = socket.recv(copy=False)
+        print("image data received")
+
         labels = np.frombuffer(label_data_buf, dtype=return_header['descr'])
         labels.shape = return_header['shape']
         print("returning label data", labels.shape)
