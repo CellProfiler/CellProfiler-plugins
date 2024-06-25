@@ -112,29 +112,34 @@ This must be done manually, once.
             workspace.display_data.dimensions = dimensions
 
     def do_server_handshake(self):
+        def cleanup():
+            LOGGER.debug("destroying existing context")
+            if self.server_socket:
+                self.server_socket.close()
+                self.server_socket = None
+            if self.context:
+                self.context.term()
+                self.context.destroy()
+
         port = str(self.server_port.value)
         domain = "localhost"
         socket_addr = f"tcp://{domain}:{port}"
 
         if self.context:
-            LOGGER.debug("destroying existing context")
-            self.context.destroy()
-            self.server_socket = None
+            cleanup()
 
         self.context = zmq.Context()
         self.server_socket = self.context.socket(zmq.PAIR)
         self.server_socket.copy_threshold = 0
-        
+
         LOGGER.debug(f"connecting to {socket_addr}")
 
         c = self.server_socket.connect(socket_addr)
-        
-        LOGGER.debug(f"setup socket at {c}")
-        
-        LOGGER.debug("sending handshake, waiting for acknowledgement")
 
-        self.server_socket.send_string(HELLO)
-        
+        LOGGER.debug(f"setup socket at {c}")
+
+        LOGGER.debug("receiving handshake, waiting for acknowledgement")
+
         poller = zmq.Poller()
         poller.register(self.server_socket, zmq.POLLIN)
         while True:
@@ -143,14 +148,20 @@ This must be done manually, once.
                 break
             else:
                 LOGGER.debug("handshake timeout")
+                cleanup()
                 return
 
-        response = self.server_socket.recv_string()
+        hello = self.server_socket.recv_string()
 
-        if response == ACK:
-            LOGGER.debug(f"received correct response {response}")
+        if hello == HELLO:
+            LOGGER.debug(f"received correct greeting {hello}")
         else:
-            LOGGER.debug(f"received unexpected response {response}")
+            LOGGER.debug(f"received unexpected greeting {hello}")
+
+        LOGGER.debug("acknowledging handshake")
+
+        self.server_socket.send_string(ACK)
+
 
     def do_server_execute(self, im_data):
         dummy_data = lambda: np.array([[]])
