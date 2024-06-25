@@ -42,19 +42,19 @@ class ForeignToolServer(object):
         self._context = zmq.Context()
         self._server_socket = self._context.socket(zmq.PAIR)
         self._server_socket.bind(f"{protocol}://{domain}:{port}")
-        self._logger.info("launched on", self._server_socket.getsockopt(zmq.LAST_ENDPOINT))
+        self._logger.info(f"launched on {self._server_socket.getsockopt(zmq.LAST_ENDPOINT)}")
 
         if wait_for_handshake:
             self.wait_for_handshake()
 
     def wait_for_handshake(self):
-        self._logger.debug("waiting for handshake from cllient")
+        self._logger.debug("waiting for handshake from client")
         client_hello = self._server_socket.recv_string()
         if client_hello == HELLO:
             self._logger.debug("received correct handshake")
             _send_ack(self._server_socket, self._logger, subject="handshake")
         else:
-            self._logger.debug("received incorrect handshake", client_hello)
+            self._logger.debug(f"received incorrect handshake {client_hello}")
             self._logger.debug("sending deny")
             self._server_socket.send_string(DENY)
             raise ForeignToolError("server received incorrect handshake")
@@ -65,12 +65,12 @@ class ForeignToolServer(object):
         """
         header = np.lib.format.header_data_from_array_1_0(image_data)
 
-        self._logger.debug("sending header", header, "waiting for acknowledgement")
+        self._logger.debug(f"sending header {header} waiting for acknowledgement")
         self._server_socket.send_json(header)
 
         ack = _receive_ack(self._server_socket, self._logger, subject="header")
 
-        self._logger.debug("sending image data", image_data.shape, "waiting for acknowledgement")
+        self._logger.debug(f"sending image data {image_data.shape} waiting for acknowledgement")
         
         self._server_socket.send(image_data, copy=False)
 
@@ -87,7 +87,7 @@ class ForeignToolServer(object):
         self._logger.debug("parsing label data")
         labels = np.frombuffer(label_bytes, dtype=labels_header['descr'])
         labels.shape = labels_header['shape']
-        self._logger.debug("parse label data", labels.shape)
+        self._logger.debug(f"parse label data of shape {labels.shape}")
         
         _send_ack(self._server_socket, self._logger, subject="return data")
         
@@ -100,7 +100,7 @@ class ForeignToolServer(object):
         return self._serve_image(image_data)
 
 class ForeignToolClient(object):
-    def __init__(self, port, domain='*', protocol='tcp', do_handshake=True, cb=None):
+    def __init__(self, port, domain='localhost', protocol='tcp', do_handshake=True, cb=None):
         """
         Connect to a server on the given port.
         """
@@ -109,7 +109,7 @@ class ForeignToolClient(object):
         self._context = zmq.Context()
         self._client_socket = self._context.socket(zmq.PAIR)
         self._client_socket.connect(f"{protocol}://{domain}:{port}")
-        self._logger.info("connected to", self._client_socket.getsockopt(zmq.LAST_ENDPOINT))
+        self._logger.info(f"connected to {self._client_socket.getsockopt(zmq.LAST_ENDPOINT)}")
 
         if cb:
             self.register_cb(cb)
@@ -117,12 +117,12 @@ class ForeignToolClient(object):
         if do_handshake:
             self.do_handshake()
 
-        def do_handshake(self):
-            """
-            Handshake with the server.
-            """
-            self.client_socket.send_string(HELLO)
-            response = _receive_ack(self.client_socket, self.logger, subject="handshake")
+    def do_handshake(self):
+        """
+        Handshake with the server.
+        """
+        self._client_socket.send_string(HELLO)
+        response = _receive_ack(self._client_socket, self._logger, subject="handshake")
 
     def register_cb(self, cb):
         """
@@ -142,7 +142,7 @@ class ForeignToolClient(object):
         Receive an image from the server.
         """
         header = self._client_socket.recv_json()
-        self._logger.debug("received header", header)
+        self._logger.debug(f"received header {header}")
 
         _send_ack(self._client_socket, self._logger, subject="header")
 
@@ -152,9 +152,8 @@ class ForeignToolClient(object):
         self._logger.debug("parsing image data")
         buf = memoryview(im_bytes)
         im = np.frombuffer(buf, dtype=header['descr'])
-        im = (im * 255).astype(np.uint8)
         im.shape = header['shape']
-        self._logger.debug("parsed image data", im.shape)
+        self._logger.debug(f"parsed image data {im.shape}")
 
         _send_ack(self._client_socket, self._logger, subject="image data")
 
@@ -163,7 +162,7 @@ class ForeignToolClient(object):
         self._logger.debug("executed callback")
 
         return_header = np.lib.format.header_data_from_array_1_0(return_data)
-        self._logger.debug("returning header", return_header)
+        self._logger.debug(f"returning header {return_header}")
         self._client_socket.send_json(return_header)
 
         ack = _receive_ack(self._client_socket, self._logger, subject="return header")
