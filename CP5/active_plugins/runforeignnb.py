@@ -1,10 +1,13 @@
 import zmq
 import numpy as np
+import logging
 
 from cellprofiler_core.module.image_segmentation import ImageSegmentation
 from cellprofiler_core.setting.do_something import DoSomething
 from cellprofiler_core.setting.text import Integer
 from cellprofiler_core.object import Objects
+
+LOGGER = logging.getLogger(__name__)
 
 HELLO = "Hello"
 ACK = "Acknowledge"
@@ -114,6 +117,7 @@ This must be done manually, once.
         socket_addr = f"tcp://{domain}:{port}"
 
         if self.context:
+            LOGGER.debug("destroying existing context")
             self.context.destroy()
             self.server_socket = None
 
@@ -121,21 +125,32 @@ This must be done manually, once.
         self.server_socket = self.context.socket(zmq.PAIR)
         self.server_socket.copy_threshold = 0
         
-        print("connecting to", socket_addr)
+        LOGGER.debug(f"connecting to {socket_addr}")
 
         c = self.server_socket.connect(socket_addr)
         
-        print("setup socket at", c)
+        LOGGER.debug(f"setup socket at {c}")
         
-        print("sending handshake, waiting for acknowledgement")
+        LOGGER.debug("sending handshake, waiting for acknowledgement")
 
         self.server_socket.send_string(HELLO)
-        response = self.server_socket.recv_string()
         
+        poller = zmq.Poller()
+        poller.register(self.server_socket, zmq.POLLIN)
+        while True:
+            socks = dict(poller.poll(5000))
+            if socks.get(self.server_socket) == zmq.POLLIN:
+                break
+            else:
+                LOGGER.debug("handshake timeout")
+                return
+
+        response = self.server_socket.recv_string()
+
         if response == ACK:
-            print("received correct response", response)
+            LOGGER.debug(f"received correct response {response}")
         else:
-            print("received unexpected response", response)
+            LOGGER.debug(f"received unexpected response {response}")
 
     def do_server_execute(self, im_data):
         dummy_data = lambda: np.array([[]])
@@ -143,41 +158,42 @@ This must be done manually, once.
         socket = self.server_socket
         header = np.lib.format.header_data_from_array_1_0(im_data)
 
-        print("sending header", header, "waiting for acknowledgement")
+        LOGGER.debug(f"sending header {header}; waiting for acknowledgement")
         socket.send_json(header)
 
         ack = socket.recv_string()
         if ack == ACK:
-            print("header acknowledged:", ack)
+            LOGGER.debug(f"header acknowledged: {ack}")
         else:
-            print("unexpected response", ack)
+            LOGGER.debug(f"unexpected response {ack}")
             return dummy_data()
         
-        print("sending image data", im_data.shape, "waiting for acknowledgement")
+        LOGGER.debug(f"sending image data {im_data.shape}; waiting for acknowledgement")
         socket.send(im_data, copy=False)
 
         ack = socket.recv_string()
         if ack == ACK:
-            print("image data acknowledged", ack)
+            LOGGER.debug(f"image data acknowledged {ack}")
         elif ack == DENIED:
-            print("image data denied, aborting", ack)
+            LOGGER.debug(f"image data denied, aborting {ack}")
             return dummy_data()
         else:
-            print("unknown response to image data", ack)
+            LOGGER.debug(f"unknown response to image data {ack}")
             return dummy_data()
 
-        print("waiting for return header")
+        LOGGER.debug("waiting for return header")
         return_header = socket.recv_json()
-        print("received return header", return_header)
+        LOGGER.debug(f"received return header {return_header}")
 
-        print("acknowledging header reciept")
+        LOGGER.debug("acknowledging header reciept")
         socket.send_string(ACK)
 
-        print("waiting for image data")
+        LOGGER.debug("waiting for image data")
         label_data_buf = socket.recv(copy=False)
-        print("image data received")
+        LOGGER.debug("image data received")
 
         labels = np.frombuffer(label_data_buf, dtype=return_header['descr'])
         labels.shape = return_header['shape']
-        print("returning label data", labels.shape)
+        LOGGER.debug(f"returning label data {labels.shape}")
+
         return labels
