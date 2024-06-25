@@ -32,8 +32,6 @@ def run(image_data, image_header):
     segmentation = mask_sizes[labels]
 
     labels, _ = sp.ndimage.label(segmentation)
-    
-    ski.io.imsave("/Users/ngogober/Desktop/thresh.tif", labels)
 
     return labels
 
