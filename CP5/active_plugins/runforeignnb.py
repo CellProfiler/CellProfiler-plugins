@@ -11,15 +11,13 @@ ACK = "Acknowledge"
 DENIED = "Denied"
 
 __doc__ = """\
-RunForeign
+RunForeignNb
 ============
 
-**RunForeign** runs a foreign tool via sockets.
+**RunForeign** runs a foreign notebook via sockets.
 
 
-Assumes there is a server up and running, handshakes, and pings for availability on every validation run of pipeline.
-Server must be idompotent on both handshake and validation ping.
-Server provides definition of what run will be.
+Assumes there is a notebook running as a server to do the handshake, receive an image, and send back labels.
 
 |
 
@@ -31,10 +29,10 @@ YES          NO            YES
 
 """
 
-class RunForeign(ImageSegmentation):
+class RunForeignNb(ImageSegmentation):
     category = "Object Processing"
 
-    module_name = "RunForeign"
+    module_name = "RunForeignNb"
 
     variable_revision_number = 1
 
