@@ -114,23 +114,29 @@ This must be done manually, once.
     def do_server_handshake(self):
         def cleanup():
             LOGGER.debug("destroying existing context")
-            if self.server_socket:
+            if self.server_socket is not None:
                 self.server_socket.close()
+                LOGGER.debug(f"socket closed: {self.server_socket.closed}")
                 self.server_socket = None
-            if self.context:
+            if self.context is not None:
                 self.context.term()
+                # destroy is more destructive
+                # doesn't require sockets closed first
+                # may leave them hanging if managed by other threads
                 self.context.destroy()
+                LOGGER.debug(f"context closed: {self.context.closed}")
+                self.context = None
 
         port = str(self.server_port.value)
         domain = "localhost"
         socket_addr = f"tcp://{domain}:{port}"
 
-        if self.context:
+        if self.context is not None or self.server_socket is not None:
             cleanup()
 
         self.context = zmq.Context()
         self.server_socket = self.context.socket(zmq.PAIR)
-        self.server_socket.copy_threshold = 0
+        #self.server_socket.copy_threshold = 0
 
         LOGGER.debug(f"connecting to {socket_addr}")
 
