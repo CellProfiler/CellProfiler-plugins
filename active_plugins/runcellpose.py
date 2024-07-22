@@ -609,9 +609,14 @@ The default is set to "Yes".
         objects.add_objects(y, y_name)
 
         if self.save_probabilities.value:
+            if self.docker_or_python.value == "Docker":
+                prob_index = 1 #todo check
+            else:
+                prob_index = 2
+            print(prob_index)
             # Flows come out sized relative to CellPose's inbuilt model size.
             # We need to slightly resize to match the original image.
-            size_corrected = skimage.transform.resize(flows[2], y_data.shape)
+            size_corrected = skimage.transform.resize(flows[prob_index], y_data.shape)
             prob_image = Image(
                 size_corrected,
                 parent_image=x.parent_image,
