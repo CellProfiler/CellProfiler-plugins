@@ -1,0 +1,48 @@
+cff-version: 1.2.0
+message: "If using CellProfiler Plugins in a pipeline used in a publication, please cite our CellProfiler-Plugins paper. Additionally, some plugins require citation themselves if used. You can determine which plugins require citation by reading the Help information for each plugin, accessible through CellProfiler, or by using the Citation generator built into CellProfiler (since CellProfiler 5)."
+type: software
+authors:
+  - name: 'Imaging Platform, Broad Institute of Harvard and MIT'
+    city: Cambridge
+    country: US
+repository: https://github.com/CellProfiler/CellProfiler-plugins
+title: "CellProfiler plugins"
+doi: https://doi.org/10.1111/jmi.13223
+date-released: 2023
+preferred-citation:
+  type: article
+  authors:
+  - family-names: "Weisbart"
+    given-names: "Erin"
+    orcid: "https://orcid.org/0000-0002-6437-2458"
+  - family-names: "Tromans-Coia"
+    given-names: "Callum"
+    orcid: "https://orcid.org/0000-0002-5518-8915"
+  - family-names: "Diaz-Rohrer"
+    given-names: "Barbara"
+    orcid: "https://orcid.org/0000-0002-4748-7077"
+  - family-names: "Stirling"
+    given-names: "David R."
+    orcid: "https://orcid.org/0000-0001-6802-4103"
+  - family-names: "Garcia-Fossa"
+    given-names: "Fernanda"
+    orcid: "https://orcid.org/0000-0003-2308-0149"
+  - family-names: "Senft"
+    given-names: "Rebecca A."
+    orcid: "https://orcid.org/0000-0003-0081-4170"
+  - family-names: "Hiner"
+    given-names: "Mark C."
+    orcid: "https://orcid.org/0000-0001-9404-7579"
+  - family-names: "de Jesus"
+    given-names: "Marcelo B."
+    orcid: "https://orcid.org/0000-0003-0812-1491"
+  - family-names: "Eliceiri"
+    given-names: "Kevin W."
+    orcid: "https://orcid.org/0000-0001-8678-670X"
+  - family-names: "Cimini"
+    given-names: "Beth A."
+    orcid: "https://orcid.org/0000-0001-9640-9318"
+  doi: "https://doi.org/10.1111/jmi.13223"
+  journal: "Journal of Microscopy"
+  title: "CellProfiler plugins – An easy image analysis platform integration for containers and Python tools."
+  year: 2023
