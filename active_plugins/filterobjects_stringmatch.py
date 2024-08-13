@@ -23,7 +23,7 @@ LOGGER = logging.getLogger(__name__)
 class FilterObjects_StringMatch(ObjectProcessing):
     module_name = "FilterObjects_StringMatch"
 
-    variable_revision_number = 10
+    variable_revision_number = 1
 
     def __init__(self):
         self.rules = Rules()
@@ -53,11 +53,8 @@ class FilterObjects_StringMatch(ObjectProcessing):
 
     def settings(self):
         settings = super(FilterObjects_StringMatch, self).settings()
+        settings += [self.filter_out]
         return settings
-
-    def help_settings(self):
-        return [
-        ]
 
     def visible_settings(self):
         visible_settings = super(FilterObjects_StringMatch, self).visible_settings()
@@ -168,36 +165,22 @@ class FilterObjects_StringMatch(ObjectProcessing):
         src_name = self.x_name.value
         m = workspace.measurements
         values = m.get_current_measurement(src_name, "Barcode_BarcodeCalled")
-        
+        print (values)
         # Is this structure still necessary or is it an artifact?
         # Could be just values == self.filter_out.value
         # Make an array of True
         hits = numpy.ones(len(values), bool)
         # Fill with False for those where we want to filter out
         hits[values == self.filter_out.value] = False
+
+        print (self.filter_out.value)
+        print (hits)
         
         # Get object numbers for things that are True
         indexes = numpy.argwhere(hits)[:, 0]
         # Objects are 1 counted, Python is 0 counted
         indexes = indexes + 1
+        
+        print (indexes)
+
         return indexes
-
-
-    def prepare_to_create_batch(self, workspace, fn_alter_path):
-        """Prepare to create a batch file
-
-        This function is called when CellProfiler is about to create a
-        file for batch processing. It will pickle the image set list's
-        "legacy_fields" dictionary. This callback lets a module prepare for
-        saving.
-
-        pipeline - the pipeline to be saved
-        image_set_list - the image set list to be saved
-        fn_alter_path - this is a function that takes a pathname on the local
-                        host and returns a pathname on the remote host. It
-                        handles issues such as replacing backslashes and
-                        mapping mountpoints. It should be called for every
-                        pathname stored in the settings or legacy fields.
-        """
-        self.rules_directory.alter_for_create_batch_files(fn_alter_path)
-        return True
