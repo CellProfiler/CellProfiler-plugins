@@ -165,22 +165,15 @@ class FilterObjects_StringMatch(ObjectProcessing):
         src_name = self.x_name.value
         m = workspace.measurements
         values = m.get_current_measurement(src_name, "Barcode_BarcodeCalled")
-        print (values)
         # Is this structure still necessary or is it an artifact?
         # Could be just values == self.filter_out.value
         # Make an array of True
         hits = numpy.ones(len(values), bool)
         # Fill with False for those where we want to filter out
         hits[values == self.filter_out.value] = False
-
-        print (self.filter_out.value)
-        print (hits)
-        
         # Get object numbers for things that are True
         indexes = numpy.argwhere(hits)[:, 0]
         # Objects are 1 counted, Python is 0 counted
         indexes = indexes + 1
-        
-        print (indexes)
 
         return indexes
