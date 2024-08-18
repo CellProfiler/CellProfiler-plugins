@@ -15,120 +15,12 @@ import scipy.ndimage
 #
 ##################################
 
-# Reference
-# 
-# If you're using a technique or method that's used in this module 
-# and has a publication attached to it, please include the paper link below.
-# Otherwise, remove the line below and remove the "References" section from __doc__.
-#
-
-cite_paper_link = "https://doi.org/10.1016/1047-3203(90)90014-M"
 
 __doc__ = """\
-MeasurementTemplate
+MeasureRWCperObject
 ===================
 
-**MeasurementTemplate** - an example measurement module. It's recommended to
-put a brief description of this module here and go into more detail below.
 
-This is an example of a module that measures a property of an image both
-for the image as a whole and for every object in the image. It
-demonstrates how to load an image, how to load an object and how to
-record a measurement. 
-
-The text you see here will be displayed as the help for your module, formatted
-as `reStructuredText <http://docutils.sourceforge.net/rst.html>`_.
- 
-Note whether or not this module supports 3D image data and respects masks.
-A module which respects masks applies an image's mask and operates only on
-the image data not obscured by the mask. Update the table below to indicate 
-which image processing features this module supports.
-
-|
-
-============ ============ ===============
-Supports 2D? Supports 3D? Respects masks?
-============ ============ ===============
-YES          NO           YES
-============ ============ ===============
-
-See also
-^^^^^^^^
-
-Is there another **Module** that is related to this one? If so, refer
-to that **Module** in this section. Otherwise, this section can be omitted.
-
-What do I need as input?
-^^^^^^^^^^^^^^^^^^^^^^^^
-
-Are there any assumptions about input data someone using this module
-should be made aware of? For example, is there a strict requirement that
-image data be single-channel, or that the foreground is brighter than
-the background? Describe any assumptions here.
-
-This section can be omitted if there is no requirement on the input.
-
-What do I get as output?
-^^^^^^^^^^^^^^^^^^^^^^^^
-
-Describe the output of this module. This is necessary if the output is
-more complex than a single image. For example, if there is data displayed
-over the image then describe what the data represents.
-
-This section can be omitted if there is no specialized output.
-
-Measurements made by this module
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Describe the measurements made by this module. Typically, measurements
-are described in the following format:
-
-**Measurement category:**
-
--  *MeasurementName*: A brief description of the measurement.
--  *MeasurementName*: A brief description of the measurement.
-
-**Measurement category:**
-
--  *MeasurementName*: A brief description of the measurement.
--  *MeasurementName*: A brief description of the measurement.
-
-This module makes the following measurements:
-
-**MT** (the MeasurementTemplate category):
-
--  *Intensity_[IMAGE_NAME]_N[Ni]_M[Mj]*: the Zernike feature of the
-   IMAGE_NAME image with radial degree Ni and Azimuthal degree Mj,
-   Mj >= 0.
--  *Intensity_[IMAGE_NAME]_N[Ni]_MM[Mj]*: the Zernike feature of
-   the IMAGE_NAME image with radial degree Ni and Azimuthal degree
-   Mj, Mj < 0.
-
-Technical notes
-^^^^^^^^^^^^^^^
-
-Include implementation details or notes here. Additionally provide any 
-other background information about this module, including definitions
-or adopted conventions. Information which may be too specific to fit into
-the general description should be provided here.
-
-Omit this section if there is no technical information to mention.
-
-The Zernike features measured here are themselves interesting. You can 
-reconstruct the image of a cell, approximately, by constructing the Zernike 
-functions on a unit circle, multiplying the real parts by the corresponding 
-features for positive M, multiplying the imaginary parts by the corresponding 
-features for negative M and adding real and imaginary parts.
-
-References
-^^^^^^^^^^
-
-Provide citations here, if appropriate. Citations are formatted as a list and,
-wherever possible, include a link to the original work. For example,
-
--  Meyer F, Beucher S (1990) “Morphological segmentation.” *J Visual
-   Communication and Image Representation* 1, 21-46.
-   {cite_paper_link}
 """
 
 #
@@ -146,382 +38,495 @@ from cellprofiler_core.setting.text import Integer
 
 """This is the measurement template category"""
 C_MEASUREMENT_TEMPLATE = "MT"
+M_PER_OBJECT = "Within each object individually"
+
+"""Feature name format for the RWC Coefficient measurement"""
+F_RWC_FORMAT = "Correlation_RWC_%s_%s"
 
 
-#
-# The module class
-#
-# Your module should "inherit" from cellprofiler_core.module.Module.
-# This means that your module will use the methods from Module unless
-# you re-implement them. You can let Module do most of the work and
-# implement only what you need.
-#
 class MeasurementTemplate(Module):
-    #
-    # The module starts by declaring the name that's used for display,
-    # the category under which it is stored and the variable revision
-    # number which can be used to provide backwards compatibility if
-    # you add user-interface functionality later.
-    #
-    module_name = "MeasurementTemplate"
+    module_name = "MeasureRWCperObject"
     category = "Measurement"
     variable_revision_number = 1
-    #
-    # Citation
-    #
-    # If you're using a technique or method that's used in this module 
-    # and has a publication attached to it, please include the paper link below.
-    # Edit accordingly and add the link for the paper as "https://doi.org/XXXX".
-    # If no citation is necessary, remove the "doi" dictionary below. 
-    #
 
-    doi = {"Please cite the following when using ImageTemplate:": 'https://doi.org/10.1016/1047-3203(90)90014-M', 
-           "If you're also using specific technique X, cite:": 'https://doi.org/10.1016/1047-3203(90)90014-M'}
-    #
-    # "create_settings" is where you declare the user interface elements
-    # (the "settings") which the user will use to customize your module.
-    #
-    # You can look at other modules and in cellprofiler_core.settings for
-    # settings you can use.
-    #
     def create_settings(self):
-        #
-        # The ImageNameSubscriber "subscribes" to all ImageNameProviders in
-        # prior modules. Modules before yours will put images into CellProfiler.
-        # The ImageSubscriber gives your user a list of these images
-        # which can then be used as inputs in your module.
-        #
-        self.input_image_name = ImageSubscriber(
-            # The text to the left of the edit box
-            text="Input image name:",
-            # reST help that gets displayed when the user presses the
-            # help button to the right of the edit box.
-            doc="""\
-This is the image that the module operates on. You can choose any image
-that is made available by a prior module.
+        """Create the initial settings for the module"""
 
-**MeasurementTemplate** will measure something about this image.
-""",
+        self.images_list = ImageListSubscriber(
+            "Select images to measure",
+            [],
+            doc="""Select images to measure the correlation/colocalization in.""",
         )
 
-        #
-        # The ObjectNameSubscriber is similar to the ImageNameSubscriber.
-        # It will ask the user which object to pick from the list of
-        # objects provided by upstream modules.
-        #
         self.input_object_name = LabelSubscriber(
             text="Input object name",
             doc="These are the objects that the module operates on.",
         )
 
-        #
-        # The radial degree is the "N" parameter in the Zernike - how many
-        # inflection points there are, radiating out from the center. Higher
-        # N means more features and a more detailed description
-        #
-        # The setting is an integer setting, bounded between 1 and 50.
-        # N = 50 generates 1200 features!
-        #
-        self.radial_degree = Integer(
-            text="Radial degree",
-            value=10,
-            minval=1,
-            maxval=50,
+        self.objects_list = LabelListSubscriber(
+            "Select objects to measure",
+            [],
             doc="""\
-Calculate all Zernike features up to the given radial
-degree. The Zernike function is parameterized by a radial
-and azimuthal degree. The module will calculate all Zernike
-features for all azimuthal degrees up to and including the
-radial degree you enter here.
+Select the object to be measured.""",
+        )
+
+        self.thr = Float(
+            "Set threshold as percentage of maximum intensity for the images",
+            15,
+            minval=0,
+            maxval=99,
+            doc="""\
+You may choose to measure colocalization metrics only for those pixels above 
+a certain threshold. Select the threshold as a percentage of the maximum intensity 
+of the above image [0-99].
+
+This value is used by the Overlap, Manders, and Rank Weighted Colocalization 
+measurements.
 """,
         )
 
-    #
-    # The "settings" method tells CellProfiler about the settings you
-    # have in your module. CellProfiler uses the list for saving
-    # and restoring values for your module when it saves or loads a
-    # pipeline file.
-    #
-    # This module does not have a "visible_settings" method. CellProfiler
-    # will use "settings" to make the list of user-interface elements
-    # that let the user configure the module. See imagetemplate.py for
-    # a template for visible_settings that you can cut and paste here.
-    #
+        self.do_rwc = True
+
+        self.spacer = Divider(line=True)
+
     def settings(self):
-        return [self.input_image_name, self.input_object_name, self.radial_degree]
+        """Return the settings to be saved in the pipeline"""
+        result = [
+            self.images_list,
+            self.thr,
+            # self.images_or_objects,
+            self.objects_list,
+            # self.do_all,
+            # self.do_corr_and_slope,
+            # self.do_manders,
+            self.do_rwc,
+            # self.do_overlap,
+            # self.do_costes,
+            # self.fast_costes,
+        ]
+        return result
+    
+    def visible_settings(self):
+        result = [
+            self.images_list,
+            self.spacer,
+            self.thr,
+            self.do_rwc,
+            # self.images_or_objects,
+        ]
+        return result
 
-    #
-    # CellProfiler calls "run" on each image set in your pipeline.
-    #
+    def help_settings(self):
+        """Return the settings to be displayed in the help menu"""
+        help_settings = [
+            # self.images_or_objects,
+            self.thr,
+            self.images_list,
+            self.objects_list,
+            # self.do_all,
+            # self.fast_costes,
+        ]
+        return help_settings
+    
+    def get_image_pairs(self):
+        """Yield all permutations of pairs of images to correlate
+
+        Yields the pairs of images in a canonical order.
+        """
+        for i in range(len(self.images_list.value) - 1):
+            for j in range(i + 1, len(self.images_list.value)):
+                yield (
+                    self.images_list.value[i],
+                    self.images_list.value[j],
+                )
+    
+
     def run(self, workspace):
-        #
-        # Get the measurements object - we put the measurements we
-        # make in here
-        #
-        measurements = workspace.measurements
+        """Calculate measurements on an image set"""
+        col_labels = ["First image", "Second image", "Objects", "Measurement", "Value"]
+        statistics = []
+        if len(self.images_list.value) < 2:
+            raise ValueError("At least 2 images must be selected for analysis.")
+        for first_image_name, second_image_name in self.get_image_pairs():
+            for object_name in self.objects_list.value:
+                statistics += self.run_image_pair_objects(
+                    workspace, first_image_name, second_image_name, object_name
+                )
+        if self.show_window:
+            workspace.display_data.statistics = statistics
+            workspace.display_data.col_labels = col_labels
 
-        #
-        # We record some statistics which we will display later.
-        # We format them so that Matplotlib can display them in a table.
-        # The first row is a header that tells what the fields are.
-        #
-        statistics = [["Feature", "Mean", "Median", "SD"]]
-
-        #
-        # Put the statistics in the workspace display data so we
-        # can get at them when we display
-        #
-        workspace.display_data.statistics = statistics
-
-        #
-        # Get the input image and object. You need to get the .value
-        # because otherwise you'll get the setting object instead of
-        # the string name.
-        #
-        input_image_name = self.input_image_name.value
-        input_object_name = self.input_object_name.value
-
-        ################################################################
-        #
-        # GETTING AN IMAGE FROM THE IMAGE SET
-        #
-        # Get the image set. The image set has all of the images in it.
-        #
-        image_set = workspace.image_set
-        #
-        # Get the input image object. We want a grayscale image here.
-        # The image set will convert a color image to a grayscale one
-        # and warn the user.
-        #
-        input_image = image_set.get_image(input_image_name, must_be_grayscale=True)
-        #
-        # Get the pixels - these are a 2-d Numpy array.
-        #
-        pixels = input_image.pixel_data
-        #
-        ###############################################################
-
-        ###############################################################
-        #
-        # GETTING THE LABELS MATRIX FROM THE OBJECT SET
-        #
-        # The object set has all of the objects in it.
-        #
-        object_set = workspace.object_set
-        #
-        # Get objects from the object set. The most useful array in
-        # the objects is "objects.segmented" which is a labels matrix
-        # in which each pixel has an integer value.
-        #
-        # The value, "0", is reserved for "background" - a pixel with
-        # a zero value is not in an object. Each object has an object
-        # number, starting at "1" and each pixel in the object is
-        # labeled with that number.
-        #
-        # The other useful array is "objects.small_removed_segmented" which
-        # is another labels matrix. There are objects that touch the edge of
-        # the image and get filtered out and there are large objects that
-        # get filtered out. Modules like "IdentifySecondaryObjects" may
-        # want to associate pixels near the objects in the labels matrix to
-        # those objects - the large and touching objects should compete with
-        # the real ones, so you should use "objects.small_removed_segmented"
-        # for those cases.
-        #
-        objects = object_set.get_objects(input_object_name)
-        labels = objects.segmented
-        ###############################################################
-
-        #
-        # The minimum enclosing circle (MEC) is the smallest circle that
-        # will fit around the object. We get the centers and radii of
-        # all of the objects at once. You'll see how that lets us
-        # compute the X and Y position of each pixel in a label all at
-        # one go.
-        #
-        # First, get an array that lists the whole range of indexes in
-        # the labels matrix.
-        #
-        indexes = objects.indices
-        #
-        # Then ask for the minimum_enclosing_circle for each object named
-        # in those indexes. MEC returns the i and j coordinate of the center
-        # and the radius of the circle and that defines the circle entirely.
-        #
-        centers, radius = centrosome.cpmorphology.minimum_enclosing_circle(
-            labels, indexes
-        )
-        #
-        # The module computes a measurement based on the image intensity
-        # inside an object times a Zernike polynomial inscribed in the
-        # minimum enclosing circle around the object. The details are
-        # in the "measure_zernike" function. We call into the function with
-        # an N and M which describe the polynomial.
-        #
-        for n, m in self.get_zernike_indexes():
-            # Compute the zernikes for each object, returned in an array
-            zr, zi = self.measure_zernike(
-                pixels, labels, indexes, centers, radius, n, m
-            )
-
-            # Get the name of the measurement feature for this zernike
-            feature = self.get_measurement_name(n, m)
-
-            # Add a measurement for this kind of object
-            if m != 0:
-                measurements.add_measurement(input_object_name, feature, zr)
-
-                # Do the same with -m
-                feature = self.get_measurement_name(n, -m)
-                measurements.add_measurement(input_object_name, feature, zi)
-            else:
-                # For zero, the total is the sum of real and imaginary parts
-                measurements.add_measurement(input_object_name, feature, zr + zi)
-
-            # Record the statistics.
-            zmean = numpy.mean(zr)
-            zmedian = numpy.median(zr)
-            zsd = numpy.std(zr)
-            statistics.append([feature, zmean, zmedian, zsd])
-
-    #
-    # "display" lets you use matplotlib to display your results.
-    #
     def display(self, workspace, figure):
         statistics = workspace.display_data.statistics
-
+        helptext = "default"
         figure.set_subplots((1, 1))
-
-        figure.subplot_table(0, 0, statistics)
-
-    def get_zernike_indexes(self, wants_negative=False):
-        """Get an N x 2 numpy array containing the M and N Zernike degrees
-
-        Use the radial_degree setting to determine which Zernikes to do.
-
-        wants_negative - if True, return both positive and negative M, if false
-                         return only positive
-        """
-        zi = centrosome.zernike.get_zernike_indexes(self.radial_degree.value + 1)
-
-        if wants_negative:
-            #
-            # numpy.vstack means concatenate rows of two 2d arrays.
-            # The multiplication by [1, -1] negates every m, but preserves n.
-            # zi[zi[:, 1] != 0] picks out only elements with m not equal to zero.
-            #
-            zi = numpy.vstack([zi, zi[zi[:, 1] != 0] * numpy.array([1, -1])])
-
-            #
-            # Sort by azimuth degree and radial degree so they are ordered
-            # reasonably
-            #
-            order = numpy.lexsort((zi[:, 1], zi[:, 0]))
-            zi = zi[order, :]
-
-        return zi
-
-    #
-    # "measure_zernike" makes one Zernike measurement on each object
-    #
-    def measure_zernike(self, pixels, labels, indexes, centers, radius, n, m):
-        """Measure the intensity of the image with Zernike (N, M)
-
-        pixels - the intensity image to be measured
-        labels - the labels matrix that labels each object with an integer
-        indexes - the label #s in the image
-        centers - the centers of the minimum enclosing circle for each object
-        radius - the radius of the minimum enclosing circle for each object
-        n, m - the Zernike coefficients.
-
-        See http://en.wikipedia.org/wiki/Zernike_polynomials for an
-        explanation of the Zernike polynomials
-        """
-        #
-        # The strategy here is to operate on the whole array instead
-        # of operating on one object at a time. The most important thing
-        # is to avoid having to run the Python interpreter once per pixel
-        # in the image and the second most important is to avoid running
-        # it per object in case there are hundreds of objects.
-        #
-        # We play lots of indexing tricks here to operate on the whole image.
-        # I'll try to explain some - hopefully, you can reuse.
-        center_x = centers[:, 1]
-        center_y = centers[:, 0]
-
-        #
-        # Make up fake values for 0 (the background). This lets us do our
-        # indexing tricks. Really, we're going to ignore the background,
-        # but we want to do the indexing without ignoring the background
-        # because that's easier.
-        #
-        center_x = numpy.hstack([[0], center_x])
-        center_y = numpy.hstack([[0], center_y])
-        radius = numpy.hstack([[1], radius])
-
-        #
-        # Now get one array that's the y coordinate of each pixel and one
-        # that's the x coordinate. This might look stupid and wasteful,
-        # but these "arrays" are never actually realized and made into
-        # real memory.
-        #
-        # Using 0.0:X creates floating point indices. This makes the
-        # data type of x, y consistent with center_x, center_y and
-        # raidus. Numpy requires consistent data types for in-place
-        # operations like -= and /=.
-        #
-        y, x = numpy.mgrid[0.0 : labels.shape[0], 0.0 : labels.shape[1]]
-
-        #
-        # Get the x and y coordinates relative to the object centers.
-        # This uses Numpy broadcasting. For each pixel, we use the
-        # value in the labels matrix as an index into the appropriate
-        # one-dimensional array. So we get the value for that object.
-        #
-        y -= center_y[labels]
-        x -= center_x[labels]
-
-        #
-        # Zernikes take x and y values from zero to one. We scale the
-        # integer coordinate values by dividing them by the radius of
-        # the circle. Again, we use the indexing trick to look up the
-        # values for each object.
-        #
-        y /= radius[labels]
-        x /= radius[labels]
-
-        #
-        # Now we can get Zernike polynomials per-pixel where each pixel
-        # value is calculated according to its object's MEC.
-        #
-        # We use a mask of all of the non-zero labels so the calculation
-        # runs a little faster.
-        #
-        zernike_polynomial = centrosome.zernike.construct_zernike_polynomials(
-            x, y, numpy.array([[n, m]]), labels > 0
+        figure.subplot_table(
+            0, 0, statistics, workspace.display_data.col_labels, title=helptext
         )
+    
+    def run_image_pair_objects(
+        self, workspace, first_image_name, second_image_name, object_name
+    ):
+        """Calculate per-object correlations between intensities in two images"""
+        first_image = workspace.image_set.get_image(
+            first_image_name, must_be_grayscale=True
+        )
+        second_image = workspace.image_set.get_image(
+            second_image_name, must_be_grayscale=True
+        )
+        objects = workspace.object_set.get_objects(object_name)
+        #
+        # Crop both images to the size of the labels matrix
+        #
+        labels = objects.segmented
+        try:
+            first_pixels = objects.crop_image_similarly(first_image.pixel_data)
+            first_mask = objects.crop_image_similarly(first_image.mask)
+        except ValueError:
+            first_pixels, m1 = size_similarly(labels, first_image.pixel_data)
+            first_mask, m1 = size_similarly(labels, first_image.mask)
+            first_mask[~m1] = False
+        try:
+            second_pixels = objects.crop_image_similarly(second_image.pixel_data)
+            second_mask = objects.crop_image_similarly(second_image.mask)
+        except ValueError:
+            second_pixels, m1 = size_similarly(labels, second_image.pixel_data)
+            second_mask, m1 = size_similarly(labels, second_image.mask)
+            second_mask[~m1] = False
+        mask = (labels > 0) & first_mask & second_mask
+        first_pixels = first_pixels[mask]
+        second_pixels = second_pixels[mask]
+        labels = labels[mask]
+        result = []
+        first_pixel_data = first_image.pixel_data
+        first_mask = first_image.mask
+        first_pixel_count = numpy.product(first_pixel_data.shape)
+        second_pixel_data = second_image.pixel_data
+        second_mask = second_image.mask
+        second_pixel_count = numpy.product(second_pixel_data.shape)
+        #
+        # Crop the larger image similarly to the smaller one
+        #
+        if first_pixel_count < second_pixel_count:
+            second_pixel_data = first_image.crop_image_similarly(second_pixel_data)
+            second_mask = first_image.crop_image_similarly(second_mask)
+        elif second_pixel_count < first_pixel_count:
+            first_pixel_data = second_image.crop_image_similarly(first_pixel_data)
+            first_mask = second_image.crop_image_similarly(first_mask)
+        mask = (
+            first_mask
+            & second_mask
+            & (~numpy.isnan(first_pixel_data))
+            & (~numpy.isnan(second_pixel_data))
+        )
+        if numpy.any(mask):
+            fi = first_pixel_data[mask]
+            si = second_pixel_data[mask]
 
-        #
-        # For historical reasons, centrosome didn't multiply by the per/zernike
-        # normalizing factor: 2*n + 2 / E / pi where E is 2 if m is zero and 1
-        # if m is one. We do it here to aid with the reconstruction
-        #
-        zernike_polynomial *= (2 * n + 2) / (2 if m == 0 else 1) / numpy.pi
+        n_objects = objects.count
+        # Handle case when both images for the correlation are completely masked out
 
-        #
-        # Multiply the Zernike polynomial by the image to dissect
-        # the image by the Zernike basis set.
-        #
-        output_pixels = pixels * zernike_polynomial[:, :, 0]
+        if n_objects == 0:
+            # corr = numpy.zeros((0,))
+            # overlap = numpy.zeros((0,))
+            # K1 = numpy.zeros((0,))
+            # K2 = numpy.zeros((0,))
+            # M1 = numpy.zeros((0,))
+            # M2 = numpy.zeros((0,))
+            RWC1 = numpy.zeros((0,))
+            RWC2 = numpy.zeros((0,))
+            # C1 = numpy.zeros((0,))
+            # C2 = numpy.zeros((0,))
+        elif numpy.where(mask)[0].__len__() == 0:
+            corr = numpy.zeros((n_objects,))
+            corr[:] = numpy.NaN
+            # overlap = K1 = K2 = M1 = M2 = RWC1 = RWC2 = C1 = C2 = corr
+            RWC1 = RWC2 = corr
 
-        #
-        # The sum function calculates the sum of the pixel values for
-        # each pixel in an object, using the labels matrix to name
-        # the pixels in an object
-        #
-        zr = scipy.ndimage.sum(output_pixels.real, labels, indexes)
-        zi = scipy.ndimage.sum(output_pixels.imag, labels, indexes)
+        else:
+            lrange = numpy.arange(n_objects, dtype=numpy.int32) + 1
 
-        return zr, zi
+            # RWC Coefficient
+            RWC1 = numpy.zeros(len(lrange))
+            RWC2 = numpy.zeros(len(lrange))
+            for label in labels:
+                # set first_pixels to only what's inside that label and rename
+                # same with second_pixels to only what's inside that label and rename
+                # same with labels to only what's inside that label and rename
+                # same with lrange to only what's inside that label and rename
+                # same with fi_thresh, si_thresh, combined_thresh, tot_fi_thr, tot_si_thr
+                # - move the 770 block inside this function after subsettingfirst_pixels and second_pixels
+                    
+                [Rank1] = numpy.lexsort(([labels], [first_pixels]))
+                [Rank2] = numpy.lexsort(([labels], [second_pixels]))
+                Rank1_U = numpy.hstack(
+                    [[False], first_pixels[Rank1[:-1]] != first_pixels[Rank1[1:]]]
+                )
+                Rank2_U = numpy.hstack(
+                    [[False], second_pixels[Rank2[:-1]] != second_pixels[Rank2[1:]]]
+                )
+                Rank1_S = numpy.cumsum(Rank1_U)
+                Rank2_S = numpy.cumsum(Rank2_U)
+                Rank_im1 = numpy.zeros(first_pixels.shape, dtype=int)
+                Rank_im2 = numpy.zeros(second_pixels.shape, dtype=int)
+                Rank_im1[Rank1] = Rank1_S
+                Rank_im2[Rank2] = Rank2_S
+
+                R = max(Rank_im1.max(), Rank_im2.max()) + 1
+                Di = abs(Rank_im1 - Rank_im2)
+                weight = (R - Di) * 1.0 / R
+                weight_thresh = weight[combined_thresh]
+
+                if numpy.any(combined_thresh):
+                    RWC1 = numpy.array(
+                        scipy.ndimage.sum(
+                            fi_thresh * weight_thresh, labels[combined_thresh], lrange
+                        )
+                    ) / numpy.array(tot_fi_thr)
+                    RWC2 = numpy.array(
+                        scipy.ndimage.sum(
+                            si_thresh * weight_thresh, labels[combined_thresh], lrange
+                        )
+                    ) / numpy.array(tot_si_thr)
+                
+                # Threshold as percentage of maximum intensity of objects in each channel
+                tff = (self.thr.value / 100) * fix(
+                    scipy.ndimage.maximum(first_pixels, labels, lrange)
+                )
+                tss = (self.thr.value / 100) * fix(
+                    scipy.ndimage.maximum(second_pixels, labels, lrange)
+                )
+
+                combined_thresh = (first_pixels >= tff[labels - 1]) & (
+                    second_pixels >= tss[labels - 1]
+                )
+                fi_thresh = first_pixels[combined_thresh]
+                si_thresh = second_pixels[combined_thresh]
+                tot_fi_thr = scipy.ndimage.sum(
+                    first_pixels[first_pixels >= tff[labels - 1]],
+                    labels[first_pixels >= tff[labels - 1]],
+                    lrange,
+                )
+                tot_si_thr = scipy.ndimage.sum(
+                    second_pixels[second_pixels >= tss[labels - 1]],
+                    labels[second_pixels >= tss[labels - 1]],
+                    lrange,
+                )
+
+            result += [
+                [
+                    first_image_name,
+                    second_image_name,
+                    object_name,
+                    "Mean RWC coeff",
+                    "%.3f" % numpy.mean(RWC1),
+                ],
+                [
+                    first_image_name,
+                    second_image_name,
+                    object_name,
+                    "Median RWC coeff",
+                    "%.3f" % numpy.median(RWC1),
+                ],
+                [
+                    first_image_name,
+                    second_image_name,
+                    object_name,
+                    "Min RWC coeff",
+                    "%.3f" % numpy.min(RWC1),
+                ],
+                [
+                    first_image_name,
+                    second_image_name,
+                    object_name,
+                    "Max RWC coeff",
+                    "%.3f" % numpy.max(RWC1),
+                ],
+            ]
+            result += [
+                [
+                    second_image_name,
+                    first_image_name,
+                    object_name,
+                    "Mean RWC coeff",
+                    "%.3f" % numpy.mean(RWC2),
+                ],
+                [
+                    second_image_name,
+                    first_image_name,
+                    object_name,
+                    "Median RWC coeff",
+                    "%.3f" % numpy.median(RWC2),
+                ],
+                [
+                    second_image_name,
+                    first_image_name,
+                    object_name,
+                    "Min RWC coeff",
+                    "%.3f" % numpy.min(RWC2),
+                ],
+                [
+                    second_image_name,
+                    first_image_name,
+                    object_name,
+                    "Max RWC coeff",
+                    "%.3f" % numpy.max(RWC2),
+                ],
+            ]
+
+        rwc_measurement_1 = F_RWC_FORMAT % (first_image_name, second_image_name)
+        rwc_measurement_2 = F_RWC_FORMAT % (second_image_name, first_image_name)
+        workspace.measurements.add_measurement(object_name, rwc_measurement_1, RWC1)
+        workspace.measurements.add_measurement(object_name, rwc_measurement_2, RWC2)
+
+        if n_objects == 0:
+            return [
+                [
+                    first_image_name,
+                    second_image_name,
+                    object_name,
+                    "Mean correlation",
+                    "-",
+                ],
+                [
+                    first_image_name,
+                    second_image_name,
+                    object_name,
+                    "Median correlation",
+                    "-",
+                ],
+                [
+                    first_image_name,
+                    second_image_name,
+                    object_name,
+                    "Min correlation",
+                    "-",
+                ],
+                [
+                    first_image_name,
+                    second_image_name,
+                    object_name,
+                    "Max correlation",
+                    "-",
+                ],
+            ]
+        else:
+            return result
+        
+    def get_measurement_columns(self, pipeline):
+        """Return column definitions for all measurements made by this module"""
+        columns = []
+        for first_image, second_image in self.get_image_pairs():
+            for i in range(len(self.objects_list.value)):
+                object_name = self.objects_list.value[i]
+                if self.do_rwc:
+                    columns += [
+                        (
+                            object_name,
+                            F_RWC_FORMAT % (first_image, second_image),
+                            COLTYPE_FLOAT,
+                        ),
+                        (
+                            object_name,
+                            F_RWC_FORMAT % (second_image, first_image),
+                            COLTYPE_FLOAT,
+                        ),
+                    ]
+        return columns
+
+    def get_categories(self, pipeline, object_name):
+        """Return the categories supported by this module for the given object
+
+        object_name - name of the measured object or IMAGE
+        """
+        return ["Correlation"]
+
+    def get_measurements(self, pipeline, object_name, category):
+        if self.get_categories(pipeline, object_name) == [category]:
+            results = []
+            results += ["RWC"]
+            return results
+        return []
+
+    def get_measurement_images(self, pipeline, object_name, category, measurement):
+        """Return the joined pairs of images measured"""
+        result = []
+        if measurement in self.get_measurements(pipeline, object_name, category):
+            for i1, i2 in self.get_image_pairs():
+                result.append("%s_%s" % (i1, i2))
+                # For asymmetric, return both orderings
+                if measurement in ("K", "Manders", "RWC", "Costes"):
+                    result.append("%s_%s" % (i2, i1))
+        return result
+
+    def validate_module(self, pipeline):
+        """Make sure chosen objects are selected only once"""
+        if len(self.images_list.value) < 2:
+            raise ValidationError("This module needs at least 2 images to be selected", self.images_list)
+
+        if len(self.objects_list.value) == 0:
+            raise ValidationError("No object sets selected", self.objects_list)
+
+    def upgrade_settings(self, setting_values, variable_revision_number, module_name):
+        """Adjust the setting values for pipelines saved under old revisions"""
+        if variable_revision_number < 2:
+            raise NotImplementedError(
+                "Automatic upgrade for this module is not supported in CellProfiler 3."
+            )
+
+        if variable_revision_number == 2:
+            image_count = int(setting_values[0])
+            idx_thr = image_count + 2
+            setting_values = (
+                setting_values[:idx_thr] + ["15.0"] + setting_values[idx_thr:]
+            )
+            variable_revision_number = 3
+
+        if variable_revision_number == 3:
+            num_images = int(setting_values[0])
+            num_objects = int(setting_values[1])
+            div_img = 2 + num_images
+            div_obj = div_img + 2 + num_objects
+            images_set = set(setting_values[2:div_img])
+            thr_mode = setting_values[div_img : div_img + 2]
+            objects_set = set(setting_values[div_img + 2 : div_obj])
+            other_settings = setting_values[div_obj:]
+            if "None" in images_set:
+                images_set.remove("None")
+            if "None" in objects_set:
+                objects_set.remove("None")
+            images_string = ", ".join(map(str, images_set))
+            objects_string = ", ".join(map(str, objects_set))
+            setting_values = (
+                [images_string] + thr_mode + [objects_string] + other_settings
+            )
+            variable_revision_number = 4
+        if variable_revision_number == 4:
+            # Add costes mode switch
+            setting_values += [M_FASTER]
+            variable_revision_number = 5
+        return setting_values, variable_revision_number
+
+    def volumetric(self):
+        return True
+
+
+def get_scale(scale_1, scale_2):
+    if scale_1 is not None and scale_2 is not None:
+        return max(scale_1, scale_2)
+    elif scale_1 is not None:
+        return scale_1
+    elif scale_2 is not None:
+        return scale_2
+    else:
+        return 255
+    
+
+
+
+
+
+    
 
     #
     # Here, we go about naming the measurements.
