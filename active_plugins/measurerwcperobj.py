@@ -4,20 +4,34 @@
 #
 #################################
 
-import centrosome.cpmorphology
-import centrosome.zernike
 import numpy
 import scipy.ndimage
+import scipy.stats
+from scipy.linalg import lstsq
+import logging
 
 #################################
 #
 # Imports from CellProfiler
 #
 ##################################
+from cellprofiler_core.constants.measurement import COLTYPE_FLOAT
+from cellprofiler_core.module import Module
+from cellprofiler_core.setting import Divider, Binary, ValidationError
+from cellprofiler_core.setting.choice import Choice
+from cellprofiler_core.setting.subscriber import (
+    LabelSubscriber,
+    LabelListSubscriber,
+    ImageListSubscriber,
+)
+from cellprofiler_core.setting.text import Float
+from cellprofiler_core.utilities.core.object import size_similarly
+from centrosome.cpmorphology import fixup_scipy_ndimage_result as fix
 
+LOGGER = logging.getLogger(__name__)
 
 __doc__ = """\
-MeasureRWCperObject
+MeasureRWCperObj
 ===================
 
 
@@ -31,10 +45,6 @@ MeasureRWCperObject
 # if someone wants to change the text, that text will change everywhere.
 # Also, you can't misspell it by accident.
 #
-from cellprofiler_core.constants.measurement import COLTYPE_FLOAT
-from cellprofiler_core.module import Module
-from cellprofiler_core.setting.subscriber import ImageSubscriber, LabelSubscriber
-from cellprofiler_core.setting.text import Integer
 
 """This is the measurement template category"""
 C_MEASUREMENT_TEMPLATE = "MT"
@@ -44,8 +54,8 @@ M_PER_OBJECT = "Within each object individually"
 F_RWC_FORMAT = "Correlation_RWC_%s_%s"
 
 
-class MeasurementTemplate(Module):
-    module_name = "MeasureRWCperObject"
+class MeasureRWCperObj(Module):
+    module_name = "MeasureRWCperObj"
     category = "Measurement"
     variable_revision_number = 1
 
@@ -503,7 +513,7 @@ measurements.
             variable_revision_number = 4
         if variable_revision_number == 4:
             # Add costes mode switch
-            setting_values += [M_FASTER]
+            # setting_values += [M_FASTER]
             variable_revision_number = 5
         return setting_values, variable_revision_number
 
