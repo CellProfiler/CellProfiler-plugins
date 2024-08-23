@@ -64,28 +64,48 @@ class EnforceObjectsOneToOne(ObjectProcessing):
         self.x_name.text = "Pre-primary objects"
 
         self.x_name.doc = """\
-TODO
+        In CellProfiler, we use the term *object* as a generic term to refer to an identified feature in an image, 
+        usually an organism, cell, or cellular compartment (for example, nuclei, cells, colonies, worms).
+        
+        Pre-primary objects are the objects that will be considered the Primary objects after
+        one-to-one relationship is forced. In CellProfiler, we typically define an object as
+        *Primary* when it can be found in an object without needing the assistance of another
+        cellular feature. Nuclei are a common example of primary objects. 
+        
+        Unlike our typical definition of Primary object, in this module, the Pre-primary object may have been identified 
+        using any other module (e.g. IdentifyPrimaryObjects, IdentifySecondaryObjects) or plugin (e.g. RunCellpose, RunStardist).
+        The Pre-primary objects will act as the seed objects and the Pre-secondary objects will be
+        filtered to a one-to-one-relationship.
         """
 
         self.y_name = LabelSubscriber(
             "Pre-secondary objects",
             doc="""\
-TODO
+            In CellProfiler, we use the term *object* as a generic term to refer to an identified feature in an image, 
+            usually an organism, cell, or cellular compartment (for example, nuclei, cells, colonies, worms).
+            
+            Pre-secondary objects are the objects that will be considered the Secondary objects after
+            one-to-one relationship is forced. In CellProfiler, we typically define an object as
+            *Secondary* when it can be found in an image by using another cellular feature as a reference for guiding detection. 
+            Cell bodies are a common example of secondary objects identified using Nuclei as primary objects.
+            
+            Unlike our typical definition of Secondary object, in this module, the Pre-secondary object may have been identified 
+            using any other module (e.g. IdentifyPrimaryObjects, IdentifySecondaryObjects) or plugin (e.g. RunCellpose, RunStardist).
+            The Pre-primary objects will act as the seed objects and the Pre-secondary objects will be
+            filtered to a one-to-one-relationship.
             """,
         )
 
         self.output_primary_objects_name = LabelName(
             "Name the output primary object",
             "PrimaryObjects",
-            doc="""\
-TODO """,
+            doc="""The name to give the Primary objects created from the Pre-primary objects""",
         )
 
         self.output_secondary_objects_name = LabelName(
             "Name the output secondary object",
             "SecondaryObjects",
-            doc="""\
-TODO """,
+            doc="""The name to give the Secondary objects created from the Pre-secondary objects""",
         )
 
 
