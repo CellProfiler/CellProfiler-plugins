@@ -4,6 +4,7 @@ from cellprofiler_core.setting import (
 )
 from cellprofiler_core.setting.text import Alphanumeric
 from cellprofiler_core.setting.choice import Choice
+from cellprofiler_core.setting import Measurement
 
 __doc__ = ""
 
@@ -61,20 +62,25 @@ class FilterObjects_StringMatch(ObjectProcessing):
              (e.g. Object 'AAAAB' will be filtered by string 'AAAA').""",
         )
 
-        #self.filter_column = 
+        self.filter_column = Measurement("Measurement",
+                lambda: "Image",
+                "",
+                doc="""Select the measurement column that will be used for filtering.""",
+            )
 
         self.rules.create_settings()
 
     def settings(self):
         settings = super(FilterObjects_StringMatch, self).settings()
-        settings += [self.filter_out,self.filter_method]
+        settings += [self.filter_out,self.filter_method, self.filter_column]
         return settings
 
     def visible_settings(self):
         visible_settings = super(FilterObjects_StringMatch, self).visible_settings()
         visible_settings += [
                 self.filter_out,
-                self.filter_method
+                self.filter_method,
+                self.filter_column
             ]
         return visible_settings              
 
@@ -179,7 +185,7 @@ class FilterObjects_StringMatch(ObjectProcessing):
         """
         src_name = self.x_name.value
         m = workspace.measurements
-        values = m.get_current_measurement(src_name, "Barcode_BarcodeCalled")
+        values = m.get_current_measurement(src_name, self.filter_column)
         if self.filter_method == METHOD_EXACT:
             # Is this structure still necessary or is it an artifact?
             # Could be just values == self.filter_out.value
