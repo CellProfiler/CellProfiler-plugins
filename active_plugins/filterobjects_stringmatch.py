@@ -63,8 +63,8 @@ class FilterObjects_StringMatch(ObjectProcessing):
         )
 
         self.filter_column = Measurement("Measurement",
-                lambda: "Image",
-                "",
+                self.x_name.get_value,
+                "Barcode_BarcodeCalled",
                 doc="""Select the measurement column that will be used for filtering.""",
             )
 
@@ -185,7 +185,7 @@ class FilterObjects_StringMatch(ObjectProcessing):
         """
         src_name = self.x_name.value
         m = workspace.measurements
-        values = m.get_current_measurement(src_name, self.filter_column)
+        values = m.get_current_measurement(src_name, self.filter_column.value)
         if self.filter_method == METHOD_EXACT:
             # Is this structure still necessary or is it an artifact?
             # Could be just values == self.filter_out.value
