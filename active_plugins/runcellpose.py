@@ -58,14 +58,15 @@ features: additional models; bact-omni and cyto2-omni which were trained using t
 and the mask reconstruction algorithm for Omnipose that was created to solve over-segemnation of large cells; useful for bacterial cells,
 but can be used for other arbitrary and anisotropic shapes. You can mix and match Omnipose models with Cellpose style masking or vice versa.
 
-The module has been updated to be compatible with the latest release of Cellpose. From the old version of the module the 'cells' model corresponds to 'cyto2' model.
+The module is compatible with Cellpose 1.0.2 >= 2.3.2. From the old version of the module the 'cells' model corresponds to 'cyto2' model.
 
-Installation:
+You can run this module using Cellpose installed to the same Python environment as CellProfiler. Alternatively, you can 
+run this module using Cellpose in a Docker that the module will automatically download for you so you do not have to perform
+any installation yourself.
 
-It is necessary that you have installed Cellpose version >= 1.0.2
-
-You'll want to run `pip install cellpose` on your CellProfiler Python environment to setup Cellpose. If you have an older version of Cellpose
-run 'python -m pip install cellpose --upgrade'.
+To install Cellpose in your Python environment:
+You'll want to run `pip install cellpose==2.3.2` on your CellProfiler Python environment to setup Cellpose. If you have an older version of Cellpose
+run 'python -m pip install --force-reinstall -v cellpose==2.3.2'.
 
 To use Omnipose models, and mask reconstruction method you'll want to install Omnipose 'pip install omnipose' and Cellpose version 1.0.2 'pip install cellpose==1.0.2'.
 
@@ -84,8 +85,10 @@ YES          YES          NO
 """
 
 "Select Cellpose Docker Image"
-CELLPOSE_DOCKER_NO_PRETRAINED = "cellprofiler/runcellpose_no_pretrained:0.1"
-CELLPOSE_DOCKER_IMAGE_WITH_PRETRAINED = "cellprofiler/runcellpose_with_pretrained:0.1"
+CELLPOSE_DOCKER_NO_PRETRAINED_v232 = "cellprofiler/runcellpose_no_pretrained:2.3.2"
+CELLPOSE_DOCKER_IMAGE_WITH_PRETRAINED_v232 = "cellprofiler/runcellpose_with_pretrained:2.3.2"
+CELLPOSE_DOCKER_NO_PRETRAINED_v220 = "cellprofiler/runcellpose_no_pretrained:2.2"
+CELLPOSE_DOCKER_IMAGE_WITH_PRETRAINED_v220 = "cellprofiler/runcellpose_with_pretrained:2.2"
 
 "Detection mode"
 MODEL_NAMES = ['cyto','nuclei','tissuenet','livecell', 'cyto2', 'general',
@@ -134,19 +137,19 @@ are installed will be used.
 
         self.docker_image = Choice(
             text="Select Cellpose docker image",
-            choices=[CELLPOSE_DOCKER_IMAGE_WITH_PRETRAINED, CELLPOSE_DOCKER_NO_PRETRAINED],
-            value=CELLPOSE_DOCKER_IMAGE_WITH_PRETRAINED,
+            choices=[CELLPOSE_DOCKER_IMAGE_WITH_PRETRAINED_v220, CELLPOSE_DOCKER_NO_PRETRAINED_v220,CELLPOSE_DOCKER_IMAGE_WITH_PRETRAINED_v232, CELLPOSE_DOCKER_NO_PRETRAINED_v232],
+            value=CELLPOSE_DOCKER_IMAGE_WITH_PRETRAINED_v232,
             doc="""\
 Select which Docker image to use for running Cellpose.
 
 If you are not using a custom model, you can select
-**"{CELLPOSE_DOCKER_IMAGE_WITH_PRETRAINED}"**. If you are using a custom model,
-you can use either **"{CELLPOSE_DOCKER_NO_PRETRAINED}"** or
-**"{CELLPOSE_DOCKER_IMAGE_WITH_PRETRAINED}"**, but the latter will be slightly
-larger (~500 MB) due to including all of the pretrained models.
+**"{CELLPOSE_DOCKER_IMAGE_WITH_PRETRAINED_v232}"** or "{CELLPOSE_DOCKER_IMAGE_WITH_PRETRAINED_v220}"**. If you are using a custom model,
+you can use any of the available Dockers, but those with pretrained models will be slightly larger (~500 MB).
 """.format(
-            **{"CELLPOSE_DOCKER_NO_PRETRAINED": CELLPOSE_DOCKER_NO_PRETRAINED, 
-               "CELLPOSE_DOCKER_IMAGE_WITH_PRETRAINED": CELLPOSE_DOCKER_IMAGE_WITH_PRETRAINED}
+            **{"CELLPOSE_DOCKER_NO_PRETRAINED_v220": CELLPOSE_DOCKER_NO_PRETRAINED_v220, 
+               "CELLPOSE_DOCKER_IMAGE_WITH_PRETRAINED_v220": CELLPOSE_DOCKER_IMAGE_WITH_PRETRAINED_v220,
+               "CELLPOSE_DOCKER_NO_PRETRAINED_v232": CELLPOSE_DOCKER_NO_PRETRAINED_v232, 
+               "CELLPOSE_DOCKER_IMAGE_WITH_PRETRAINED_v232": CELLPOSE_DOCKER_IMAGE_WITH_PRETRAINED_v232}
 ),
         )
 
@@ -738,7 +741,7 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
             setting_values = setting_values + ["0.0", False, "15", "1.0", False, False]
             variable_revision_number = 3
         if variable_revision_number == 3:
-            setting_values = [setting_values[0]] + ["Python",CELLPOSE_DOCKER_IMAGE_WITH_PRETRAINED] + setting_values[1:]
+            setting_values = [setting_values[0]] + ["Python",CELLPOSE_DOCKER_IMAGE_WITH_PRETRAINED_v232] + setting_values[1:]
             variable_revision_number = 4
         if variable_revision_number == 4:
             setting_values = [setting_values[0]] + ['No'] + setting_values[1:]
