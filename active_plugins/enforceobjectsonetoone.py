@@ -41,7 +41,8 @@ In the case of a tie, all objects are dropped.
 If there is multiple:multiple relationship between pre-primary and pre-secondary objects, the pre-primary
 object that is the largest will be related to the pre-secondary object that it is most overlapped by.
 
-Note that object shapes are changed by this module. Pre-primary objects are forced to not go outside the pseudo-secondary object.
+Note that object shapes are changed by this module. Primary objects are forced to not go outside the Secondary object
+so the shape of a pre-primary object may be changed for it to become a Primary object.
 
 |
 
