@@ -25,10 +25,9 @@ EnforceObjectsOneToOne
 **EnforceObjectsOneToOne** takes two sets of objects which were independently 
 generated (often, though need not be, by a deep learning plugin) and forces
 the object sets to create a 1-to-1 object relationship that matches what happens
-in IdentifyPrimaryObjects and IdentifySecondaryObjects. Pseudo-primary objects
-are also forced to not go outside the pseudo-secondary object.
+in IdentifyPrimaryObjects and IdentifySecondaryObjects. 
 
-Pre-primary objects are filtered out if they do not touch any secondary objects.
+Any pre-primary objects that do not touch a pre-secondary object, and vice-versa, are filtered out.
 
 If there is a 1:1 relationship between a pre-primary and pre-secondary object, they become Primary and Secondary objects.
 
@@ -42,6 +41,7 @@ In the case of a tie, all objects are dropped.
 If there is multiple:multiple relationship between pre-primary and pre-secondary objects, the pre-primary
 object that is the largest will be related to the pre-secondary object that it is most overlapped by.
 
+Note that object shapes are changed by this module. Pre-primary objects are forced to not go outside the pseudo-secondary object.
 
 |
 
@@ -185,7 +185,7 @@ class EnforceObjectsOneToOne(ObjectProcessing):
 
         if self.show_window:
             #isdone? NO
-            """workspace.display_data.parent_labels = pre_primary.segmented
+            workspace.display_data.parent_labels = pre_primary.segmented
 
             workspace.display_data.parent_count = parents.count
 
@@ -193,11 +193,11 @@ class EnforceObjectsOneToOne(ObjectProcessing):
 
             workspace.display_data.parents_of = parents_of
 
-            workspace.display_data.dimensions = parents.dimensions"""
+            workspace.display_data.dimensions = parents.dimensions
 
     def display(self, workspace, figure):
         #isdone? NO
-        return 
+        
         if not self.show_window:
             return
 
@@ -205,7 +205,7 @@ class EnforceObjectsOneToOne(ObjectProcessing):
 
         figure.set_subplots((1, 3), dimensions=dimensions)
 
-        """child_labels = workspace.display_data.child_labels
+        child_labels = workspace.display_data.child_labels
 
         parents_of = workspace.display_data.parents_of
 
@@ -262,7 +262,7 @@ class EnforceObjectsOneToOne(ObjectProcessing):
             max_label=max_label,
             seed=seed,
             colormap=cmap,
-        )"""
+        )
 
     def enforce_unique(self, primary_object_array,secondary_object_array,erode_excess=False):
         hist, _, _ = numpy.histogram2d(
