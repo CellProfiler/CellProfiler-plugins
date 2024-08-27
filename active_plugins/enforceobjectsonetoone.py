@@ -186,7 +186,7 @@ class EnforceObjectsOneToOne(ObjectProcessing):
 
         if self.show_window:
             #isdone? NO
-            workspace.display_data.parent_labels = pre_primary.segmented
+            """workspace.display_data.parent_labels = pre_primary.segmented
 
             workspace.display_data.parent_count = parents.count
 
@@ -194,19 +194,19 @@ class EnforceObjectsOneToOne(ObjectProcessing):
 
             workspace.display_data.parents_of = parents_of
 
-            workspace.display_data.dimensions = parents.dimensions
+            workspace.display_data.dimensions = parents.dimensions"""
 
     def display(self, workspace, figure):
         #isdone? NO
         
         if not self.show_window:
             return
-
+        
         dimensions = workspace.display_data.dimensions
 
         figure.set_subplots((1, 3), dimensions=dimensions)
 
-        child_labels = workspace.display_data.child_labels
+        """child_labels = workspace.display_data.child_labels
 
         parents_of = workspace.display_data.parents_of
 
@@ -263,7 +263,7 @@ class EnforceObjectsOneToOne(ObjectProcessing):
             max_label=max_label,
             seed=seed,
             colormap=cmap,
-        )
+        )"""
 
     def enforce_unique(self, primary_object_array,secondary_object_array,erode_excess=False):
         hist, _, _ = numpy.histogram2d(
