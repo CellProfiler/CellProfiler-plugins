@@ -28,7 +28,20 @@ the object sets to create a 1-to-1 object relationship that matches what happens
 in IdentifyPrimaryObjects and IdentifySecondaryObjects. Pseudo-primary objects
 are also forced to not go outside the pseudo-secondary object.
 
-TODO - describe heuristic, tie handling
+Pre-primary objects are filtered out if they do not touch any secondary objects.
+
+If there is a 1:1 relationship between a pre-primary and pre-secondary object, they become Primary and Secondary objects.
+
+If there is 1:multiple relationship between pre-primary and pre-secondary objects, the pre-secondary object
+that most overlaps with the pre-primary object forms the Primary/Secondary relationship.
+
+If there is multiple:1 relationship between pre-primary and pre-secondary objects, the pre-primary object
+that is most overlapped by the pre-secondary object forms the Primary/Secondary relationship. 
+In the case of a tie, all objects are dropped.
+
+If there is multiple:multiple relationship between pre-primary and pre-secondary objects, the pre-primary
+object that is the largest will be related to the pre-secondary object that it is most overlapped by.
+
 
 |
 
