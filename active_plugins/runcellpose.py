@@ -83,9 +83,11 @@ YES          YES          NO
 
 """
 
+"Select Cellpose Docker Image"
 CELLPOSE_DOCKER_NO_PRETRAINED = "cellprofiler/runcellpose_no_pretrained:0.1"
 CELLPOSE_DOCKER_IMAGE_WITH_PRETRAINED = "cellprofiler/runcellpose_with_pretrained:0.1"
 
+"Detection mode"
 MODEL_NAMES = ['cyto','nuclei','tissuenet','livecell', 'cyto2', 'general',
                 'CP', 'CPx', 'TN1', 'TN2', 'TN3', 'LC1', 'LC2', 'LC3', 'LC4', 'custom']
 
@@ -95,7 +97,7 @@ class RunCellpose(ImageSegmentation):
 
     module_name = "RunCellpose"
 
-    variable_revision_number = 4
+    variable_revision_number = 6
 
     doi = {
         "Please cite the following when using RunCellPose:": "https://doi.org/10.1038/s41592-020-01018-x",
@@ -104,6 +106,16 @@ class RunCellpose(ImageSegmentation):
 
     def create_settings(self):
         super(RunCellpose, self).create_settings()
+
+        self.rescale = Binary(
+            text="Rescale images before running Cellpose",
+            value=True,
+            doc="""\
+Reminds the user that the  normalization step will be performed to ensure suimilar segmentation behaviour in the RunCellpose
+module and the Cellpose app.
+"""
+        )
+
 
         self.docker_or_python = Choice(
             text="Run CellPose in docker or local python environment",
@@ -337,9 +349,18 @@ The default is set to "Yes".
 """,
         )
 
+        self.probability_rescale_setting = Binary(
+            text="Rescale probability map?",
+            value=True,
+            doc="""
+Activate to rescale probability map to 0-255 (which matches the scale used when running this module from Docker)
+""",
+        )
+
     def settings(self):
         return [
             self.x_name,
+            self.rescale,
             self.docker_or_python,
             self.docker_image,
             self.expected_diameter,
@@ -362,10 +383,12 @@ The default is set to "Yes".
             self.omni,
             self.invert,
             self.remove_edge_masks,
+            self.probability_rescale_setting,
         ]
 
     def visible_settings(self):
-        vis_settings = [self.docker_or_python]
+        vis_settings = [self.rescale, self.docker_or_python]
+
 
         if self.docker_or_python.value == "Docker":
             vis_settings += [self.docker_image]
@@ -402,6 +425,8 @@ The default is set to "Yes".
 
         if self.save_probabilities.value:
             vis_settings += [self.probabilities_name]
+            if self.docker_or_python.value == 'Python':
+                vis_settings += [self.probability_rescale_setting]
 
         vis_settings += [self.use_averaging, self.use_gpu]
 
@@ -440,6 +465,13 @@ The default is set to "Yes".
         x = images.get_image(x_name)
         dimensions = x.dimensions
         x_data = x.pixel_data
+
+        if self.rescale.value:
+            rescale_x = x_data.copy()
+            x01 = numpy.percentile(rescale_x, 1)
+            x99 = numpy.percentile(rescale_x, 99)
+            x_data = numpy.clip((rescale_x - x01) / (x99 - x01), a_min=0, a_max=1)
+
         anisotropy = 0.0
         if self.do_3D.value:
             anisotropy = x.spacing[0] / x.spacing[1]
@@ -609,9 +641,18 @@ The default is set to "Yes".
         objects.add_objects(y, y_name)
 
         if self.save_probabilities.value:
+            if self.docker_or_python.value == "Docker":
+                # get rid of extra dimension
+                prob_map = numpy.squeeze(flows[1], axis=0) # ranges 0-255
+            else:
+                prob_map = flows[2]
+                rescale_prob_map = prob_map.copy()
+                prob_map01 = numpy.percentile(rescale_prob_map, 1)
+                prob_map99 = numpy.percentile(rescale_prob_map, 99)
+                prob_map = numpy.clip((rescale_prob_map - prob_map01) / (prob_map99 - prob_map01), a_min=0, a_max=1)
             # Flows come out sized relative to CellPose's inbuilt model size.
             # We need to slightly resize to match the original image.
-            size_corrected = skimage.transform.resize(flows[2], y_data.shape)
+            size_corrected = skimage.transform.resize(prob_map, y_data.shape)
             prob_image = Image(
                 size_corrected,
                 parent_image=x.parent_image,
@@ -699,4 +740,12 @@ The default is set to "Yes".
         if variable_revision_number == 3:
             setting_values = [setting_values[0]] + ["Python",CELLPOSE_DOCKER_IMAGE_WITH_PRETRAINED] + setting_values[1:]
             variable_revision_number = 4
+        if variable_revision_number == 4:
+            setting_values = [setting_values[0]] + ['No'] + setting_values[1:]
+            variable_revision_number = 5
+        if variable_revision_number == 5:
+            setting_values = setting_values + [False]
+            variable_revision_number = 6
         return setting_values, variable_revision_number
+    
+

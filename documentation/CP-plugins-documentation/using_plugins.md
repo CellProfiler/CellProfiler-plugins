@@ -21,7 +21,7 @@ See [Installing plugins with dependencies, using CellProfiler from source](#inst
 See [Installing plugins with dependencies, using pre-built CellProfiler](#installing-plugins-with-dependencies-using-pre-built-cellprofiler).
 - The third option uses Docker to bypass installation requirements. 
 It is the simplest option that only requires download of Docker Desktop; the module that has dependencies will automatically download a Docker that has all of the dependencies upon run and access that Docker while running the plugin.
-It is currently only supported for the RunCellpose plugin but will be available in other plugins soon.
+It is currently supported for the RunCellpose and Runilastik plugins. Please have a look at this [table](https://github.com/CellProfiler/CellProfiler-plugins/blob/master/documentation/CP-plugins-documentation/supported_plugins.md) to know about the availability of docker versions for plugins.  
 See [Using Docker to Bypass Installation Requirements](#using-docker-to-bypass-installation-requirements).
 
 ### Installing plugins without dependencies
@@ -233,10 +233,9 @@ See [Using Docker to Bypass Installation Requirements](#using-docker-to-bypass-i
     Download Docker Desktop from [Docker.com](https://www.docker.com/products/docker-desktop/).
 
 2. **Run Docker Desktop**
+Open Docker Desktop.
 
-    Open Docker Desktop.
-
-    Docker Desktop will need to be open every time you use a plugin with Docker.
+Docker Desktop will need to be open every time you use a plugin with Docker. Please have a look at this [table](https://github.com/CellProfiler/CellProfiler-plugins/blob/master/documentation/CP-plugins-documentation/supported_plugins.md) to know if a docker version is available for a plugin. 
 
 3. **Select "Run with Docker"**
 
