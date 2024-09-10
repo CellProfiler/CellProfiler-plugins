@@ -1,5 +1,4 @@
 import numpy
-
 import cellprofiler_core.object
 from cellprofiler_core.constants.measurement import (
     C_PARENT,
@@ -15,7 +14,6 @@ from cellprofiler_core.constants.measurement import (
 from cellprofiler_core.module.image_segmentation import ObjectProcessing
 from cellprofiler_core.setting.subscriber import LabelSubscriber
 from cellprofiler_core.setting.text import LabelName
-
 from cellprofiler.modules import _help
 
 __doc__ = """\
@@ -144,6 +142,7 @@ class EnforceObjectsOneToOne(ObjectProcessing):
         return visible_settings
 
     def run(self, workspace):
+        workspace.display_data.statistics = []
         pre_primary = workspace.object_set.get_objects(self.x_name.value)
 
         pre_primary_seg = pre_primary.segmented
@@ -184,17 +183,20 @@ class EnforceObjectsOneToOne(ObjectProcessing):
         #relate old secondary to new secondary, and get the measurements
         self.add_measurements(workspace,self.output_primary_objects_name.value, self.output_secondary_objects_name.value)
 
+        #make outline image
+        # TODO
+
         if self.show_window:
             #isdone? NO
-            """workspace.display_data.parent_labels = pre_primary.segmented
-
-            workspace.display_data.parent_count = parents.count
-
-            workspace.display_data.child_labels = children.segmented
-
-            workspace.display_data.parents_of = parents_of
-
-            workspace.display_data.dimensions = parents.dimensions"""
+            workspace.display_data.pre_primary_labels = pre_primary.segmented
+            workspace.display_data.pre_secondary_labels = pre_secondary.segmented
+            workspace.display_data.primary_labels = new_primary_objects.segmented
+            workspace.display_data.secondary_labels = new_secondary_objects.segmented
+            workspace.display_data.dimensions = new_primary_objects.dimensions
+            statistics = workspace.display_data.statistics
+            statistics.append(["# of pre-primary objects", numpy.unique(pre_primary_seg).shape[0]-1])
+            statistics.append(["# of pre-secondary objects", numpy.unique(pre_secondary_seg).shape[0]-1])
+            statistics.append(["# of enforced objects", numpy.unique(primary_seg).shape[0]-1])
 
     def display(self, workspace, figure):
         #isdone? NO
@@ -204,30 +206,15 @@ class EnforceObjectsOneToOne(ObjectProcessing):
         
         dimensions = workspace.display_data.dimensions
 
-        figure.set_subplots((1, 3), dimensions=dimensions)
+        figure.set_subplots((2,2), dimensions=dimensions)
 
-        """child_labels = workspace.display_data.child_labels
-
-        parents_of = workspace.display_data.parents_of
-
-        parent_labels = workspace.display_data.parent_labels
-
-        #
-        # discover the mapping so that we can apply it to the children
-        #
-        mapping = numpy.arange(workspace.display_data.parent_count + 1)
-
-        mapping[parent_labels] = parent_labels
-
-        parent_labeled_children = numpy.zeros(child_labels.shape, int)
-
-        mask = child_labels > 0
-
-        parent_labeled_children[mask] = mapping[parents_of[child_labels[mask] - 1]]
-
+        pre_primary_labels = workspace.display_data.pre_primary_labels
+        pre_secondary_labels = workspace.display_data.pre_secondary_labels
+        primary_labels = workspace.display_data.primary_labels
+        secondary_labels = workspace.display_data.secondary_labels
+        
         max_label = max(
-            parent_labels.max(), child_labels.max(), parent_labeled_children.max()
-        )
+            pre_primary_labels.max(), pre_secondary_labels.max())
 
         seed = numpy.random.randint(256)
 
@@ -236,7 +223,7 @@ class EnforceObjectsOneToOne(ObjectProcessing):
         figure.subplot_imshow_labels(
             0,
             0,
-            parent_labels,
+            pre_primary_labels,
             title=self.x_name.value,
             max_label=max_label,
             seed=seed,
@@ -246,7 +233,7 @@ class EnforceObjectsOneToOne(ObjectProcessing):
         figure.subplot_imshow_labels(
             1,
             0,
-            child_labels,
+            pre_secondary_labels,
             title=self.y_name.value,
             sharexy=figure.subplot(0, 0),
             max_label=max_label,
@@ -254,16 +241,23 @@ class EnforceObjectsOneToOne(ObjectProcessing):
             colormap=cmap,
         )
 
-        figure.subplot_imshow_labels(
+        figure.subplot_imshow_grayscale(
             0,
             1,
-            parent_labeled_children,
-            title="{} labeled by {}".format(self.y_name.value, self.x_name.value),
-            sharexy=figure.subplot(0, 0),
-            max_label=max_label,
-            seed=seed,
-            colormap=cmap,
-        )"""
+            secondary_labels, #TODO (secondary_labels is placeholder)
+            title=f"{self.output_primary_objects_name} and {self.output_secondary_objects_name}", 
+            cplabels=[], #TODO
+            sharexy=figure.subplot(0, 0)
+        )
+
+
+        # List number of objects
+        figure.subplot_table(
+            1,
+            1,
+            [[x[1]] for x in workspace.display_data.statistics],
+            row_labels=[x[0] for x in workspace.display_data.statistics],            
+        )
 
     def enforce_unique(self, primary_object_array,secondary_object_array,erode_excess=False):
         hist, _, _ = numpy.histogram2d(
