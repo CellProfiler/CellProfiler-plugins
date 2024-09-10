@@ -8,6 +8,7 @@ import os
 from skimage.transform import resize
 from stardist.models import StarDist2D, StarDist3D
 from csbdeep.utils import normalize
+from csbdeep.models.pretrained import get_registered_models
 from numba import cuda
 import tensorflow as tf
 
@@ -24,7 +25,6 @@ from cellprofiler_core.setting import Binary
 from cellprofiler_core.setting.choice import Choice
 from cellprofiler_core.setting.do_something import DoSomething
 from cellprofiler_core.setting.text import Integer, ImageName, Directory, Float
-from csbdeep.models.pretrained import get_registered_models
 
 __doc__ = f"""\
 RunStardist
