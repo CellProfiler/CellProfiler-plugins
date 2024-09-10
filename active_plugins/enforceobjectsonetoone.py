@@ -12,8 +12,9 @@ from cellprofiler_core.constants.measurement import (
     FTR_OBJECT_NUMBER,
 )
 from cellprofiler_core.module.image_segmentation import ObjectProcessing
-from cellprofiler_core.setting.subscriber import LabelSubscriber
+from cellprofiler_core.setting.subscriber import LabelSubscriber, ImageSubscriber
 from cellprofiler_core.setting.text import LabelName
+from cellprofiler_core.setting import Binary
 from cellprofiler.modules import _help
 
 __doc__ = """\
@@ -120,6 +121,19 @@ class EnforceObjectsOneToOne(ObjectProcessing):
             doc="""The name to give the Secondary objects created from the Pre-secondary objects""",
         )
 
+        self.wants_display_outlines_on_image = Binary(
+            "In module display, show enforced objects on a selected image?",
+            False,
+            doc="""Select *{YES:s}* to have enforced objects superimposed on an image in the module display.
+            Select *{NO:s}* to have enforced objects displayed on a blank image.""".format(**{"YES": "Yes", "NO": "No"}),
+        )
+
+        self.image_name = ImageSubscriber(
+            "Select the image for visualization",
+            "None",
+            doc="""\
+            Select an image to see enforced objects superimposed on in the module display.""",
+        )
 
     def settings(self):
 
@@ -127,7 +141,9 @@ class EnforceObjectsOneToOne(ObjectProcessing):
 
         settings += [
             self.output_primary_objects_name,
-            self.output_secondary_objects_name
+            self.output_secondary_objects_name,
+            self.wants_display_outlines_on_image,
+            self.image_name,
         ]
         return settings
 
@@ -136,13 +152,17 @@ class EnforceObjectsOneToOne(ObjectProcessing):
 
         visible_settings += [
             self.output_primary_objects_name,
-            self.output_secondary_objects_name
+            self.output_secondary_objects_name,
+            self.wants_display_outlines_on_image
         ]
+        if self.wants_display_outlines_on_image:
+            visible_settings += [self.image_name]
 
         return visible_settings
 
     def run(self, workspace):
         workspace.display_data.statistics = []
+        
         pre_primary = workspace.object_set.get_objects(self.x_name.value)
 
         pre_primary_seg = pre_primary.segmented
@@ -184,27 +204,33 @@ class EnforceObjectsOneToOne(ObjectProcessing):
         self.add_measurements(workspace,self.output_primary_objects_name.value, self.output_secondary_objects_name.value)
 
         #make outline image
-        # TODO
+    
+        if self.wants_display_outlines_on_image:
+            image_name = self.image_name.value
+            image = workspace.image_set.get_image(image_name, must_be_grayscale=True)
+            img = image.pixel_data
+        else:
+            img = numpy.zeros(pre_primary.shape, dtype = "uint8")
 
         if self.show_window:
-            #isdone? NO
             workspace.display_data.pre_primary_labels = pre_primary.segmented
             workspace.display_data.pre_secondary_labels = pre_secondary.segmented
             workspace.display_data.primary_labels = new_primary_objects.segmented
             workspace.display_data.secondary_labels = new_secondary_objects.segmented
             workspace.display_data.dimensions = new_primary_objects.dimensions
+            workspace.display_data.img = img
             statistics = workspace.display_data.statistics
             statistics.append(["# of pre-primary objects", numpy.unique(pre_primary_seg).shape[0]-1])
             statistics.append(["# of pre-secondary objects", numpy.unique(pre_secondary_seg).shape[0]-1])
             statistics.append(["# of enforced objects", numpy.unique(primary_seg).shape[0]-1])
 
     def display(self, workspace, figure):
-        #isdone? NO
         
         if not self.show_window:
             return
         
         dimensions = workspace.display_data.dimensions
+        img = workspace.display_data.img
 
         figure.set_subplots((2,2), dimensions=dimensions)
 
@@ -240,13 +266,16 @@ class EnforceObjectsOneToOne(ObjectProcessing):
             seed=seed,
             colormap=cmap,
         )
-
+        cplabels = [
+            dict(name=self.output_primary_objects_name.value, labels=[primary_labels]),
+            dict(name=self.output_secondary_objects_name.value, labels=[secondary_labels]),
+        ]
         figure.subplot_imshow_grayscale(
             0,
             1,
-            secondary_labels, #TODO (secondary_labels is placeholder)
+            img,
             title=f"{self.output_primary_objects_name} and {self.output_secondary_objects_name}", 
-            cplabels=[], #TODO
+            cplabels=cplabels, 
             sharexy=figure.subplot(0, 0)
         )
 
