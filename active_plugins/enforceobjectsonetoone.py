@@ -30,17 +30,16 @@ Any pre-primary objects that do not touch a pre-secondary object, and vice-versa
 
 If there is a 1:1 relationship between a pre-primary and pre-secondary object, they become Primary and Secondary objects.
 
-If there is 1:multiple relationship between pre-primary and pre-secondary objects, the pre-secondary object
-that most overlaps with the pre-primary object forms the Primary/Secondary relationship.
+Otherwise, each pre-primary object checks, in descending area of amount of overlap, whether it is the best match for any of the 
+pre-secondary objects it touches. The best primary-secondary relationship is defined by:
+- Percent of the pre-primary object's area overlapping the pre-secondary object (ie, what percentage of the nucleus is inside 
+this cell?)
+- In case of a tie on _percent_ overlap (such as if two nuclei are totally encompassed by a single cell), which pre-primary object 
+has a larger overall area?
+- In case there is still a tie at this stage (if two nuclei of exactly identical size have exactly identical overlap percentages 
+with a cell), no match is given, in fairness.
 
-If there is multiple:1 relationship between pre-primary and pre-secondary objects, the pre-primary object
-that is most overlapped by the pre-secondary object forms the Primary/Secondary relationship. 
-In the case of a tie, all objects are dropped.
-
-If there is multiple:multiple relationship between pre-primary and pre-secondary objects, the pre-primary
-object that is the largest will be related to the pre-secondary object that it is most overlapped by.
-
-Note that object shapes are changed by this module. Primary objects are forced to not go outside the Secondary object
+Note that Primary object shapes are changed by this module. Primary objects are forced to not go outside the Secondary object
 so the shape of a pre-primary object may be changed for it to become a Primary object.
 
 |
@@ -194,13 +193,13 @@ class EnforceObjectsOneToOne(ObjectProcessing):
 
         workspace.object_set.add_objects(new_secondary_objects, self.output_secondary_objects_name.value)
 
-        #relate new primary to new secondary, and get the measurements
+        #relate old primary to new primary, and get the measurements
         self.add_measurements(workspace,self.x_name.value, self.output_primary_objects_name.value)
 
-        #relate old primary to new primary, and get the measurements
+        #relate old secondary to new secondary, and get the measurements
         self.add_measurements(workspace,self.y_name.value, self.output_secondary_objects_name.value)
 
-        #relate old secondary to new secondary, and get the measurements
+        #relate new primary to new secondary, and get the measurements        
         self.add_measurements(workspace,self.output_primary_objects_name.value, self.output_secondary_objects_name.value)
 
         #make outline image
@@ -327,10 +326,9 @@ class EnforceObjectsOneToOne(ObjectProcessing):
                 for each_secondary in order_to_try:
                     # what other nuclei touch this cell
                     secondary_touchers = hist[1:,each_secondary].nonzero()[0]+1
-                    #if the cell I touch most only touches me:
+                    #if the cell I touch most only touches me, that's a match:
                     if secondary_touchers.shape == 1:
                         secondary_match = each_secondary
-                        #print(f"{primary} won at 'the cell I touch most touches no other cell', breaking")
                         break
                     # if it's more than just me:
                     else:
@@ -347,9 +345,8 @@ class EnforceObjectsOneToOne(ObjectProcessing):
                         # do I win?
                         if best_primary == [primary]:
                             secondary_match = each_secondary
-                            #print(f"{primary} won at 'I have the best percent inside the cell', it was {score}, breaking")
                             break
-                        # do I at least tie - if so, pick the nucleus with the most inside the cell
+                        # do I at least tie - if so, pick the nucleus with the most area inside the cell
                         elif primary in best_primary:
                             best_tiebreaker_score = 0
                             best_tiebreaker = []
@@ -363,7 +360,6 @@ class EnforceObjectsOneToOne(ObjectProcessing):
                             if best_tiebreaker == [primary]:
                                 # I win - otherwise, the default secondary_match of 0 still applies
                                 secondary_match = each_secondary
-                                #print(f"{primary} won at 'I am the biggest inside the cell', it was {best_tiebreaker_score}, breaking")
                                 break
             if secondary_match != 0:
                 sanity_check_list.append(secondary_match)
