@@ -32,12 +32,12 @@ If there is a 1:1 relationship between a pre-primary and pre-secondary object, t
 
 Otherwise, each pre-primary object checks, in descending area of amount of overlap, whether it is the best match for any of the 
 pre-secondary objects it touches. The best primary-secondary relationship is defined by:
-- Percent of the pre-primary object's area overlapping the pre-secondary object (ie, what percentage of the nucleus is inside 
+- Percent of the pre-primary object's area overlapping the pre-secondary object (e.g. what percentage of the nucleus is inside 
 this cell?)
 - In case of a tie on _percent_ overlap (such as if two nuclei are totally encompassed by a single cell), which pre-primary object 
 has a larger overall area?
-- In case there is still a tie at this stage (if two nuclei of exactly identical size have exactly identical overlap percentages 
-with a cell), no match is given, in fairness.
+- In case there is still a tie at this stage (e.g. two nuclei of exactly identical size have exactly identical overlap percentages 
+with a cell), no match is given.
 
 Note that Primary object shapes are changed by this module. Primary objects are forced to not go outside the Secondary object
 so the shape of a pre-primary object may be changed for it to become a Primary object.
