@@ -81,13 +81,12 @@ class EnforceObjectsOneToOne(ObjectProcessing):
         
         Pre-primary objects are the objects that will be considered the Primary objects after
         one-to-one relationship is forced. In CellProfiler, we typically define an object as
-        *Primary* when it can be found in an object without needing the assistance of another
-        cellular feature. Nuclei are a common example of primary objects. 
+        *Primary* when it can be found in an image directly, rather than being built by relationship to another object.
+        Nuclei are a common example of primary objects. 
         
-        Unlike our typical definition of Primary object, in this module, the Pre-primary object may have been identified 
-        using any other module (e.g. IdentifyPrimaryObjects, IdentifySecondaryObjects) or plugin (e.g. RunCellpose, RunStardist).
-        The Pre-primary objects will act as the seed objects and the Pre-secondary objects will be
-        filtered to a one-to-one-relationship.
+        In this module, the Pre-primary object may have been identified using any other module (e.g. IdentifyPrimaryObjects, 
+        IdentifySecondaryObjects) or plugin (e.g. RunCellpose, RunStardist).
+        The Pre-primary objects and the Pre-secondary objects will be filtered to a one-to-one-relationship.
         """
 
         self.y_name = LabelSubscriber(
@@ -98,13 +97,13 @@ class EnforceObjectsOneToOne(ObjectProcessing):
             
             Pre-secondary objects are the objects that will be considered the Secondary objects after
             one-to-one relationship is forced. In CellProfiler, we typically define an object as
-            *Secondary* when it can be found in an image by using another cellular feature as a reference for guiding detection. 
+            *Secondary* when it can be found in an image by expansion from a smaller, already-defined primary object as 
+            a reference for guiding detection. 
             Cell bodies are a common example of secondary objects identified using Nuclei as primary objects.
             
             Unlike our typical definition of Secondary object, in this module, the Pre-secondary object may have been identified 
             using any other module (e.g. IdentifyPrimaryObjects, IdentifySecondaryObjects) or plugin (e.g. RunCellpose, RunStardist).
-            The Pre-primary objects will act as the seed objects and the Pre-secondary objects will be
-            filtered to a one-to-one-relationship.
+            The Pre-primary objects and the Pre-secondary objects will be filtered to a one-to-one-relationship.
             """,
         )
 
@@ -129,7 +128,8 @@ class EnforceObjectsOneToOne(ObjectProcessing):
 
         self.image_name = ImageSubscriber(
             "Select the image for visualization",
-            "None",
+            can_be_blank=True,
+            blank_text="None",
             doc="""\
             Select an image to see enforced objects superimposed on in the module display.""",
         )
