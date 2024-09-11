@@ -440,67 +440,73 @@ Those plugins that do have extra documentation contain links below.</p>
 <td><p></p></td>
 <td><p>N/A</p></td>
 </tr>
-<tr class="row-odd"><td><p>EnhancedMeasureTexture</p></td>
+<tr class="row-odd"><td><p>EnforceObjectsOneToOne</p></td>
+<td><p>EnforceObjectsOneToOne generates Primary and Secondary object relationships for any pair of objects in a similar manner to the relationships established by IdentifyPrimaryObjects and IdentifySecondaryObjects. It is particularly useful for relating objects identified using Deep Learning.</p></td>
+<td><p>No</p></td>
+<td><p></p></td>
+<td><p>N/A</p></td>
+</tr>
+<tr class="row-even"><td><p>EnhancedMeasureTexture</p></td>
 <td><p>EnhancedMeasureTexture measures the degree and nature of textures within an image or objects in a more comprehensive/tuneable manner than the MeasureTexture module native to CellProfiler.</p></td>
 <td><p>No</p></td>
 <td><p></p></td>
 <td><p>N/A</p></td>
 </tr>
-<tr class="row-even"><td><p>FilterObjects_StringMatch</p></td>
+<tr class="row-odd"><td><p>FilterObjects_StringMatch</p></td>
 <td><p>FilterObjects_StringMatch allows filtering of objects using exact or partial string matching in a manner similar to FilterObjects.</p></td>
 <td><p>No</p></td>
 <td><p></p></td>
 <td><p>N/A</p></td>
 </tr>
-<tr class="row-odd"><td><p>HistogramEqualization</p></td>
+<tr class="row-even"><td><p>HistogramEqualization</p></td>
 <td><p>HistogramEqualization increases the global contrast of a low-contrast image or volume. Histogram equalization redistributes intensities to utilize the full range of intensities, such that the most common frequencies are more distinct. This module can perform either global or local histogram equalization.</p></td>
 <td><p>No</p></td>
 <td><p></p></td>
 <td><p>N/A</p></td>
 </tr>
-<tr class="row-even"><td><p>HistogramMatching</p></td>
+<tr class="row-odd"><td><p>HistogramMatching</p></td>
 <td><p>HistogramMatching manipulates the pixel intensity values an input image and matches them to the histogram of a reference image. It can be used as a way to normalize intensities across different 2D or 3D images or different frames of the same 3D image. It allows you to choose which frame to use as the reference.</p></td>
 <td><p>No</p></td>
 <td><p></p></td>
 <td><p>N/A</p></td>
 </tr>
-<tr class="row-odd"><td><p>PixelShuffle</p></td>
+<tr class="row-even"><td><p>PixelShuffle</p></td>
 <td><p>PixelShuffle takes the intensity of each pixel in an image and randomly shuffles its position.</p></td>
 <td><p>No</p></td>
 <td><p></p></td>
 <td><p>N/A</p></td>
 </tr>
-<tr class="row-even"><td><p><span class="xref myst">RunCellpose</span></p></td>
+<tr class="row-odd"><td><p><span class="xref myst">RunCellpose</span></p></td>
 <td><p>RunCellpose allows you to run Cellpose within CellProfiler. Cellpose is a generalist machine-learning algorithm for cellular segmentation and is a great starting point for segmenting non-round cells. You can use pre-trained Cellpose models or your custom model with this plugin. You can use a GPU with this module to dramatically increase your speed/efficiency.</p></td>
 <td><p>Yes</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">cellpose</span></code></p></td>
 <td><p>Yes</p></td>
 </tr>
-<tr class="row-odd"><td><p>Runilastik</p></td>
+<tr class="row-even"><td><p>Runilastik</p></td>
 <td><p>Runilasitk allows to run ilastik within CellProfiler. You can use pre-trained ilastik projects/models to predict the probability of your input images. The plugin supports two types of ilastik projects: Pixel Classification and Autocontext (2-stage).</p></td>
 <td><p>Yes</p></td>
 <td><p></p></td>
 <td><p>Yes</p></td>
 </tr>
-<tr class="row-even"><td><p>RunImageJScript</p></td>
+<tr class="row-odd"><td><p>RunImageJScript</p></td>
 <td><p>RunImageJScript allows you to run any supported ImageJ script directly within CellProfiler. It is significantly more performant than RunImageJMacro, and is also less likely to leave behind temporary files.</p></td>
 <td><p>Yes</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">imagejscript</span></code> , though note that conda installation may be preferred, see <a class="reference external" href="https://py.imagej.net/en/latest/Install.html#installing-via-pip">this link</a> for more information</p></td>
 <td><p>No</p></td>
 </tr>
-<tr class="row-odd"><td><p>RunOmnipose</p></td>
+<tr class="row-even"><td><p>RunOmnipose</p></td>
 <td><p>RunOmnipose allows you to run Omnipose within CellProfiler. Omnipose is a general image segmentation tool that builds on Cellpose.</p></td>
 <td><p>Yes</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">omnipose</span></code></p></td>
 <td><p>No</p></td>
 </tr>
-<tr class="row-even"><td><p>RunStarDist</p></td>
+<tr class="row-odd"><td><p>RunStarDist</p></td>
 <td><p>RunStarDist allows you to run StarDist within CellProfiler. StarDist is a machine-learning algorithm for object detection with star-convex shapes making it best suited for nuclei or round-ish cells. You can use pre-trained StarDist models or your custom model with this plugin. You can use a GPU with this module to dramatically increase your speed/efficiency. RunStarDist is generally faster than RunCellpose.</p></td>
 <td><p>Yes</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">stardist</span></code></p></td>
 <td><p>No</p></td>
 </tr>
-<tr class="row-odd"><td><p>VarianceTransform</p></td>
+<tr class="row-even"><td><p>VarianceTransform</p></td>
 <td><p>This module allows you to calculate the variance of an image, using a determined window size. It also has the option to find the optimal window size from a predetermined range to obtain the maximum variance of an image.</p></td>
 <td><p>No</p></td>
 <td><p></p></td>
