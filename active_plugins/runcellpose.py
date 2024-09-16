@@ -600,30 +600,28 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
             # Save the image to the Docker mounted directory
             skimage.io.imsave(temp_img_path, x_data)
 
-            cmd = f"""
-            {docker_path} run --rm -v {temp_dir}:/data
-            {self.docker_image.value}
-            {'--gpus all' if self.use_gpu.value else ''}
-            cellpose
-            --dir /data/img
-            {'--pretrained_model ' + self.mode.value if self.mode.value != 'custom' else '--pretrained_model /data/model/' + model_file}
-            --chan {channels[0]}
-            --chan2 {channels[1]}
-            --diameter {diam}
-            {'--net_avg' if self.use_averaging.value else ''}
-            {'--do_3D' if self.do_3D.value else ''}
-            --anisotropy {anisotropy}
-            --flow_threshold {self.flow_threshold.value}
-            --cellprob_threshold {self.cellprob_threshold.value}
-            --stitch_threshold {self.stitch_threshold.value}
-            --min_size {self.min_size.value}
-            {'--invert' if self.invert.value else ''}
-            {'--exclude_on_edges' if self.remove_edge_masks.value else ''}
-            --verbose
-            """
-
+            cmd = [docker_path, 'run', '--rm', '-v', f'{temp_dir}:/data', self.docker_image.value]
+            if self.use_gpu.value:
+                cmd += ['--gpus', 'all']
+            cmd += ['cellpose', '--verbose', '--dir', '/data/img', '--pretrained_model']
+            if self.mode.value !='custom':
+                cmd += [self.mode.value]
+            else:
+                cmd += ['/data/model/' + model_file]
+            cmd += ['--chan', str(channels[0]), '--chan2', str(channels[1]), '--diameter', str(diam)]
+            if self.use_averaging.value:
+                cmd += ['--net_avg']
+            if self.do_3D.value:
+                cmd += ['--do_3D']
+            cmd += ['--anisotropy', str(anisotropy), '--flow_threshold', str(self.flow_threshold.value), '--cellprob_threshold', 
+                    str(self.cellprob_threshold.value), '--stitch_threshold', str(self.stitch_threshold.value), '--min_size', str(self.min_size.value)]
+            if self.invert.value:
+                cmd += ['--invert']
+            if self.remove_edge_masks.value:
+                cmd += ['--exclude_on_edges']
+            print(cmd)
             try:
-                subprocess.run(cmd.split(), text=True)
+                subprocess.run(cmd, text=True)
                 cellpose_output = numpy.load(os.path.join(temp_img_dir, unique_name + "_seg.npy"), allow_pickle=True).item()
 
                 y_data = cellpose_output["masks"]
