@@ -114,7 +114,7 @@ class HistogramMatching(cellprofiler_core.module.ImageProcessing):
         x_data = x.pixel_data
 
         if x.volumetric:
-            y_data = numpy.zeros_like(x_data, dtype=numpy.float)
+            y_data = numpy.zeros_like(x_data, dtype=float)
 
             if self.do_self_reference.value:
                 reference_image = x_data[self.frame_number.value]
