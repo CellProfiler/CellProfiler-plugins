@@ -441,6 +441,7 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
 
     def validate_module(self, pipeline):
         """If using custom model, validate the model file opens and works"""
+        from cellpose import models
         if self.mode.value == "custom":
             model_file = self.model_file_name.value
             model_directory = self.model_directory.get_absolute_path()
