@@ -27,6 +27,7 @@ from cellprofiler_core.setting.subscriber import (
 from cellprofiler_core.setting.text import Float
 from cellprofiler_core.utilities.core.object import size_similarly
 from centrosome.cpmorphology import fixup_scipy_ndimage_result as fix
+from cellprofiler_core.utilities.core.object import crop_labels_and_image
 
 LOGGER = logging.getLogger(__name__)
 
@@ -95,7 +96,15 @@ measurements.
 """,
         )
 
-        self.do_rwc = True
+        self.do_rwc = Binary(
+            "Calculate the Rank Weighted Colocalization coefficients?",
+            True,
+            doc="""\
+Select *{YES}* to run the Rank Weighted Colocalization coefficients.
+""".format(
+                **{"YES": "Yes"}
+            ),
+        )
 
         self.spacer = Divider(line=True)
 
@@ -119,9 +128,10 @@ measurements.
     def visible_settings(self):
         result = [
             self.images_list,
+            self.objects_list,
             self.spacer,
             self.thr,
-            self.do_rwc,
+            # self.do_rwc,
             # self.images_or_objects,
         ]
         return result
@@ -235,7 +245,16 @@ measurements.
 
         n_objects = objects.count
         # Handle case when both images for the correlation are completely masked out
-
+       
+        # Threshold as percentage of maximum intensity in each channel
+        thr_fi = self.thr.value * numpy.max(fi) / 100
+        thr_si = self.thr.value * numpy.max(si) / 100
+        combined_thresh = (fi > thr_fi) & (si > thr_si) # CHECK THIS DEFINITION, IT HAS BEEN CHANGED FROM THE ORIGINAL BUT IDK IF IT'S OK!
+        fi_thresh = fi[combined_thresh]
+        si_thresh = si[combined_thresh]
+        tot_fi_thr = fi[(fi > thr_fi)].sum()
+        tot_si_thr = si[(si > thr_si)].sum()
+       
         if n_objects == 0:
             # corr = numpy.zeros((0,))
             # overlap = numpy.zeros((0,))
@@ -259,16 +278,25 @@ measurements.
             # RWC Coefficient
             RWC1 = numpy.zeros(len(lrange))
             RWC2 = numpy.zeros(len(lrange))
-            for label in labels:
-                # set first_pixels to only what's inside that label and rename
-                # same with second_pixels to only what's inside that label and rename
-                # same with labels to only what's inside that label and rename
-                # same with lrange to only what's inside that label and rename
+
+            for label in numpy.unique(labels):
+                # set first_pixels to only what's inside that label and rename --> obj_pixels_img1
+                # same with second_pixels to only what's inside that label and rename --> obj_pixels_img2
+                # same with labels to only what's inside that label and rename --> obj_label
+                # same with lrange to only what's inside that label and rename --> obj_lrange
                 # same with fi_thresh, si_thresh, combined_thresh, tot_fi_thr, tot_si_thr
                 # - move the 770 block inside this function after subsettingfirst_pixels and second_pixels
-                    
-                [Rank1] = numpy.lexsort(([labels], [first_pixels]))
-                [Rank2] = numpy.lexsort(([labels], [second_pixels]))
+
+                # objects.segmented is an array (10,10) were each pixel is assigned its corresponding label (1,2 or 3)
+
+                #delete these and replace with Beth's suggestion
+                obj_pixels_img1 = numpy.where(labels==label,first_pixel_data,0)
+                obj_pixels_img2 = numpy.where(labels==label,second_pixel_data,0)
+                
+                obj_lrange = lrange[lrange==label]
+                
+                [Rank1] = numpy.lexsort(([obj_label], [obj_pixels_img1]))
+                [Rank2] = numpy.lexsort(([obj_label], [obj_pixels_img2]))
                 Rank1_U = numpy.hstack(
                     [[False], first_pixels[Rank1[:-1]] != first_pixels[Rank1[1:]]]
                 )
@@ -277,13 +305,13 @@ measurements.
                 )
                 Rank1_S = numpy.cumsum(Rank1_U)
                 Rank2_S = numpy.cumsum(Rank2_U)
-                Rank_im1 = numpy.zeros(first_pixels.shape, dtype=int)
-                Rank_im2 = numpy.zeros(second_pixels.shape, dtype=int)
-                Rank_im1[Rank1] = Rank1_S
-                Rank_im2[Rank2] = Rank2_S
+                Rank_obj_im1 = numpy.zeros(obj_pixels_img1.shape, dtype=int)
+                Rank_obj_im2 = numpy.zeros(obj_pixels_img2.shape, dtype=int)
+                Rank_obj_im1[Rank1] = Rank1_S
+                Rank_obj_im2[Rank2] = Rank2_S
 
-                R = max(Rank_im1.max(), Rank_im2.max()) + 1
-                Di = abs(Rank_im1 - Rank_im2)
+                R = max(Rank_obj_im1.max(), Rank_obj_im2.max()) + 1
+                Di = abs(Rank_obj_im1 - Rank_obj_im2)
                 weight = (R - Di) * 1.0 / R
                 weight_thresh = weight[combined_thresh]
 
@@ -322,6 +350,7 @@ measurements.
                     labels[second_pixels >= tss[labels - 1]],
                     lrange,
                 )
+                ### update RWC1 and RWC2 with ther right position and the right values
 
             result += [
                 [
@@ -476,46 +505,6 @@ measurements.
 
         if len(self.objects_list.value) == 0:
             raise ValidationError("No object sets selected", self.objects_list)
-
-    def upgrade_settings(self, setting_values, variable_revision_number, module_name):
-        """Adjust the setting values for pipelines saved under old revisions"""
-        if variable_revision_number < 2:
-            raise NotImplementedError(
-                "Automatic upgrade for this module is not supported in CellProfiler 3."
-            )
-
-        if variable_revision_number == 2:
-            image_count = int(setting_values[0])
-            idx_thr = image_count + 2
-            setting_values = (
-                setting_values[:idx_thr] + ["15.0"] + setting_values[idx_thr:]
-            )
-            variable_revision_number = 3
-
-        if variable_revision_number == 3:
-            num_images = int(setting_values[0])
-            num_objects = int(setting_values[1])
-            div_img = 2 + num_images
-            div_obj = div_img + 2 + num_objects
-            images_set = set(setting_values[2:div_img])
-            thr_mode = setting_values[div_img : div_img + 2]
-            objects_set = set(setting_values[div_img + 2 : div_obj])
-            other_settings = setting_values[div_obj:]
-            if "None" in images_set:
-                images_set.remove("None")
-            if "None" in objects_set:
-                objects_set.remove("None")
-            images_string = ", ".join(map(str, images_set))
-            objects_string = ", ".join(map(str, objects_set))
-            setting_values = (
-                [images_string] + thr_mode + [objects_string] + other_settings
-            )
-            variable_revision_number = 4
-        if variable_revision_number == 4:
-            # Add costes mode switch
-            # setting_values += [M_FASTER]
-            variable_revision_number = 5
-        return setting_values, variable_revision_number
 
     def volumetric(self):
         return True
