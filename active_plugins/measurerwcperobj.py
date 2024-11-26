@@ -249,11 +249,11 @@ Select *{YES}* to run the Rank Weighted Colocalization coefficients.
         # Threshold as percentage of maximum intensity in each channel
         thr_fi = self.thr.value * numpy.max(fi) / 100
         thr_si = self.thr.value * numpy.max(si) / 100
-        combined_thresh = (fi > thr_fi) & (si > thr_si) # CHECK THIS DEFINITION, IT HAS BEEN CHANGED FROM THE ORIGINAL BUT IDK IF IT'S OK!
-        fi_thresh = fi[combined_thresh]
-        si_thresh = si[combined_thresh]
-        tot_fi_thr = fi[(fi > thr_fi)].sum()
-        tot_si_thr = si[(si > thr_si)].sum()
+
+        #fi_thresh = fi[combined_thresh] #array including ONLY the pixels from fi that are above threshold in both images
+        #si_thresh = si[combined_thresh] #array including ONLY the pixels from si that are above threshold in both images
+        #tot_fi_thr = fi[(fi > thr_fi)].sum() #single value of the integrated intensity of above-threshold pixels for fi (?)
+        #tot_si_thr = si[(si > thr_si)].sum() #single value of the integrated intensity of above-threshold pixels for si (?)
        
         if n_objects == 0:
             # corr = numpy.zeros((0,))
@@ -286,24 +286,35 @@ Select *{YES}* to run the Rank Weighted Colocalization coefficients.
                 # same with lrange to only what's inside that label and rename --> obj_lrange
                 # same with fi_thresh, si_thresh, combined_thresh, tot_fi_thr, tot_si_thr
                 # - move the 770 block inside this function after subsettingfirst_pixels and second_pixels
+                
+                #combined_thersh is an boolean array representing all the pixels in a single object, that is True in any pixel where BOTH fi and si are above their respective threshold
+                combined_thresh = (first_pixels[labels==label] > thr_fi) & (second_pixels[labels==label] > thr_si)
+
+                #obj_pixels_img1 = numpy.where(labels==label,first_pixels,0) 
+                obj_pixels_img1 = first_pixels[labels==label]
+                #ASK BETH - in this case where no object has disjointed pixels, the order of the values of first_pixels matches the order of the objects. What would happen with disjointed objects?!
 
                 # objects.segmented is an array (10,10) were each pixel is assigned its corresponding label (1,2 or 3)
+                #obj_pixels_img2 = numpy.where(objects.segmented==label,second_pixel_data,0)
+                obj_pixels_img2 = second_pixels[labels==label]
 
-                #delete these and replace with Beth's suggestion
-                obj_pixels_img1 = numpy.where(labels==label,first_pixel_data,0)
-                obj_pixels_img2 = numpy.where(labels==label,second_pixel_data,0)
+                #obj_lrange = lrange[lrange==label]
+
+                fi_thresh_obj = obj_pixels_img1[combined_thresh] #array of pixel values above threshold for the object
+                si_thresh_obj = obj_pixels_img2[combined_thresh] 
                 
-                obj_lrange = lrange[lrange==label]
+                tot_fi_thr = 
+                tot_si_thr =              
                 
-                [Rank1] = numpy.lexsort(([obj_label], [obj_pixels_img1]))
-                [Rank2] = numpy.lexsort(([obj_label], [obj_pixels_img2]))
+                Rank1 = numpy.lexsort([obj_pixels_img1]) #array with a value assigned to each position according to ascending rank (0 is the rank of the lowest value)
+                Rank2 = numpy.lexsort([obj_pixels_img2])
                 Rank1_U = numpy.hstack(
                     [[False], first_pixels[Rank1[:-1]] != first_pixels[Rank1[1:]]]
-                )
+                ) #ASK BETH! this is a boolean array that has False every time pixel i from first_pixels (the list of pixel values from all objects in order) is equal to pixel i+1
                 Rank2_U = numpy.hstack(
                     [[False], second_pixels[Rank2[:-1]] != second_pixels[Rank2[1:]]]
                 )
-                Rank1_S = numpy.cumsum(Rank1_U)
+                Rank1_S = numpy.cumsum(Rank1_U) #ask BETH, array with cumulative number of 'True' 
                 Rank2_S = numpy.cumsum(Rank2_U)
                 Rank_obj_im1 = numpy.zeros(obj_pixels_img1.shape, dtype=int)
                 Rank_obj_im2 = numpy.zeros(obj_pixels_img2.shape, dtype=int)
@@ -313,17 +324,17 @@ Select *{YES}* to run the Rank Weighted Colocalization coefficients.
                 R = max(Rank_obj_im1.max(), Rank_obj_im2.max()) + 1
                 Di = abs(Rank_obj_im1 - Rank_obj_im2)
                 weight = (R - Di) * 1.0 / R
-                weight_thresh = weight[combined_thresh]
+                weight_thresh = weight[combined_thresh[label]]
 
                 if numpy.any(combined_thresh):
                     RWC1 = numpy.array(
                         scipy.ndimage.sum(
-                            fi_thresh * weight_thresh, labels[combined_thresh], lrange
+                            fi_thresh_obj * weight_thresh, labels[combined_thresh], lrange
                         )
                     ) / numpy.array(tot_fi_thr)
                     RWC2 = numpy.array(
                         scipy.ndimage.sum(
-                            si_thresh * weight_thresh, labels[combined_thresh], lrange
+                            si_thresh_obj * weight_thresh, labels[combined_thresh], lrange
                         )
                     ) / numpy.array(tot_si_thr)
                 
