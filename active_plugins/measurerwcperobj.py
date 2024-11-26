@@ -327,6 +327,7 @@ Select *{YES}* to run the Rank Weighted Colocalization coefficients.
                 )
                 tot_si_thr_perObj = scipy.ndimage.sum(
                     obj_pixels_img2[obj_pixels_img2 >= tff[label - 1]]
+                )
                 
                 Rank1 = numpy.lexsort([obj_pixels_img1]) #array with a value assigned to each position according to ascending rank (0 is the rank of the lowest value)
                 Rank2 = numpy.lexsort([obj_pixels_img2])
