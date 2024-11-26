@@ -321,18 +321,12 @@ Select *{YES}* to run the Rank Weighted Colocalization coefficients.
 
                 fi_thresh_obj = obj_pixels_img1[combined_thresh] #array of pixel values above threshold for the object
                 si_thresh_obj = obj_pixels_img2[combined_thresh] 
-                
-<<<<<<< Updated upstream
-                tot_fi_thr = 
-                tot_si_thr =              
-=======
+
                 tot_fi_thr_perObj = scipy.ndimage.sum(
                     obj_pixels_img1[obj_pixels_img1 >= tff[label - 1]]
                 )
                 tot_si_thr_perObj = scipy.ndimage.sum(
                     obj_pixels_img2[obj_pixels_img2 >= tff[label - 1]]
-                )             
->>>>>>> Stashed changes
                 
                 Rank1 = numpy.lexsort([obj_pixels_img1]) #array with a value assigned to each position according to ascending rank (0 is the rank of the lowest value)
                 Rank2 = numpy.lexsort([obj_pixels_img2])
