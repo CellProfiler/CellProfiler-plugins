@@ -279,6 +279,25 @@ Select *{YES}* to run the Rank Weighted Colocalization coefficients.
             RWC1 = numpy.zeros(len(lrange))
             RWC2 = numpy.zeros(len(lrange))
 
+            # Threshold as percentage of maximum intensity of objects in each channel
+            tff = (self.thr.value / 100) * fix(
+                scipy.ndimage.maximum(first_pixels, labels, lrange)
+            )
+            tss = (self.thr.value / 100) * fix(
+                scipy.ndimage.maximum(second_pixels, labels, lrange)
+            )
+            
+            tot_fi_thr = scipy.ndimage.sum(
+                first_pixels[first_pixels >= tff[labels - 1]],
+                labels[first_pixels >= tff[labels - 1]],
+                lrange,
+            )
+            tot_si_thr = scipy.ndimage.sum(
+                second_pixels[second_pixels >= tss[labels - 1]],
+                labels[second_pixels >= tss[labels - 1]],
+                lrange,
+            )
+
             for label in numpy.unique(labels):
                 # set first_pixels to only what's inside that label and rename --> obj_pixels_img1
                 # same with second_pixels to only what's inside that label and rename --> obj_pixels_img2
@@ -303,16 +322,25 @@ Select *{YES}* to run the Rank Weighted Colocalization coefficients.
                 fi_thresh_obj = obj_pixels_img1[combined_thresh] #array of pixel values above threshold for the object
                 si_thresh_obj = obj_pixels_img2[combined_thresh] 
                 
+<<<<<<< Updated upstream
                 tot_fi_thr = 
                 tot_si_thr =              
+=======
+                tot_fi_thr_perObj = scipy.ndimage.sum(
+                    obj_pixels_img1[obj_pixels_img1 >= tff[label - 1]]
+                )
+                tot_si_thr_perObj = scipy.ndimage.sum(
+                    obj_pixels_img2[obj_pixels_img2 >= tff[label - 1]]
+                )             
+>>>>>>> Stashed changes
                 
                 Rank1 = numpy.lexsort([obj_pixels_img1]) #array with a value assigned to each position according to ascending rank (0 is the rank of the lowest value)
                 Rank2 = numpy.lexsort([obj_pixels_img2])
                 Rank1_U = numpy.hstack(
-                    [[False], first_pixels[Rank1[:-1]] != first_pixels[Rank1[1:]]]
+                    [[False], obj_pixels_img1[Rank1[:-1]] != obj_pixels_img1[Rank1[1:]]]
                 ) #ASK BETH! this is a boolean array that has False every time pixel i from first_pixels (the list of pixel values from all objects in order) is equal to pixel i+1
                 Rank2_U = numpy.hstack(
-                    [[False], second_pixels[Rank2[:-1]] != second_pixels[Rank2[1:]]]
+                    [[False], obj_pixels_img2[Rank2[:-1]] != obj_pixels_img2[Rank2[1:]]]
                 )
                 Rank1_S = numpy.cumsum(Rank1_U) #ask BETH, array with cumulative number of 'True' 
                 Rank2_S = numpy.cumsum(Rank2_U)
@@ -324,43 +352,21 @@ Select *{YES}* to run the Rank Weighted Colocalization coefficients.
                 R = max(Rank_obj_im1.max(), Rank_obj_im2.max()) + 1
                 Di = abs(Rank_obj_im1 - Rank_obj_im2)
                 weight = (R - Di) * 1.0 / R
-                weight_thresh = weight[combined_thresh[label]]
+                weight_thresh = weight[combined_thresh]
 
                 if numpy.any(combined_thresh):
                     RWC1 = numpy.array(
                         scipy.ndimage.sum(
-                            fi_thresh_obj * weight_thresh, labels[combined_thresh], lrange
+                            fi_thresh_obj * weight_thresh
                         )
-                    ) / numpy.array(tot_fi_thr)
+                    ) / numpy.array(tot_fi_thr_perObj)
                     RWC2 = numpy.array(
                         scipy.ndimage.sum(
-                            si_thresh_obj * weight_thresh, labels[combined_thresh], lrange
+                            si_thresh_obj * weight_thresh
                         )
-                    ) / numpy.array(tot_si_thr)
+                    ) / numpy.array(tot_si_thr_perObj)
                 
-                # Threshold as percentage of maximum intensity of objects in each channel
-                tff = (self.thr.value / 100) * fix(
-                    scipy.ndimage.maximum(first_pixels, labels, lrange)
-                )
-                tss = (self.thr.value / 100) * fix(
-                    scipy.ndimage.maximum(second_pixels, labels, lrange)
-                )
 
-                combined_thresh = (first_pixels >= tff[labels - 1]) & (
-                    second_pixels >= tss[labels - 1]
-                )
-                fi_thresh = first_pixels[combined_thresh]
-                si_thresh = second_pixels[combined_thresh]
-                tot_fi_thr = scipy.ndimage.sum(
-                    first_pixels[first_pixels >= tff[labels - 1]],
-                    labels[first_pixels >= tff[labels - 1]],
-                    lrange,
-                )
-                tot_si_thr = scipy.ndimage.sum(
-                    second_pixels[second_pixels >= tss[labels - 1]],
-                    labels[second_pixels >= tss[labels - 1]],
-                    lrange,
-                )
                 ### update RWC1 and RWC2 with ther right position and the right values
 
             result += [
