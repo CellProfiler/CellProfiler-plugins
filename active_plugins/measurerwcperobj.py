@@ -53,7 +53,7 @@ C_MEASUREMENT_TEMPLATE = "MT"
 M_PER_OBJECT = "Within each object individually"
 
 """Feature name format for the RWC Coefficient measurement"""
-F_RWC_FORMAT = "Correlation_RWC_%s_%s"
+F_RWC_FORMAT = "Correlation_RWC_perObj_%s_%s"
 
 
 class MeasureRWCperObj(Module):
@@ -363,18 +363,7 @@ Select *{YES}* to run the Rank Weighted Colocalization coefficients.
                 # ...which will always be the case since the thr is calculated as a % of the max intensity pixel in each object
                 # ...unless the above-threshold pixels on one channel don't match the ones on the other, so I guess it makes sense...
                 if numpy.any(combined_thresh_perObj):
-                    # RWC1 = numpy.array(
-                    #     scipy.ndimage.sum(
-                    #         fi_thresh_obj * weight_thresh_perObj
-                    #     )
-                    # ) / numpy.array(tot_fi_thr_perObj)
-                    # RWC2 = numpy.array(
-                    #     scipy.ndimage.sum(
-                    #         si_thresh_obj * weight_thresh_perObj
-                    #     )
-                    # ) / numpy.array(tot_si_thr_perObj)
-                    
-                    # RWC1 and 2 are arrays 
+                    # RWC1 and 2 are arrays with the RWC value for each object in the set
                     RWC1[label-1] = numpy.array(
                         scipy.ndimage.sum(
                             fi_thresh_obj * weight_thresh_perObj
@@ -386,35 +375,33 @@ Select *{YES}* to run the Rank Weighted Colocalization coefficients.
                         )
                     ) / numpy.array(tot_si_thr_perObj)
 
-                ### update RWC1 and RWC2 with ther right position and the right values
-
             result += [
                 [
                     first_image_name,
                     second_image_name,
                     object_name,
-                    "Mean RWC coeff",
+                    "Mean RWC_perObj coeff",
                     "%.3f" % numpy.mean(RWC1),
                 ],
                 [
                     first_image_name,
                     second_image_name,
                     object_name,
-                    "Median RWC coeff",
+                    "Median RWC_perObj coeff",
                     "%.3f" % numpy.median(RWC1),
                 ],
                 [
                     first_image_name,
                     second_image_name,
                     object_name,
-                    "Min RWC coeff",
+                    "Min RWC_perObj coeff",
                     "%.3f" % numpy.min(RWC1),
                 ],
                 [
                     first_image_name,
                     second_image_name,
                     object_name,
-                    "Max RWC coeff",
+                    "Max RWC_perObj coeff",
                     "%.3f" % numpy.max(RWC1),
                 ],
             ]
@@ -423,28 +410,28 @@ Select *{YES}* to run the Rank Weighted Colocalization coefficients.
                     second_image_name,
                     first_image_name,
                     object_name,
-                    "Mean RWC coeff",
+                    "Mean RWC_perObj coeff",
                     "%.3f" % numpy.mean(RWC2),
                 ],
                 [
                     second_image_name,
                     first_image_name,
                     object_name,
-                    "Median RWC coeff",
+                    "Median RWC_perObj coeff",
                     "%.3f" % numpy.median(RWC2),
                 ],
                 [
                     second_image_name,
                     first_image_name,
                     object_name,
-                    "Min RWC coeff",
+                    "Min RWC_perObj coeff",
                     "%.3f" % numpy.min(RWC2),
                 ],
                 [
                     second_image_name,
                     first_image_name,
                     object_name,
-                    "Max RWC coeff",
+                    "Max RWC_perObj coeff",
                     "%.3f" % numpy.max(RWC2),
                 ],
             ]
