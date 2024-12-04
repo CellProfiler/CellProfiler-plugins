@@ -53,7 +53,7 @@ C_MEASUREMENT_TEMPLATE = "MT"
 M_PER_OBJECT = "Within each object individually"
 
 """Feature name format for the RWC Coefficient measurement"""
-F_RWC_FORMAT = "Correlation_RWC_perObj_%s_%s"
+F_RWCperObj_FORMAT = "Correlation_RWCperObj_%s_%s"
 
 
 class MeasureRWCperObj(Module):
@@ -380,28 +380,28 @@ Select *{YES}* to run the Rank Weighted Colocalization coefficients.
                     first_image_name,
                     second_image_name,
                     object_name,
-                    "Mean RWC_perObj coeff",
+                    "Mean RWCperObj coeff",
                     "%.3f" % numpy.mean(RWC1),
                 ],
                 [
                     first_image_name,
                     second_image_name,
                     object_name,
-                    "Median RWC_perObj coeff",
+                    "Median RWCperObj coeff",
                     "%.3f" % numpy.median(RWC1),
                 ],
                 [
                     first_image_name,
                     second_image_name,
                     object_name,
-                    "Min RWC_perObj coeff",
+                    "Min RWCperObj coeff",
                     "%.3f" % numpy.min(RWC1),
                 ],
                 [
                     first_image_name,
                     second_image_name,
                     object_name,
-                    "Max RWC_perObj coeff",
+                    "Max RWCperObj coeff",
                     "%.3f" % numpy.max(RWC1),
                 ],
             ]
@@ -410,34 +410,34 @@ Select *{YES}* to run the Rank Weighted Colocalization coefficients.
                     second_image_name,
                     first_image_name,
                     object_name,
-                    "Mean RWC_perObj coeff",
+                    "Mean RWCperObj coeff",
                     "%.3f" % numpy.mean(RWC2),
                 ],
                 [
                     second_image_name,
                     first_image_name,
                     object_name,
-                    "Median RWC_perObj coeff",
+                    "Median RWCperObj coeff",
                     "%.3f" % numpy.median(RWC2),
                 ],
                 [
                     second_image_name,
                     first_image_name,
                     object_name,
-                    "Min RWC_perObj coeff",
+                    "Min RWCperObj coeff",
                     "%.3f" % numpy.min(RWC2),
                 ],
                 [
                     second_image_name,
                     first_image_name,
                     object_name,
-                    "Max RWC_perObj coeff",
+                    "Max RWCperObj coeff",
                     "%.3f" % numpy.max(RWC2),
                 ],
             ]
 
-        rwc_measurement_1 = F_RWC_FORMAT % (first_image_name, second_image_name)
-        rwc_measurement_2 = F_RWC_FORMAT % (second_image_name, first_image_name)
+        rwc_measurement_1 = F_RWCperObj_FORMAT % (first_image_name, second_image_name)
+        rwc_measurement_2 = F_RWCperObj_FORMAT % (second_image_name, first_image_name)
         workspace.measurements.add_measurement(object_name, rwc_measurement_1, RWC1)
         workspace.measurements.add_measurement(object_name, rwc_measurement_2, RWC2)
 
@@ -485,12 +485,12 @@ Select *{YES}* to run the Rank Weighted Colocalization coefficients.
                     columns += [
                         (
                             object_name,
-                            F_RWC_FORMAT % (first_image, second_image),
+                            F_RWCperObj_FORMAT % (first_image, second_image),
                             COLTYPE_FLOAT,
                         ),
                         (
                             object_name,
-                            F_RWC_FORMAT % (second_image, first_image),
+                            F_RWCperObj_FORMAT % (second_image, first_image),
                             COLTYPE_FLOAT,
                         ),
                     ]
@@ -506,7 +506,7 @@ Select *{YES}* to run the Rank Weighted Colocalization coefficients.
     def get_measurements(self, pipeline, object_name, category):
         if self.get_categories(pipeline, object_name) == [category]:
             results = []
-            results += ["RWC"]
+            results += ["RWCperObj"]
             return results
         return []
 
