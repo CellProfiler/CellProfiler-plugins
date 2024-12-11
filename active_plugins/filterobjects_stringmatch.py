@@ -21,13 +21,15 @@ from cellprofiler.utilities.rules import Rules
 
 LOGGER = logging.getLogger(__name__)
 
-METHOD_EXACT = "Exact match"
-METHOD_CONTAINS = "String contains"
+METHOD_EXACT = "Filter out strings matching"
+METHOD_CONTAINS = "Filter out strings containing"
+METHOD_KEEP_EXACT = "Keep only strings matching"
+METHOD_KEEP_CONTAINS = "Keep only strings containing"
 
 class FilterObjects_StringMatch(ObjectProcessing):
     module_name = "FilterObjects_StringMatch"
 
-    variable_revision_number = 1
+    variable_revision_number = 2
 
     def __init__(self):
         self.rules = Rules()
@@ -48,18 +50,21 @@ class FilterObjects_StringMatch(ObjectProcessing):
         self.spacer_1 = Divider(line=False)
 
         self.filter_out = Alphanumeric(
-            "What string to filter out",
+            "String to use for filter",
             "AAAA",
             doc="""Enter the string that should be used to filter objects.""",
         )
 
         self.filter_method = Choice(
             "Filter method",
-            [METHOD_EXACT, METHOD_CONTAINS],
-            doc="""Select whether to only filter objects that are an exact match for the string entered
+            [METHOD_EXACT, METHOD_CONTAINS, METHOD_KEEP_EXACT, METHOD_KEEP_CONTAINS],
+            doc="""Select whether to filter out objects that are an exact match for the string entered
             (e.g. Object 'AAAAB' will NOT be filtered by string 'AAAA') 
-             or to filter any object that contains the string entered
-             (e.g. Object 'AAAAB' will be filtered by string 'AAAA').""",
+             to filter any object that contains the string entered
+             (e.g. Object 'AAAAB' will be filtered by string 'AAAA'), to keep only objects that
+             are an exact match for the string entered (e.g. Only 'AAAA' objects will be kept by string
+             'AAAA'), or keep only objects that contain the string entered (e.g. 'AAAAB' and 'AAAAA' objects
+             but not 'AAAB' objects will be kept by string 'AAAA').""",
         )
 
         self.filter_column = Measurement("Measurement",
@@ -186,14 +191,14 @@ class FilterObjects_StringMatch(ObjectProcessing):
         src_name = self.x_name.value
         m = workspace.measurements
         values = m.get_current_measurement(src_name, self.filter_column.value)
+        # keep hits
         if self.filter_method == METHOD_EXACT:
-            # Is this structure still necessary or is it an artifact?
-            # Could be just values == self.filter_out.value
-            # Make an array of True
-            hits = numpy.ones(len(values), bool)
-            # Fill with False for those where we want to filter out
-            hits[values == self.filter_out.value] = False
+            hits = [self.filter_out.value != x for x in values]
+        elif self.filter_method == METHOD_KEEP_EXACT:
+            hits = [self.filter_out.value == x for x in values]
         elif self.filter_method == METHOD_CONTAINS:
+            hits = [self.filter_out.value not in x for x in values]
+        elif self.filter_method == METHOD_KEEP_CONTAINS:
             hits = [self.filter_out.value in x for x in values]
         # Get object numbers for things that are True
         indexes = numpy.argwhere(hits)[:, 0]
@@ -201,3 +206,10 @@ class FilterObjects_StringMatch(ObjectProcessing):
         indexes = indexes + 1
 
         return indexes
+
+    def upgrade_settings(self, setting_values, variable_revision_number, module_name):
+        if variable_revision_number == 1:
+            setting_values = [value.replace('Exact match','Filter out strings matching') for value in setting_values]
+            setting_values = [value.replace('String contains','Filter out strings containing') for value in setting_values]
+            variable_revision_number = 2
+        return setting_values, variable_revision_number
