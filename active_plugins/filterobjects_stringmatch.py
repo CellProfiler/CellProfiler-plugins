@@ -1,10 +1,9 @@
 from cellprofiler_core.module.image_segmentation import ObjectProcessing
-from cellprofiler_core.setting import (
-    Divider,
-)
+from cellprofiler_core.setting import Divider
 from cellprofiler_core.setting.text import Alphanumeric
 from cellprofiler_core.setting.choice import Choice
-from cellprofiler_core.setting import Measurement
+from cellprofiler_core.setting import Measurement, HiddenCount, SettingsGroup
+from cellprofiler_core.setting.do_something import DoSomething, RemoveSettingButton
 
 __doc__ = ""
 
@@ -73,11 +72,48 @@ class FilterObjects_StringMatch(ObjectProcessing):
                 doc="""Select the measurement column that will be used for filtering.""",
             )
 
+        self.additional_strings = []
+
+        self.additional_string_count = HiddenCount(
+            self.additional_strings, "Additional string count"
+        )
+
+        self.spacer_2 = Divider(line=True)
+
+        self.additional_string_button = DoSomething(
+            "Add an additional string to use to filter objects?",
+            "Add an additional string",
+            self.add_additional_string,
+            doc="""\
+Click this button to add an additional string to apply to the objects with the same rules.""",
+        )
+
         self.rules.create_settings()
+
+    def add_additional_string(self):
+        group = SettingsGroup()
+        group.append(
+            "additional_string",
+            Alphanumeric(
+            "String to use for additional filter",
+            "AAAA",
+            doc="""Enter the string that should be used to filter objects.""",
+        ),
+        )
+        group.append(
+            "remover",
+            RemoveSettingButton(
+                "", "Remove this additional string", self.additional_strings, group
+            ),
+        )
+        group.append("divider", Divider(line=False))
+        self.additional_strings.append(group)
 
     def settings(self):
         settings = super(FilterObjects_StringMatch, self).settings()
         settings += [self.filter_out,self.filter_method, self.filter_column]
+        for x in self.additional_strings:
+            settings += [self.filter_out]
         return settings
 
     def visible_settings(self):
@@ -87,6 +123,10 @@ class FilterObjects_StringMatch(ObjectProcessing):
                 self.filter_method,
                 self.filter_column
             ]
+        if self.filter_method != METHOD_KEEP_EXACT:
+            for x in self.additional_strings:
+                visible_settings += x.visible_settings()
+            visible_settings += [self.additional_string_button]
         return visible_settings              
 
     def run(self, workspace):
@@ -194,12 +234,24 @@ class FilterObjects_StringMatch(ObjectProcessing):
         # keep hits
         if self.filter_method == METHOD_EXACT:
             hits = [self.filter_out.value != x for x in values]
+            if self.additional_strings:
+                for group in self.additional_strings:
+                    more_hits = [group.additional_string.value != x for x in values]
+                    hits = [a and b for a, b in zip(hits, more_hits)]
         elif self.filter_method == METHOD_KEEP_EXACT:
             hits = [self.filter_out.value == x for x in values]
         elif self.filter_method == METHOD_CONTAINS:
             hits = [self.filter_out.value not in x for x in values]
+            if self.additional_strings:
+                for group in self.additional_strings:
+                    more_hits = [group.additional_string.value not in x for x in values]
+                    hits = [a and b for a, b in zip(hits, more_hits)]
         elif self.filter_method == METHOD_KEEP_CONTAINS:
             hits = [self.filter_out.value in x for x in values]
+            if self.additional_strings:
+                for group in self.additional_strings:
+                    more_hits = [group.additional_string.value in x for x in values]
+                    hits = [a and b for a, b in zip(hits, more_hits)]
         # Get object numbers for things that are True
         indexes = numpy.argwhere(hits)[:, 0]
         # Objects are 1 counted, Python is 0 counted
