@@ -16,7 +16,6 @@ import scipy.ndimage
 import scipy.sparse
 
 import cellprofiler_core.object
-from cellprofiler.utilities.rules import Rules
 
 LOGGER = logging.getLogger(__name__)
 
@@ -25,15 +24,12 @@ METHOD_CONTAINS = "Filter out strings containing"
 METHOD_KEEP_EXACT = "Keep only strings matching"
 METHOD_KEEP_CONTAINS = "Keep only strings containing"
 
+ADDITIONAL_STRING_SETTING_INDEX = 5
+
 class FilterObjects_StringMatch(ObjectProcessing):
     module_name = "FilterObjects_StringMatch"
 
     variable_revision_number = 2
-
-    def __init__(self):
-        self.rules = Rules()
-
-        super(FilterObjects_StringMatch, self).__init__()
 
     def create_settings(self):
         super(FilterObjects_StringMatch, self).create_settings()
@@ -88,8 +84,6 @@ class FilterObjects_StringMatch(ObjectProcessing):
 Click this button to add an additional string to apply to the objects with the same rules.""",
         )
 
-        self.rules.create_settings()
-
     def add_additional_string(self):
         group = SettingsGroup()
         group.append(
@@ -111,10 +105,17 @@ Click this button to add an additional string to apply to the objects with the s
 
     def settings(self):
         settings = super(FilterObjects_StringMatch, self).settings()
-        settings += [self.filter_out,self.filter_method, self.filter_column]
+        settings += [self.filter_out,self.filter_method, self.filter_column, self.additional_string_count]
         for x in self.additional_strings:
-            settings += [self.filter_out]
+            settings += [x.additional_string]
         return settings
+
+    def prepare_settings(self, setting_values):
+        additional_string_count = int(setting_values[ADDITIONAL_STRING_SETTING_INDEX])
+        while len(self.additional_strings) > additional_string_count:
+            del self.additional_images[additional_string_count:]
+        while len(self.additional_strings) < additional_string_count:
+            self.add_additional_string()
 
     def visible_settings(self):
         visible_settings = super(FilterObjects_StringMatch, self).visible_settings()
