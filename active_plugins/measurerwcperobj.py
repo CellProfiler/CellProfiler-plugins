@@ -353,8 +353,8 @@ Select *{YES}* to run the Rank Weighted Colocalization coefficients.
                 Rank_im1_perObj[Rank1_perObj] = Rank1_S_perObj
                 Rank_im2_perObj[Rank2_perObj] = Rank2_S_perObj
 
-                R_perObj = max(Rank_im1_perObj.max(), Rank_im2_perObj.max()) + 1
-                Di_perObj = abs(Rank_im1_perObj - Rank_im2_perObj)
+                R_perObj = max(Rank_im1_perObj.max(), Rank_im2_perObj.max()) + 1 #max rank among all ranks in both ch
+                Di_perObj = abs(Rank_im1_perObj - Rank_im2_perObj) #absolute difference of rank between ch in each pixel
                 
                 weight_perObj = (R_perObj - Di_perObj) * 1.0 / R_perObj
                 weight_thresh_perObj = weight_perObj[combined_thresh_perObj]
