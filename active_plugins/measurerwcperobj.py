@@ -281,7 +281,7 @@ Select *{YES}* to run the Rank Weighted Colocalization coefficients.
             RWC1 = numpy.zeros(len(lrange))
             RWC2 = numpy.zeros(len(lrange))
 
-            # Threshold as percentage of maximum intensity of objects in each channel
+            # List of thresholds for each object (as percentage of maximum intensity of objects in each channel
             # Single threshold per object (it is calculated based on the highest pixel intensity in each object)
             tff = (self.thr.value / 100) * fix(
                 scipy.ndimage.maximum(first_pixels, labels, lrange)
@@ -315,14 +315,9 @@ Select *{YES}* to run the Rank Weighted Colocalization coefficients.
                 first_pixels_perObj = first_pixels[labels==label]
                 second_pixels_perObj = second_pixels[labels==label]
 
-                # Local threshold for each object individually
-                thr_fi_perObj = self.thr.value * numpy.max(first_pixels_perObj) / 100
-                thr_si_perObj = self.thr.value * numpy.max(second_pixels_perObj) / 100
-
-                #combined_thersh is an boolean array representing all the pixels in a single object, that is True in any pixel where BOTH fi and si are above their respective threshold
-                #is thr_fi == tff[labels==label] ??
-                # combined_thresh_perObj = (first_pixels[labels==label] > tff[labels==label]) & (second_pixels[labels==label] > tss[labels==label])
-                combined_thresh_perObj = (first_pixels_perObj > thr_fi_perObj) & (second_pixels_perObj > thr_si_perObj)
+                #combined_thresh_perObj is an boolean array representing all the pixels in a single object
+                # It is True in any pixel where BOTH first_pixels_perObj and second_pixels_perObj are above their respective threshold
+                combined_thresh_perObj = (first_pixels_perObj > tff[label-1]) & (second_pixels_perObj > tss[label-1])
 
                 # sum of the above-threshold (for both channels) pixel intensities per object
                 tot_fi_thr_perObj = scipy.ndimage.sum(
