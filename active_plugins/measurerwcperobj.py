@@ -310,14 +310,19 @@ Select *{YES}* to run the Rank Weighted Colocalization coefficients.
                 # same with fi_thresh, si_thresh, combined_thresh, tot_fi_thr, tot_si_thr
                 # - move the 770 block inside this function after subsettingfirst_pixels and second_pixels
                 
-                #combined_thersh is an boolean array representing all the pixels in a single object, that is True in any pixel where BOTH fi and si are above their respective threshold
-                #is thr_fi == tff[labels==label] ??
-                # combined_thresh_perObj = (first_pixels[labels==label] > tff[labels==label]) & (second_pixels[labels==label] > tss[labels==label])
-                combined_thresh_perObj = (first_pixels[labels==label] > thr_fi) & (second_pixels[labels==label] > thr_si)
 
                 #ASK BETH - in this case where no object has disjointed pixels, the order of the values of first_pixels matches the order of the objects. What would happen with disjointed objects?!
                 first_pixels_perObj = first_pixels[labels==label]
                 second_pixels_perObj = second_pixels[labels==label]
+
+                # Local threshold for each object individually
+                thr_fi_perObj = self.thr.value * numpy.max(first_pixels_perObj) / 100
+                thr_si_perObj = self.thr.value * numpy.max(second_pixels_perObj) / 100
+
+                #combined_thersh is an boolean array representing all the pixels in a single object, that is True in any pixel where BOTH fi and si are above their respective threshold
+                #is thr_fi == tff[labels==label] ??
+                # combined_thresh_perObj = (first_pixels[labels==label] > tff[labels==label]) & (second_pixels[labels==label] > tss[labels==label])
+                combined_thresh_perObj = (first_pixels_perObj > thr_fi_perObj) & (second_pixels_perObj > thr_si_perObj)
 
                 # sum of the above-threshold (for both channels) pixel intensities per object
                 tot_fi_thr_perObj = scipy.ndimage.sum(
