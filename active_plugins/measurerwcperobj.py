@@ -275,7 +275,7 @@ Select *{YES}* to run the Rank Weighted Colocalization coefficients.
             RWC1 = RWC2 = corr
 
         else:
-            lrange = numpy.arange(n_objects, dtype=numpy.int32) + 1
+            lrange = numpy.arange(n_objects, dtype=numpy.int32) + 1  # +1 bc Objects start at index 0
 
             # RWC Coefficient
             RWC1 = numpy.zeros(len(lrange))
@@ -283,26 +283,15 @@ Select *{YES}* to run the Rank Weighted Colocalization coefficients.
 
             # List of thresholds for each object (as percentage of maximum intensity of objects in each channel
             # Single threshold per object (it is calculated based on the highest pixel intensity in each object)
-            tff = (self.thr.value / 100) * fix(
+            tff_perObj = (self.thr.value / 100) * fix(
                 scipy.ndimage.maximum(first_pixels, labels, lrange)
             )
-            tss = (self.thr.value / 100) * fix(
+            tss_perObj = (self.thr.value / 100) * fix(
                 scipy.ndimage.maximum(second_pixels, labels, lrange)
             )
-            
-            #NOT USED!
-            tot_fi_thr = scipy.ndimage.sum(
-                first_pixels[first_pixels >= tff[labels - 1]],
-                labels[first_pixels >= tff[labels - 1]],
-                lrange,
-            )
-            tot_si_thr = scipy.ndimage.sum(
-                second_pixels[second_pixels >= tss[labels - 1]],
-                labels[second_pixels >= tss[labels - 1]],
-                lrange,
-            )
 
-            for label in numpy.unique(labels):
+
+            for label in lrange: 
                 # set first_pixels to only what's inside that label and rename --> obj_pixels_img1
                 # same with second_pixels to only what's inside that label and rename --> obj_pixels_img2
                 # same with labels to only what's inside that label and rename --> obj_label
@@ -317,14 +306,14 @@ Select *{YES}* to run the Rank Weighted Colocalization coefficients.
 
                 #combined_thresh_perObj is an boolean array representing all the pixels in a single object
                 # It is True in any pixel where BOTH first_pixels_perObj and second_pixels_perObj are above their respective threshold
-                combined_thresh_perObj = (first_pixels_perObj > tff[label-1]) & (second_pixels_perObj > tss[label-1])
+                combined_thresh_perObj = (first_pixels_perObj > tff_perObj[label-1]) & (second_pixels_perObj > tss_perObj[label-1])
 
                 # sum of the above-threshold (for both channels) pixel intensities per object
                 tot_fi_thr_perObj = scipy.ndimage.sum(
-                    first_pixels_perObj[first_pixels_perObj >= tff[label - 1]]
+                    first_pixels_perObj[first_pixels_perObj >= tff_perObj[label - 1]]
                 )
                 tot_si_thr_perObj = scipy.ndimage.sum(
-                    second_pixels_perObj[second_pixels_perObj >= tff[label - 1]]
+                    second_pixels_perObj[second_pixels_perObj >= tss_perObj[label - 1]]
                 )
 
                 #array of pixel values above threshold for the object
@@ -353,7 +342,7 @@ Select *{YES}* to run the Rank Weighted Colocalization coefficients.
                 Rank_im1_perObj[Rank1_perObj] = Rank1_S_perObj
                 Rank_im2_perObj[Rank2_perObj] = Rank2_S_perObj
 
-                R_perObj = max(Rank_im1_perObj.max(), Rank_im2_perObj.max()) + 1 #max rank among all ranks in both ch
+                R_perObj = max(Rank_im1_perObj.max(), Rank_im2_perObj.max()) + 1 #max rank among all ranks in both ch (+1 to avoid division by 0)
                 Di_perObj = abs(Rank_im1_perObj - Rank_im2_perObj) #absolute difference of rank between ch in each pixel
                 
                 weight_perObj = (R_perObj - Di_perObj) * 1.0 / R_perObj
