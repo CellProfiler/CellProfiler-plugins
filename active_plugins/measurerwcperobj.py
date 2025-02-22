@@ -308,12 +308,13 @@ Select *{YES}* to run the Rank Weighted Colocalization coefficients.
 
                 #combined_thresh_perObj is an boolean array representing all the pixels in a single object
                 # It is True in any pixel where BOTH first_pixels_perObj and second_pixels_perObj are above their respective threshold
-                combined_thresh_perObj = (first_pixels_perObj > tff_perObj[label-1]) & (second_pixels_perObj > tss_perObj[label-1])
+                # I needed to add 'above or equal' bc otherwise, 0 value pixels automatically get excluded no matter the threshold
+                combined_thresh_perObj = (first_pixels_perObj >= tff_perObj[label-1]) & (second_pixels_perObj >= tss_perObj[label-1])
                 
                 # Count the number of above-threshold pixels remaining in the object, and get relative value vs the size of the object
                 #store values in arrays (remember label starts at 1 and array index at 0)
                 above_thresh_pixels_perObj[label-1] = numpy.count_nonzero(combined_thresh_perObj)
-                relative_above_thresh_pixels_perObj[label-1] = above_thresh_pixels_perObj[label-1] / numpy.count_nonzero(first_pixels_perObj)
+                relative_above_thresh_pixels_perObj[label-1] = above_thresh_pixels_perObj[label-1] / len(first_pixels_perObj)
 
                 # sum of the above-threshold (for both channels) pixel intensities per object
                 tot_fi_thr_perObj = scipy.ndimage.sum(
