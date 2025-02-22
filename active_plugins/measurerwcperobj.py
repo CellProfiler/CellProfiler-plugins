@@ -280,6 +280,8 @@ Select *{YES}* to run the Rank Weighted Colocalization coefficients.
             # RWC Coefficient
             RWC1 = numpy.zeros(len(lrange))
             RWC2 = numpy.zeros(len(lrange))
+            above_thresh_pixels_perObj = numpy.zeros(len(lrange))
+            relative_above_thresh_pixels_perObj = numpy.zeros(len(lrange))
 
             # List of thresholds for each object (as percentage of maximum intensity of objects in each channel
             # Single threshold per object (it is calculated based on the highest pixel intensity in each object)
@@ -307,6 +309,11 @@ Select *{YES}* to run the Rank Weighted Colocalization coefficients.
                 #combined_thresh_perObj is an boolean array representing all the pixels in a single object
                 # It is True in any pixel where BOTH first_pixels_perObj and second_pixels_perObj are above their respective threshold
                 combined_thresh_perObj = (first_pixels_perObj > tff_perObj[label-1]) & (second_pixels_perObj > tss_perObj[label-1])
+                
+                # Count the number of above-threshold pixels remaining in the object, and get relative value vs the size of the object
+                #store values in arrays (remember label starts at 1 and array index at 0)
+                above_thresh_pixels_perObj[label-1] = numpy.count_nonzero(combined_thresh_perObj)
+                relative_above_thresh_pixels_perObj[label-1] = above_thresh_pixels_perObj[label-1] / numpy.count_nonzero(first_pixels_perObj)
 
                 # sum of the above-threshold (for both channels) pixel intensities per object
                 tot_fi_thr_perObj = scipy.ndimage.sum(
@@ -424,11 +431,47 @@ Select *{YES}* to run the Rank Weighted Colocalization coefficients.
                     "%.3f" % numpy.max(RWC2),
                 ],
             ]
+            result += [
+                [
+                    first_image_name,
+                    second_image_name,
+                    object_name,
+                    "Mean relative above-thresh px",
+                    "%.3f" % numpy.mean(relative_above_thresh_pixels_perObj),
+                ],
+                [
+                    first_image_name,
+                    second_image_name,
+                    object_name,
+                    "Median relative above-thresh px",
+                    "%.3f" % numpy.median(relative_above_thresh_pixels_perObj),
+                ],
+                [
+                    first_image_name,
+                    second_image_name,
+                    object_name,
+                    "Min relative above-thresh px",
+                    "%.3f" % numpy.min(relative_above_thresh_pixels_perObj),
+                ],
+                [
+                    first_image_name,
+                    second_image_name,
+                    object_name,
+                    "Max relative above-thresh px",
+                    "%.3f" % numpy.max(relative_above_thresh_pixels_perObj),
+                ],
+            ]
 
         rwc_measurement_1 = F_RWCperObj_FORMAT % (first_image_name, second_image_name)
         rwc_measurement_2 = F_RWCperObj_FORMAT % (second_image_name, first_image_name)
+        rwc_measurement_3 = F_RWCperObj_FORMAT % (first_image_name, second_image_name) + "_aboveThreshPixels_abs"
+        rwc_measurement_4 = F_RWCperObj_FORMAT % (first_image_name, second_image_name) + "_aboveThreshPixels_rel"
+
+
         workspace.measurements.add_measurement(object_name, rwc_measurement_1, RWC1)
         workspace.measurements.add_measurement(object_name, rwc_measurement_2, RWC2)
+        workspace.measurements.add_measurement(object_name, rwc_measurement_3, above_thresh_pixels_perObj)
+        workspace.measurements.add_measurement(object_name, rwc_measurement_4, relative_above_thresh_pixels_perObj)
 
         if n_objects == 0:
             return [
@@ -436,28 +479,28 @@ Select *{YES}* to run the Rank Weighted Colocalization coefficients.
                     first_image_name,
                     second_image_name,
                     object_name,
-                    "Mean correlation",
+                    "Mean RWCperObj coeff",
                     "-",
                 ],
                 [
                     first_image_name,
                     second_image_name,
                     object_name,
-                    "Median correlation",
+                    "Median RWCperObj coeff",
                     "-",
                 ],
                 [
                     first_image_name,
                     second_image_name,
                     object_name,
-                    "Min correlation",
+                    "Min RWCperObj coeff",
                     "-",
                 ],
                 [
                     first_image_name,
                     second_image_name,
                     object_name,
-                    "Max correlation",
+                    "Max RWCperObj coeff",
                     "-",
                 ],
             ]
@@ -480,6 +523,16 @@ Select *{YES}* to run the Rank Weighted Colocalization coefficients.
                         (
                             object_name,
                             F_RWCperObj_FORMAT % (second_image, first_image),
+                            COLTYPE_FLOAT,
+                        ),
+                        (
+                            object_name,
+                            F_RWCperObj_FORMAT % (first_image, second_image) + "_aboveThreshPixels_abs",
+                            COLTYPE_FLOAT,
+                        ),
+                        (
+                            object_name,
+                            F_RWCperObj_FORMAT % (first_image, second_image) + "_aboveThreshPixels_rel",
                             COLTYPE_FLOAT,
                         ),
                     ]
