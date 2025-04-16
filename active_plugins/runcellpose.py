@@ -114,19 +114,20 @@ class RunCellpose(ImageSegmentation):
             text="Rescale images before running Cellpose",
             value=True,
             doc="""\
-Reminds the user that the  normalization step will be performed to ensure suimilar segmentation behaviour in the RunCellpose
+Reminds the user that the  normalization step will be performed to ensure similar segmentation behaviour in the RunCellpose
 module and the Cellpose app.
 """
         )
 
 
         self.docker_or_python = Choice(
-            text="Run CellPose in docker or local python environment",
-            choices=["Docker", "Python"],
+            text="Run CellPose in a Docker/Podman container or local python environment",
+            choices=["Docker", "Podman", "Python"],
             value="Docker",
             doc="""\
 If Docker is selected, ensure that Docker Desktop is open and running on your
-computer. On first run of the RunCellpose plugin, the Docker container will be
+computer; likewise for Podman, ensure Podman Desktop is running. On first run 
+of the RunCellpose plugin, the Docker container will be
 downloaded. However, this slow downloading process will only have to happen
 once.
 
@@ -393,7 +394,7 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
         vis_settings = [self.rescale, self.docker_or_python]
 
 
-        if self.docker_or_python.value == "Docker":
+        if self.docker_or_python.value in ["Docker","Podman"]:
             vis_settings += [self.docker_image]
 
         vis_settings += [self.mode, self.x_name]
@@ -575,9 +576,12 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
                     except Exception as e:
                         print(f"Unable to clear GPU memory. You may need to restart CellProfiler to change models. {e}")
 
-        elif self.docker_or_python.value == "Docker":
-            # Define how to call docker
-            docker_path = "docker" if sys.platform.lower().startswith("win") else "/usr/local/bin/docker"
+        else:
+            if self.docker_or_python.value == "Docker":
+                # Define how to call docker
+                docker_path = "docker" if sys.platform.lower().startswith("win") else "/usr/local/bin/docker"
+            else:
+                docker_path = "podman" if sys.platform.lower().startswith("win") else "/opt/podman/bin/podman"
             # Create a UUID for this run
             unique_name = str(uuid.uuid4())
             # Directory that will be used to pass images to the docker container
