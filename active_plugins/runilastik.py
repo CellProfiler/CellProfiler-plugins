@@ -82,7 +82,7 @@ class Runilastik(ImageProcessing):
         super(Runilastik, self).create_settings()
         
         self.docker_or_local = Choice(
-            text="Run ilastik in docker or local environment",
+            text="Run ilastik in a container (Docker or Podman) or local environment",
             choices=["Docker", "Podman", "Local"],
             value="Docker",
             doc="""\
