@@ -68,11 +68,16 @@ Radius of the ball to use for smoothing
         )
 
     def settings(self):
+        __settings__ = super(RollingBall, self).settings()
 
-        settings = super(RollingBall, self).settings() + [self.radius]
+        return __settings__ + [self.radius]
 
-        # Append additional settings here.
-        return settings
+    def visible_settings(self):
+        __settings__ = super(RollingBall, self).visible_settings()
+
+        __settings__ += [self.radius]
+
+        return __settings__
 
     def run(self, workspace):
 
