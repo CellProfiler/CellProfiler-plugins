@@ -69,10 +69,10 @@ Radius of the ball to use for smoothing
 
     def settings(self):
 
-        settings = super(RollingBall, self).settings()
+        settings = super(RollingBall, self).settings() + [self.radius]
 
         # Append additional settings here.
-        return settings + [self.radius]
+        return settings
 
     def run(self, workspace):
 
