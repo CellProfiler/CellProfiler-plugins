@@ -45,7 +45,7 @@ from cellprofiler_core.setting.text import Integer
 
 class RollingBall(ImageProcessing):
 
-    module_name = "ImageTemplate"
+    module_name = "RollingBall"
 
     variable_revision_number = 1
 
