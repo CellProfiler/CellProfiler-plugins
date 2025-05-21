@@ -66,6 +66,7 @@ class ConvertOutlinesToObjects(ImageSegmentation):
 
 
 def convert_outlines_to_objects(outlines, diameter):
+    # turn everything into a label matrix
     labels = skimage.measure.label(
         outlines > 0,
         background=True,
@@ -96,6 +97,17 @@ def convert_outlines_to_objects(outlines, diameter):
 
     background_indexes = numpy.unique(labels)[is_background]
 
+    # set the background to 0
     labels[numpy.isin(labels, background_indexes)] = 0
+
+    # reindex everything to be consecutive
+    indexes = numpy.unique(labels)
+    new_object_count = len(indexes)
+    max_label = numpy.max(labels)
+    label_indexes = numpy.zeros((max_label + 1,), int)
+    label_indexes[indexes] = numpy.arange(0, new_object_count)
+
+    #target_labels[target_labels > max_label] = 0
+    labels = label_indexes[labels]
 
     return labels
