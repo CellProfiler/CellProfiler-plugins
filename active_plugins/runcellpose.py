@@ -85,26 +85,18 @@ YES          YES          NO
 """
 
 "Select Cellpose Docker Image"
-# V2 Dockers
-CELLPOSE_DOCKER_NO_PRETRAINED_v232 = "cellprofiler/runcellpose_no_pretrained:2.3.2"
-CELLPOSE_DOCKER_IMAGE_WITH_PRETRAINED_v232 = "cellprofiler/runcellpose_with_pretrained:2.3.2"
-CELLPOSE_DOCKER_NO_PRETRAINED_v220 = "cellprofiler/runcellpose_no_pretrained:2.2"
-CELLPOSE_DOCKER_IMAGE_WITH_PRETRAINED_v220 = "cellprofiler/runcellpose_with_pretrained:2.2"
-# V3 Dockers
-CELLPOSE_DOCKER_NO_PRETRAINED_v220 = "cellprofiler/runcellpose_no_pretrained:2.2" #TODO edit for v3
-CELLPOSE_DOCKER_IMAGE_WITH_PRETRAINED_v220 = "cellprofiler/runcellpose_with_pretrained:2.2" #TODO edit for v3
-# V4 Dockers
-CELLPOSE_DOCKER_NO_PRETRAINED_v220 = "cellprofiler/runcellpose_no_pretrained:2.2" #TODO edit for SAM
-CELLPOSE_DOCKER_IMAGE_WITH_PRETRAINED_v220 = "cellprofiler/runcellpose_with_pretrained:2.2" #TODO edit for SAM
+CELLPOSE_DOCKERS = {'v2': ["cellprofiler/runcellpose_no_pretrained:2.3.2",
+                     "cellprofiler/runcellpose_with_pretrained:2.3.2",
+                     "cellprofiler/runcellpose_with_pretrained:2.2"],
+                     'v3': ["docker3"], #TODO
+                     'v4': ["docker4"]} #TODO
 
 "Detection mode"
-MODEL_NAMES_V2 = ['cyto','nuclei','tissuenet','livecell', 'cyto2', 'general',
-                'CP', 'CPx', 'TN1', 'TN2', 'TN3', 'LC1', 'LC2', 'LC3', 'LC4', 'custom']
-MODEL_NAMES_V3 = [
-    "cyto3", "nuclei", "cyto2_cp3", "tissuenet_cp3", "livecell_cp3", "yeast_PhC_cp3",
-    "yeast_BF_cp3", "bact_phase_cp3", "bact_fluor_cp3", "deepbacs_cp3", "cyto2", "cyto"
-]
-MODEL_NAMES_V4 = [] #TODO
+MODEL_NAMES = {'v2':['cyto','nuclei','tissuenet','livecell', 'cyto2', 'general',
+                'CP', 'CPx', 'TN1', 'TN2', 'TN3', 'LC1', 'LC2', 'LC3', 'LC4', 'custom'],
+                'v3':[ "cyto3", "nuclei", "cyto2_cp3", "tissuenet_cp3", "livecell_cp3", "yeast_PhC_cp3",
+    "yeast_BF_cp3", "bact_phase_cp3", "bact_fluor_cp3", "deepbacs_cp3", "cyto2", "cyto"],
+    'v4':['model4']} #TODO
 
 DENOISER_NAMES = ['denoise_cyto3', 'deblur_cyto3', 'upsample_cyto3',
                   'denoise_nuclei', 'deblur_nuclei', 'upsample_nuclei']
@@ -161,37 +153,29 @@ are installed will be used.
             
         self.docker_image_v2 = Choice(
             text="Select Cellpose docker image",
-            choices=[CELLPOSE_DOCKER_IMAGE_WITH_PRETRAINED_v220, CELLPOSE_DOCKER_NO_PRETRAINED_v220,CELLPOSE_DOCKER_IMAGE_WITH_PRETRAINED_v232, CELLPOSE_DOCKER_NO_PRETRAINED_v232],
-            value=CELLPOSE_DOCKER_IMAGE_WITH_PRETRAINED_v232,
+            choices=CELLPOSE_DOCKERS['v2'],
+            value=CELLPOSE_DOCKERS['v2'][0],
             doc="""\
 Select which Docker image to use for running Cellpose.
-
-If you are not using a custom model, you can select
-**"{CELLPOSE_DOCKER_IMAGE_WITH_PRETRAINED_v232}"** or "{CELLPOSE_DOCKER_IMAGE_WITH_PRETRAINED_v220}"**. If you are using a custom model,
+If you are not using a custom model, you should select a Docker image **with pretrained**. If you are using a custom model,
 you can use any of the available Dockers, but those with pretrained models will be slightly larger (~500 MB).
-""".format(
-            **{"CELLPOSE_DOCKER_NO_PRETRAINED_v220": CELLPOSE_DOCKER_NO_PRETRAINED_v220, 
-               "CELLPOSE_DOCKER_IMAGE_WITH_PRETRAINED_v220": CELLPOSE_DOCKER_IMAGE_WITH_PRETRAINED_v220,
-               "CELLPOSE_DOCKER_NO_PRETRAINED_v232": CELLPOSE_DOCKER_NO_PRETRAINED_v232, 
-               "CELLPOSE_DOCKER_IMAGE_WITH_PRETRAINED_v232": CELLPOSE_DOCKER_IMAGE_WITH_PRETRAINED_v232}
-),
-        )
+""")
         self.docker_image_v3 = Choice(
             text="Select Cellpose docker image",
-            choices=[],#TODO
-            value=''#TODO,
+            choices=CELLPOSE_DOCKERS['v3'],
+            value=CELLPOSE_DOCKERS['v3'][0],
             doc="""\
 Select which Docker image to use for running Cellpose.
-If you are not using a custom model, select a Docker image **with pretrained**. If you are using a custom model,
+If you are not using a custom model, you should select a Docker image **with pretrained**. If you are using a custom model,
 you can use any of the available Dockers, but those with pretrained models will be slightly larger (~500 MB).""",
         )
         self.docker_image_v4 = Choice(
             text="Select Cellpose docker image",
-            choices=[],#TODO
-            value=''#TODO,
+            choices=CELLPOSE_DOCKERS['v4'],
+            value=CELLPOSE_DOCKERS['v4'][0],
             doc="""\
 Select which Docker image to use for running Cellpose.
-If you are not using a custom model, select a Docker image **with pretrained**. If you are using a custom model,
+If you are not using a custom model, you should select a Docker image **with pretrained**. If you are using a custom model,
 you can use any of the available Dockers, but those with pretrained models will be slightly larger (~500 MB).""",
         )
 
@@ -220,8 +204,8 @@ Note that automatic diameter mode does not work when running on 3D images.
 
         self.mode_v2 = Choice(
             text="Detection mode",
-            choices=MODEL_NAMES_V2,
-            value=MODEL_NAMES_V2[0],
+            choices=MODEL_NAMES['v2'],
+            value=MODEL_NAMES['v2'][0],
             doc="""\
 CellPose comes with models for detecting nuclei or cells. Alternatively, you can supply a custom-trained model
 generated using the command line or Cellpose GUI. Custom models can be useful if working with unusual cell types.
@@ -229,8 +213,8 @@ generated using the command line or Cellpose GUI. Custom models can be useful if
         )
         self.mode_v3 = Choice(
             text="Detection mode",
-            choices=MODEL_NAMES_V3,
-            value=MODEL_NAMES_V3[0],
+            choices=MODEL_NAMES['v3'],
+            value=MODEL_NAMES['v3'][0],
             doc="""\
 CellPose comes with models for detecting nuclei or cells. Alternatively, you can supply a custom-trained model
 generated using the command line or Cellpose GUI. Custom models can be useful if working with unusual cell types.
@@ -238,8 +222,8 @@ generated using the command line or Cellpose GUI. Custom models can be useful if
         )
         self.mode_v4 = Choice(
             text="Detection mode",
-            choices=MODEL_NAMES_V4,
-            value=MODEL_NAMES_V4[0],
+            choices=MODEL_NAMES['v4'],
+            value=MODEL_NAMES['v4'][0],
             doc="""\
 CellPose comes with models for detecting nuclei or cells. Alternatively, you can supply a custom-trained model
 generated using the command line or Cellpose GUI. Custom models can be useful if working with unusual cell types.
@@ -513,11 +497,11 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
         if self.docker_or_python.value == "Python":
             vis_settings += [self.omni]
 
-        if self.mode.value != "nuclei":
+        if self.mode_v2.value != "nuclei":
             vis_settings += [self.supply_nuclei]
             if self.supply_nuclei.value:
                 vis_settings += [self.nuclei_image]
-        if self.mode.value == "custom":
+        if self.mode_v2.value == "custom":
             vis_settings += [
                 self.model_directory,
                 self.model_file_name,
@@ -562,7 +546,7 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
     def validate_module(self, pipeline):
         """If using custom model, validate the model file opens and works"""
         from cellpose import models
-        if self.mode.value == "custom":
+        if self.mode_v2.value == "custom":
             model_file = self.model_file_name.value
             model_directory = self.model_directory.get_absolute_path()
             model_path = os.path.join(model_directory, model_file)
@@ -618,7 +602,7 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
                 "Color images are not currently supported. Please provide greyscale images."
             )
 
-        if self.mode.value != "nuclei" and self.supply_nuclei.value:
+        if self.mode_v2.value != "nuclei" and self.supply_nuclei.value:
             nuc_image = images.get_image(self.nuclei_image.value)
             # CellPose 1-3 expects RGB, we'll have a blank red channel, cells in green and nuclei in blue.
             if self.do_3D.value:
@@ -646,8 +630,8 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
             if self.cellpose_version.value == 'v2':
                 assert int(self.cellpose_ver[0])<=2, "Cellpose version selected in RunCellpose module doesn't match version in Python"
                 if float(self.cellpose_ver[0:3]) >= 0.6 and int(self.cellpose_ver[0])<2:
-                    if self.mode.value != 'custom':
-                        model = models.Cellpose(model_type= self.mode.value,
+                    if self.mode_v2.value != 'custom':
+                        model = models.Cellpose(model_type= self.mode_v2.value,
                                                 gpu=self.use_gpu.value)
                     else:
                         model_file = self.model_file_name.value
@@ -656,8 +640,8 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
                         model = models.CellposeModel(pretrained_model=model_path, gpu=self.use_gpu.value)
 
                 else:
-                    if self.mode.value != 'custom':
-                        model = models.CellposeModel(model_type= self.mode.value,
+                    if self.mode_v2.value != 'custom':
+                        model = models.CellposeModel(model_type= self.mode_v2.value,
                                                 gpu=self.use_gpu.value)
                     else:
                         model_file = self.model_file_name.value
@@ -707,18 +691,18 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
 
             elif self.cellpose_version.value == 'v3':
                 assert int(self.cellpose_ver[0])==3, "Cellpose version selected in RunCellpose module doesn't match version in Python"
-                if self.mode.value == 'custom':
+                if self.mode_v3.value == 'custom':
                     model_file = self.model_file_name.value
                     model_directory = self.model_directory.get_absolute_path()
                     model_path = os.path.join(model_directory, model_file)
-                model_params = (self.mode.value, self.use_gpu.value)
-                LOGGER.info(f"Loading new model: {self.mode.value}")
-                if self.mode.value in SIZED_MODELS:
+                model_params = (self.mode_v3.value, self.use_gpu.value)
+                LOGGER.info(f"Loading new model: {self.mode_v3.value}")
+                if self.mode_v3.value in SIZED_MODELS:
                     self.current_model = models.Cellpose(
-                        model_type=self.mode.value, gpu=self.use_gpu.value)
+                        model_type=self.mode_v3.value, gpu=self.use_gpu.value)
                 else:
                     self.current_model = models.CellposeModel(
-                        model_type=self.mode.value, gpu=self.use_gpu.value)
+                        model_type=self.mode_v3.value, gpu=self.use_gpu.value)
                 self.current_model_params = model_params
 
                 if self.denoise.value:
@@ -726,7 +710,7 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
                     recon_params = (
                         self.denoise_type.value,
                         self.use_gpu.value,
-                        self.mode.value != "nuclei" and self.supply_nuclei.value
+                        self.mode_v3.value != "nuclei" and self.supply_nuclei.value
                     )
                     self.recon_model = denoise.DenoiseModel(
                         model_type=recon_params[0],
@@ -745,7 +729,7 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
                         elif self.denoise_type.value == "upsample_nuclei":
                             diam = 17
                         # Result only includes input channels
-                        if self.mode.value != "nuclei" and self.supply_nuclei.value:
+                        if self.mode_v2.value != "nuclei" and self.supply_nuclei.value:
                             channels = [0, 1]
                 else:
                     input_data = x_data
@@ -780,6 +764,7 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
 
             elif self.cellpose_version.value == 'v4':
                 assert int(self.cellpose_ver[0])==4, "Cellpose version selected in RunCellpose module doesn't match version in Python"
+                # TODO
 
             if self.remove_edge_masks:
                 y_data = utils.remove_edge_masks(y_data)
@@ -797,7 +782,7 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
             os.makedirs(temp_img_dir, exist_ok=True)
 
             temp_img_path = os.path.join(temp_img_dir, unique_name+".tiff")
-            if self.mode.value == "custom":
+            if self.mode_v2.value == "custom":
                 model_file = self.model_file_name.value
                 model_directory = self.model_directory.get_absolute_path()
                 model_path = os.path.join(model_directory, model_file)
@@ -814,8 +799,8 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
             if self.use_gpu.value:
                 cmd += ['--gpus', 'all']
             cmd += ['cellpose', '--verbose', '--dir', '/data/img', '--pretrained_model']
-            if self.mode.value !='custom':
-                cmd += [self.mode.value]
+            if self.mode_v2.value !='custom':
+                cmd += [self.mode_v2.value]
             else:
                 cmd += ['/data/model/' + model_file]
             cmd += ['--chan', str(channels[0]), '--chan2', str(channels[1]), '--diameter', str(diam)]
@@ -957,7 +942,7 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
             setting_values = setting_values + ["0.0", False, "15", "1.0", False, False]
             variable_revision_number = 3
         if variable_revision_number == 3:
-            setting_values = [setting_values[0]] + ["Python",CELLPOSE_DOCKER_IMAGE_WITH_PRETRAINED_v232] + setting_values[1:]
+            setting_values = [setting_values[0]] + ["Python",CELLPOSE_DOCKERS['v2'][0]] + setting_values[1:]
             variable_revision_number = 4
         if variable_revision_number == 4:
             setting_values = [setting_values[0]] + ['No'] + setting_values[1:]
