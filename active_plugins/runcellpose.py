@@ -88,7 +88,7 @@ YES          YES          NO
 CELLPOSE_DOCKERS = {'v2': ["cellprofiler/runcellpose_no_pretrained:2.3.2",
                      "cellprofiler/runcellpose_with_pretrained:2.3.2",
                      "cellprofiler/runcellpose_with_pretrained:2.2"],
-                     'v3': ["docker3"], #TODO
+                     'v3': ["biocontainers/cellpose:3.1.0_cv1"], #TODO
                      'v4': ["docker4"]} #TODO
 
 "Detection mode"
@@ -96,12 +96,18 @@ MODEL_NAMES = {'v2':['cyto','nuclei','tissuenet','livecell', 'cyto2', 'general',
                 'CP', 'CPx', 'TN1', 'TN2', 'TN3', 'LC1', 'LC2', 'LC3', 'LC4', 'custom'],
                 'v3':[ "cyto3", "nuclei", "cyto2_cp3", "tissuenet_cp3", "livecell_cp3", "yeast_PhC_cp3",
     "yeast_BF_cp3", "bact_phase_cp3", "bact_fluor_cp3", "deepbacs_cp3", "cyto2", "cyto"],
-    'v4':['model4']} #TODO
+    'v4':['cpsam']}
 
 DENOISER_NAMES = ['denoise_cyto3', 'deblur_cyto3', 'upsample_cyto3',
                   'denoise_nuclei', 'deblur_nuclei', 'upsample_nuclei']
 # Only these models support size scaling
 SIZED_MODELS = {"cyto3", "cyto2", "cyto", "nuclei"}
+
+def get_custom_model_vars(self):
+    model_file = self.model_file_name.value
+    model_directory = self.model_directory.get_absolute_path()
+    model_path = os.path.join(model_directory, model_file)
+    return model_file, model_directory, model_path
 
 class RunCellpose(ImageSegmentation):
     category = "Object Processing"
@@ -197,7 +203,7 @@ The average diameter of the objects to be detected.
 In Cellpose 1-3, Cellpose models come with a pre-defined object diameter. Your image will be resized during detection to attempt to
 match the diameter expected by the model. The default models have an expected diameter of ~16 pixels, if trying to
 detect much smaller objects it may be more efficient to resize the image first using the Resize module.
-If set to 0 in Cellpose 1-3, it will attempt to automatically detect object size. Note that automatic diameter mode does not work when running on 3D images.
+If set to 0 in Cellpose 1-3, it will attempt to automatically detect object size.
 Note that automatic diameter mode does not work when running on 3D images.
 """,
         )
@@ -497,11 +503,11 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
         if self.docker_or_python.value == "Python":
             vis_settings += [self.omni]
 
-        if self.mode_v2.value != "nuclei":
+        if self.mode.value != "nuclei":
             vis_settings += [self.supply_nuclei]
             if self.supply_nuclei.value:
                 vis_settings += [self.nuclei_image]
-        if self.mode_v2.value == "custom":
+        if self.mode.value == "custom":
             vis_settings += [
                 self.model_directory,
                 self.model_file_name,
@@ -516,9 +522,10 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
             self.min_size,
             self.flow_threshold,
             self.y_name,
-            self.invert,
             self.save_probabilities,
         ]
+        if self.cellpose_version.value in ['v2','v3']:
+            vis_settings += [self.invert]
 
         vis_settings += [self.do_3D, self.stitch_threshold, self.remove_edge_masks]
 
@@ -546,7 +553,7 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
     def validate_module(self, pipeline):
         """If using custom model, validate the model file opens and works"""
         from cellpose import models
-        if self.mode_v2.value == "custom":
+        if self.mode.value == "custom":
             model_file = self.model_file_name.value
             model_directory = self.model_directory.get_absolute_path()
             model_path = os.path.join(model_directory, model_file)
@@ -602,7 +609,7 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
                 "Color images are not currently supported. Please provide greyscale images."
             )
 
-        if self.mode_v2.value != "nuclei" and self.supply_nuclei.value:
+        if self.mode.value != "nuclei" and self.supply_nuclei.value:
             nuc_image = images.get_image(self.nuclei_image.value)
             # CellPose 1-3 expects RGB, we'll have a blank red channel, cells in green and nuclei in blue.
             if self.do_3D.value:
@@ -630,23 +637,19 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
             if self.cellpose_version.value == 'v2':
                 assert int(self.cellpose_ver[0])<=2, "Cellpose version selected in RunCellpose module doesn't match version in Python"
                 if float(self.cellpose_ver[0:3]) >= 0.6 and int(self.cellpose_ver[0])<2:
-                    if self.mode_v2.value != 'custom':
-                        model = models.Cellpose(model_type= self.mode_v2.value,
+                    if self.mode.value != 'custom':
+                        model = models.Cellpose(model_type= self.mode.value,
                                                 gpu=self.use_gpu.value)
                     else:
-                        model_file = self.model_file_name.value
-                        model_directory = self.model_directory.get_absolute_path()
-                        model_path = os.path.join(model_directory, model_file)
+                        model_file, model_directory, model_path = get_custom_model_vars(self)
                         model = models.CellposeModel(pretrained_model=model_path, gpu=self.use_gpu.value)
 
                 else:
-                    if self.mode_v2.value != 'custom':
-                        model = models.CellposeModel(model_type= self.mode_v2.value,
+                    if self.mode.value != 'custom':
+                        model = models.CellposeModel(model_type= self.mode.value,
                                                 gpu=self.use_gpu.value)
                     else:
-                        model_file = self.model_file_name.value
-                        model_directory = self.model_directory.get_absolute_path()
-                        model_path = os.path.join(model_directory, model_file)
+                        model_file, model_directory, model_path = get_custom_model_vars(self)
                         model = models.CellposeModel(pretrained_model=model_path, gpu=self.use_gpu.value)
 
                 try:
@@ -691,18 +694,16 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
 
             elif self.cellpose_version.value == 'v3':
                 assert int(self.cellpose_ver[0])==3, "Cellpose version selected in RunCellpose module doesn't match version in Python"
-                if self.mode_v3.value == 'custom':
-                    model_file = self.model_file_name.value
-                    model_directory = self.model_directory.get_absolute_path()
-                    model_path = os.path.join(model_directory, model_file)
-                model_params = (self.mode_v3.value, self.use_gpu.value)
-                LOGGER.info(f"Loading new model: {self.mode_v3.value}")
-                if self.mode_v3.value in SIZED_MODELS:
+                if self.mode.value == 'custom':
+                    model_file, model_directory, model_path  = get_custom_model_vars(self)
+                model_params = (self.mode.value, self.use_gpu.value)
+                LOGGER.info(f"Loading new model: {self.mode.value}")
+                if self.mode.value in SIZED_MODELS:
                     self.current_model = models.Cellpose(
-                        model_type=self.mode_v3.value, gpu=self.use_gpu.value)
+                        model_type=self.mode.value, gpu=self.use_gpu.value)
                 else:
                     self.current_model = models.CellposeModel(
-                        model_type=self.mode_v3.value, gpu=self.use_gpu.value)
+                        model_type=self.mode.value, gpu=self.use_gpu.value)
                 self.current_model_params = model_params
 
                 if self.denoise.value:
@@ -710,7 +711,7 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
                     recon_params = (
                         self.denoise_type.value,
                         self.use_gpu.value,
-                        self.mode_v3.value != "nuclei" and self.supply_nuclei.value
+                        self.mode.value != "nuclei" and self.supply_nuclei.value
                     )
                     self.recon_model = denoise.DenoiseModel(
                         model_type=recon_params[0],
@@ -729,7 +730,7 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
                         elif self.denoise_type.value == "upsample_nuclei":
                             diam = 17
                         # Result only includes input channels
-                        if self.mode_v2.value != "nuclei" and self.supply_nuclei.value:
+                        if self.mode.value != "nuclei" and self.supply_nuclei.value:
                             channels = [0, 1]
                 else:
                     input_data = x_data
@@ -782,12 +783,11 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
             os.makedirs(temp_img_dir, exist_ok=True)
 
             temp_img_path = os.path.join(temp_img_dir, unique_name+".tiff")
-            if self.mode_v2.value == "custom":
-                model_file = self.model_file_name.value
-                model_directory = self.model_directory.get_absolute_path()
-                model_path = os.path.join(model_directory, model_file)
+            if self.mode.value == "custom":
+                model_file, model_directory, model_path = get_custom_model_vars(self)
+                model = models.CellposeModel(pretrained_model=model_path, gpu=self.use_gpu.value)
+                
                 temp_model_dir = os.path.join(temp_dir, "model")
-
                 os.makedirs(temp_model_dir, exist_ok=True)
                 # Copy the model
                 shutil.copy(model_path, os.path.join(temp_model_dir, model_file))
@@ -799,19 +799,27 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
             if self.use_gpu.value:
                 cmd += ['--gpus', 'all']
             cmd += ['cellpose', '--verbose', '--dir', '/data/img', '--pretrained_model']
-            if self.mode_v2.value !='custom':
-                cmd += [self.mode_v2.value]
+            if self.mode.value !='custom':
+                cmd += [self.mode.value]
             else:
                 cmd += ['/data/model/' + model_file]
-            cmd += ['--chan', str(channels[0]), '--chan2', str(channels[1]), '--diameter', str(diam)]
+            if self.cellpose_version.value == 'v3':
+                if self.denoise.value:
+                    cmd += ['--denoise', self.denoise_type.value]
+            if self.cellpose_version.value in ['v2','v3']:
+                cmd += ['--chan', str(channels[0]), '--chan2', str(channels[1]), '--diameter', str(diam)] 
+            if self.cellpose_version.value in ['v4']:
+                if self.specify_diameter.value:
+                    cmd += ['--diameter', str(diam)]
             if self.use_averaging.value:
                 cmd += ['--net_avg']
             if self.do_3D.value:
                 cmd += ['--do_3D']
             cmd += ['--anisotropy', str(anisotropy), '--flow_threshold', str(self.flow_threshold.value), '--cellprob_threshold', 
                     str(self.cellprob_threshold.value), '--stitch_threshold', str(self.stitch_threshold.value), '--min_size', str(self.min_size.value)]
-            if self.invert.value:
-                cmd += ['--invert']
+            if self.cellpose_version.value in ['v2','v3']:
+                if self.invert.value:
+                    cmd += ['--invert']
             if self.remove_edge_masks.value:
                 cmd += ['--exclude_on_edges']
             print(cmd)
