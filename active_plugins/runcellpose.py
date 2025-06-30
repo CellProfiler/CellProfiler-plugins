@@ -13,6 +13,8 @@ import uuid
 import shutil
 import logging
 import sys
+import math
+import scipy.ndimage
 
 #################################
 #
@@ -88,15 +90,15 @@ YES          YES          NO
 CELLPOSE_DOCKERS = {'v2': ["cellprofiler/runcellpose_no_pretrained:2.3.2",
                      "cellprofiler/runcellpose_with_pretrained:2.3.2",
                      "cellprofiler/runcellpose_with_pretrained:2.2"],
-                     'v3': ["biocontainers/cellpose:3.1.0_cv1"], #TODO
-                     'v4': ["docker4"]} #TODO
+                     'v3': ["erinweisbart/cellpose:3.1.1.2"], #TODO
+                     'v4': ["erinweisbart/cellpose:4.0.5"]} #TODO
 
 "Detection mode"
 MODEL_NAMES = {'v2':['cyto','nuclei','tissuenet','livecell', 'cyto2', 'general',
                 'CP', 'CPx', 'TN1', 'TN2', 'TN3', 'LC1', 'LC2', 'LC3', 'LC4', 'custom'],
                 'v3':[ "cyto3", "nuclei", "cyto2_cp3", "tissuenet_cp3", "livecell_cp3", "yeast_PhC_cp3",
-    "yeast_BF_cp3", "bact_phase_cp3", "bact_fluor_cp3", "deepbacs_cp3", "cyto2", "cyto"],
-    'v4':['cpsam']}
+    "yeast_BF_cp3", "bact_phase_cp3", "bact_fluor_cp3", "deepbacs_cp3", "cyto2", "cyto", "custom"],
+    'v4':['cpsam','custom']}
 
 DENOISER_NAMES = ['denoise_cyto3', 'deblur_cyto3', 'upsample_cyto3',
                   'denoise_nuclei', 'deblur_nuclei', 'upsample_nuclei']
@@ -493,10 +495,13 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
         
         if self.cellpose_version.value == 'v2':
             vis_settings += [self.mode_v2]
+            self.mode = self.mode_v2
         elif self.cellpose_version.value == 'v3':
             vis_settings += [self.mode_v3]
+            self.mode = self.mode_v3
         elif self.cellpose_version.value == 'v4':
             vis_settings += [self.mode_v4]
+            self.mode = self.mode_v4
 
         vis_settings += [self.x_name]
 
@@ -805,7 +810,7 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
                 cmd += ['/data/model/' + model_file]
             if self.cellpose_version.value == 'v3':
                 if self.denoise.value:
-                    cmd += ['--denoise', self.denoise_type.value]
+                    cmd += ['--restore_type', self.denoise_type.value]
             if self.cellpose_version.value in ['v2','v3']:
                 cmd += ['--chan', str(channels[0]), '--chan2', str(channels[1]), '--diameter', str(diam)] 
             if self.cellpose_version.value in ['v4']:
@@ -826,9 +831,10 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
             try:
                 subprocess.run(cmd, text=True)
                 cellpose_output = numpy.load(os.path.join(temp_img_dir, unique_name + "_seg.npy"), allow_pickle=True).item()
-
                 y_data = cellpose_output["masks"]
                 flows = cellpose_output["flows"]
+                if self.denoise.value:
+                    img_restore = cellpose_output["restore"] #TODO don't think this is correct for retrieving image for plotting
             finally:      
                 # Delete the temporary files
                 try:
@@ -843,10 +849,11 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
         y.parent_image = x.parent_image
         objects = workspace.object_set
         objects.add_objects(y, y_name)
+        object_count = y.count
 
         if self.denoise.value and self.show_window:
             # Need to remove unnecessary extra axes
-            denoised_image = numpy.squeeze(input_data)
+            denoised_image = numpy.squeeze(img_restore)
             if "upsample" in self.denoise_type.value:
                 denoised_image = skimage.transform.resize(
                     denoised_image, x_data.shape)
@@ -888,20 +895,53 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
             workspace.display_data.y_data = y_data
             workspace.display_data.dimensions = dimensions
 
+            workspace.display_data.primary_labels = y.segmented
+
+            workspace.display_data.statistics = []
+            statistics = workspace.display_data.statistics
+            statistics.append(["# of accepted objects", "%d" % object_count])
+            
+            if object_count > 0:
+                areas = y.areas
+                areas.sort()
+                low_diameter = (
+                    math.sqrt(float(areas[object_count // 10]) / numpy.pi) * 2
+                )
+                median_diameter = (
+                    math.sqrt(float(areas[object_count // 2]) / numpy.pi) * 2
+                )
+                high_diameter = (
+                    math.sqrt(float(areas[object_count * 9 // 10]) / numpy.pi) * 2
+                )
+                statistics.append(
+                    ["10th pctile diameter", "%.1f pixels" % low_diameter]
+                )
+                statistics.append(["Median diameter", "%.1f pixels" % median_diameter])
+                statistics.append(
+                    ["90th pctile diameter", "%.1f pixels" % high_diameter]
+                )
+                object_area = numpy.sum(areas)
+                total_area = numpy.product(y_data.shape[:2])
+                statistics.append(
+                    [
+                        "Area covered by objects",
+                        "%.1f %%" % (100.0 * float(object_area) / float(total_area)),
+                    ]
+                )
+
     def display(self, workspace, figure):
-        if self.save_probabilities.value:
-            layout = (2, 2)
+        if self.save_probabilities.value or self.denoise.value:
+            layout = (3, 2)
         else:
-            layout = (2, 1)
+            layout = (2, 2)
 
-        figure.set_subplots(
-            dimensions=workspace.display_data.dimensions, subplots=layout
-        )
-
+        figure.set_subplots(subplots=layout)
+        
+        title = "Input image, cycle #%d" % (workspace.measurements.image_number,)
         figure.subplot_imshow(
             colormap="gray",
             image=workspace.display_data.x_data,
-            title="Input Image",
+            title=title,
             x=0,
             y=0,
         )
@@ -913,13 +953,39 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
             x=1,
             y=0,
         )
+        
+        cplabels = [
+                dict(name=self.y_name.value, labels=[workspace.display_data.primary_labels]),
+            ]
+
+        title = "%s outlines" % self.y_name.value
+        figure.subplot_imshow_grayscale(
+            0, 1, workspace.display_data.x_data, title, cplabels=cplabels, sharexy=figure.subplot(0, 0),
+        )
+
+        figure.subplot_table(
+            1,
+            1,
+            [[x[1]] for x in workspace.display_data.statistics],
+            row_labels=[x[0] for x in workspace.display_data.statistics],
+        )
+        
         if self.save_probabilities.value:
             figure.subplot_imshow(
                 colormap="gray",
                 image=workspace.display_data.probabilities,
                 sharexy=figure.subplot(0, 0),
                 title=self.probabilities_name.value,
-                x=0,
+                x=2,
+                y=0,
+            )
+        if self.denoise.value:
+            figure.subplot_imshow(
+                colormap="gray",
+                image=workspace.display_data.recon,
+                sharexy=figure.subplot(0, 0),
+                title=self.denoise.value,
+                x=2,
                 y=1,
             )
 
