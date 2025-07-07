@@ -163,16 +163,18 @@ class EnforceObjectsOneToOne(ObjectProcessing):
         workspace.display_data.statistics = []
         
         pre_primary = workspace.object_set.get_objects(self.x_name.value)
-
         pre_primary_seg = pre_primary.segmented
 
         pre_secondary = workspace.object_set.get_objects(self.y_name.value)
-
         pre_secondary_seg = pre_secondary.segmented
 
-        primary_seg = self.enforce_unique(pre_primary_seg, pre_secondary_seg, erode_excess=True)
-
-        secondary_seg = self.enforce_unique(pre_secondary_seg, primary_seg)
+        if pre_secondary.count == 0:
+            primary_seg = secondary_seg = pre_secondary_seg
+        elif pre_primary.count == 0:
+            secondary_seg = primary_seg = pre_primary_seg
+        else:
+            primary_seg = self.enforce_unique(pre_primary_seg, pre_secondary_seg, erode_excess=True)
+            secondary_seg = self.enforce_unique(pre_secondary_seg, primary_seg)
 
         if not numpy.array_equal(numpy.unique(primary_seg),numpy.unique(secondary_seg)):
             raise RuntimeError(f"Something is wrong, there are {numpy.unique(primary_seg).shape[0]-1} primary objects (highest value: {numpy.unique(primary_seg)[-1]}) and {numpy.unique(secondary_seg).shape[0]-1} secondary objects (highest value: {numpy.unique(secondary_seg)[-1]})")
