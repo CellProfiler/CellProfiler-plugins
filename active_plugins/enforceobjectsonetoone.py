@@ -169,9 +169,9 @@ class EnforceObjectsOneToOne(ObjectProcessing):
         pre_secondary_seg = pre_secondary.segmented
 
         if pre_secondary.count == 0:
-            secondary_seg = primary_seg = pre_primary_seg
-        elif pre_primary.count == 0:
             primary_seg = secondary_seg = pre_secondary_seg
+        elif pre_primary.count == 0:
+            secondary_seg = primary_seg = pre_primary_seg
         else:
             primary_seg = self.enforce_unique(pre_primary_seg, pre_secondary_seg, erode_excess=True)
             secondary_seg = self.enforce_unique(pre_secondary_seg, primary_seg)
