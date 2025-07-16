@@ -82,12 +82,13 @@ class Runilastik(ImageProcessing):
         super(Runilastik, self).create_settings()
         
         self.docker_or_local = Choice(
-            text="Run ilastik in docker or local environment",
-            choices=["Docker", "Local"],
+            text="Run ilastik in a container (Docker or Podman) or local environment",
+            choices=["Docker", "Podman", "Local"],
             value="Docker",
             doc="""\
 If Docker is selected, ensure that Docker Desktop is open and running on your
-computer. On first run of the Runilastik plugin, the Docker container will be
+computer; likewise for Podman, ensure Podman Desktop is running. On first run 
+of the Runilastik plugin, the Docker container will be
 downloaded. However, this slow downloading process will only have to happen
 once.
 
@@ -165,7 +166,7 @@ Select the project type which matches the project file specified by
     def visible_settings(self): 
         
         vis_settings = [self.docker_or_local]
-        if self.docker_or_local.value == "Docker":
+        if self.docker_or_local.value in ["Docker","Podman"]:
             vis_settings += [self.docker_choice]
 
             if self.docker_choice == "select your own":
@@ -225,9 +226,27 @@ Select the project type which matches the project file specified by
 
         fout.close()
 
-        if self.docker_or_local.value == "Docker":
-            # Define how to call docker
-            docker_path = "docker" if sys.platform.lower().startswith("win") else "/usr/local/bin/docker"
+        if self.docker_or_local.value == "Local":
+
+            if self.executable.value[-4:] == ".app":
+                executable = os.path.join(self.executable.value, "Contents/MacOS/ilastik")
+            else:
+                executable = self.executable.value
+
+            fout_name = fout.name
+            fin_name = fin.name
+
+            cmd = [
+            executable,
+            "--headless",
+            "--project", self.project_file.value]
+
+        else:
+            if self.docker_or_local.value == "Docker":
+                # Define how to call docker
+                docker_path = "docker" if sys.platform.lower().startswith("win") else "/usr/local/bin/docker"
+            else:
+                docker_path = "podman" if sys.platform.lower().startswith("win") else "/opt/podman/bin/podman"
             # The project file is stored in a directory which can be pointed to the docker            
             model_file = self.project_file.value
             model_directory = os.path.dirname(os.path.abspath(model_file)) 
@@ -249,21 +268,6 @@ Select the project type which matches the project file specified by
             f"{ILASTIK_DOCKER_choice}", f"{ILASTIK_command}", "--headless",
             "--project", f"/model/{os.path.basename(model_file)}"
             ] 
-
-        if self.docker_or_local.value == "Local":
-
-            if self.executable.value[-4:] == ".app":
-                executable = os.path.join(self.executable.value, "Contents/MacOS/ilastik")
-            else:
-                executable = self.executable.value
-
-            fout_name = fout.name
-            fin_name = fin.name
-
-            cmd = [
-            executable,
-            "--headless",
-            "--project", self.project_file.value]
 
         cmd += ["--output_format", "hdf5"]
         
