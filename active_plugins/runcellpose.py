@@ -50,27 +50,18 @@ RunCellpose
 **RunCellpose** uses a pre-trained machine learning model (Cellpose) to detect cells or nuclei in an image.
 
 This module is useful for automating simple segmentation tasks in CellProfiler.
-The module accepts greyscale input images and produces an object set. Probabilities can also be captured as an image.
+The module accepts greyscale input images and produces an object set.
+Probabilities can also be captured as an image.
 
-Loading in a model will take slightly longer the first time you run it each session. When evaluating
-performance you may want to consider the time taken to predict subsequent images.
+Loading in a model will take slightly longer the first time you run it each session.
+When evaluating performance you may want to consider the time taken to predict subsequent images.
 
-This module now also supports Ominpose. Omnipose builds on Cellpose, for the purpose of **RunCellpose** it adds 2 additional
-features: additional models; bact-omni and cyto2-omni which were trained using the Omnipose architechture, and bact
-and the mask reconstruction algorithm for Omnipose that was created to solve over-segemnation of large cells; useful for bacterial cells,
-but can be used for other arbitrary and anisotropic shapes. You can mix and match Omnipose models with Cellpose style masking or vice versa.
+This module is compatible with Omnipose, Cellpose 2, Cellpose 3, and Cellpose-SAM (4).
 
-The module is compatible with Cellpose 1.0.2 >= 2.3.2. From the old version of the module the 'cells' model corresponds to 'cyto2' model.
+You can run this module using Cellpose installed to the same Python environment as CellProfiler.
+See our documentation at https://plugins.cellprofiler.org/runcellpose.html for more information on installation.
 
-You can run this module using Cellpose installed to the same Python environment as CellProfiler. Alternatively, you can 
-run this module using Cellpose in a Docker that the module will automatically download for you so you do not have to perform
-any installation yourself.
-
-To install Cellpose in your Python environment:
-You'll want to run `pip install cellpose==2.3.2` on your CellProfiler Python environment to setup Cellpose. If you have an older version of Cellpose
-run 'python -m pip install --force-reinstall -v cellpose==2.3.2'.
-
-To use Omnipose models, and mask reconstruction method you'll want to install Omnipose 'pip install omnipose' and Cellpose version 1.0.2 'pip install cellpose==1.0.2'.
+Alternatively, you can run this module using Cellpose in a Docker that the module will automatically download for you so you do not have to perform any installation yourself.
 
 On the first time loading into CellProfiler, Cellpose will need to download some model files from the internet. This
 may take some time. If you want to use a GPU to run the model, you'll need a compatible version of PyTorch and a
@@ -102,7 +93,7 @@ MODEL_NAMES = {'v2':['cyto','nuclei','tissuenet','livecell', 'cyto2', 'general',
 
 DENOISER_NAMES = ['denoise_cyto3', 'deblur_cyto3', 'upsample_cyto3',
                   'denoise_nuclei', 'deblur_nuclei', 'upsample_nuclei']
-# Only these models support size scaling
+# Only these models support size scaling for v2/v3
 SIZED_MODELS = {"cyto3", "cyto2", "cyto", "nuclei"}
 
 def get_custom_model_vars(self):
@@ -155,9 +146,9 @@ are installed will be used.
         )
         self.cellpose_version = Choice(
             text="Select Cellpose version",
-            choices=['v2', 'v3', 'v4'],
+            choices=['omnipose', 'v2', 'v3', 'v4'],
             value='v3',
-            doc="Select the version of Cellpose you want to use. Note that v2 is compatible with either v1 or v2.")
+            doc="Select the version of Cellpose you want to use.")
             
         self.docker_image_v2 = Choice(
             text="Select Cellpose docker image",
@@ -578,6 +569,14 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
                         % model_path, self.model_file_name,
                     )
 
+    def cleanup(self):
+        from torch import cuda
+        # Try to clear some GPU memory for other worker processes.
+        try:
+            cuda.empty_cache()
+        except Exception as e:
+            print(f"Unable to clear GPU memory. You may need to restart CellProfiler to change models. {e}")
+
     def run(self, workspace):
         x_name = self.x_name.value
         y_name = self.y_name.value
@@ -586,15 +585,20 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
         dimensions = x.dimensions
         x_data = x.pixel_data
 
+        if self.cellpose_version.value == 'omnipose':
+            self.mode = self.mode_v2
+            self.denoise.value = False  # Denoising only supported in v3
         if self.cellpose_version.value == 'v2':
             self.mode = self.mode_v2
             self.docker_image = self.docker_image_v2
+            self.denoise.value = False  # Denoising only supported in v3
         elif self.cellpose_version.value == 'v3':
             self.mode = self.mode_v3
             self.docker_image = self.docker_image_v3
         elif self.cellpose_version.value == 'v4':
             self.mode = self.mode_v4
             self.docker_image = self.docker_image_v4
+            self.denoise.value = False  # Denoising only supported in v3
 
         if self.rescale.value:
             rescale_x = x_data.copy()
@@ -639,26 +643,45 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
                 from torch import cuda
                 cuda.set_per_process_memory_fraction(self.manual_GPU_memory_share.value)
 
-            if self.cellpose_version.value == 'v2':
-                assert int(self.cellpose_ver[0])<=2, "Cellpose version selected in RunCellpose module doesn't match version in Python"
-                if float(self.cellpose_ver[0:3]) >= 0.6 and int(self.cellpose_ver[0])<2:
-                    if self.mode.value != 'custom':
-                        model = models.Cellpose(model_type= self.mode.value,
-                                                gpu=self.use_gpu.value)
-                    else:
-                        model_file, model_directory, model_path = get_custom_model_vars(self)
-                        model = models.CellposeModel(pretrained_model=model_path, gpu=self.use_gpu.value)
-
+            if self.cellpose_version.value == 'omnipose':
+                assert int(self.cellpose_ver[0])<2, "Cellpose version selected in RunCellpose module doesn't match version in Python"
+                assert float(self.cellpose_ver[0:3]) >= 0.6, "Cellpose v1/omnipose requires Cellpose >= 0.6"
+                if self.mode.value != 'custom':
+                    model = models.Cellpose(model_type= self.mode.value,
+                                            gpu=self.use_gpu.value)
                 else:
-                    if self.mode.value != 'custom':
-                        model = models.CellposeModel(model_type= self.mode.value,
-                                                gpu=self.use_gpu.value)
-                    else:
-                        model_file, model_directory, model_path = get_custom_model_vars(self)
-                        model = models.CellposeModel(pretrained_model=model_path, gpu=self.use_gpu.value)
-
+                    model_file, model_directory, model_path = get_custom_model_vars(self)
+                    model = models.CellposeModel(pretrained_model=model_path, gpu=self.use_gpu.value)
                 try:
-                    if float(self.cellpose_ver[0:3]) >= 0.7 and int(self.cellpose_ver[0])<2:
+                    y_data, flows, *_ = model.eval(
+                        x_data,
+                        channels=channels,
+                        diameter=diam,
+                        net_avg=self.use_averaging.value,
+                        do_3D=self.do_3D.value,
+                        anisotropy=anisotropy,
+                        flow_threshold=self.flow_threshold.value,
+                        cellprob_threshold=self.cellprob_threshold.value,
+                        stitch_threshold=self.stitch_threshold.value, # is ignored if do_3D=True
+                        min_size=self.min_size.value,
+                        omni=self.omni.value,
+                        invert=self.invert.value,
+                )
+                except Exception as a:
+                            print(f"Unable to create masks. Check your module settings. {a}")
+                finally:
+                    if self.use_gpu.value and model.torch:
+                        cleanup()
+                        
+            if self.cellpose_version.value == 'v2':
+                assert int(self.cellpose_ver[0])==2, "Cellpose version selected in RunCellpose module doesn't match version in Python"
+                if self.mode.value != 'custom':
+                    model = models.CellposeModel(model_type= self.mode.value,
+                                            gpu=self.use_gpu.value)
+                else:
+                    model_file, model_directory, model_path = get_custom_model_vars(self)
+                    model = models.CellposeModel(pretrained_model=model_path, gpu=self.use_gpu.value)
+                try:
                         y_data, flows, *_ = model.eval(
                             x_data,
                             channels=channels,
@@ -668,22 +691,7 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
                             anisotropy=anisotropy,
                             flow_threshold=self.flow_threshold.value,
                             cellprob_threshold=self.cellprob_threshold.value,
-                            stitch_threshold=self.stitch_threshold.value,
-                            min_size=self.min_size.value,
-                            omni=self.omni.value,
-                            invert=self.invert.value,
-                    )
-                    else:
-                        y_data, flows, *_ = model.eval(
-                            x_data,
-                            channels=channels,
-                            diameter=diam,
-                            net_avg=self.use_averaging.value,
-                            do_3D=self.do_3D.value,
-                            anisotropy=anisotropy,
-                            flow_threshold=self.flow_threshold.value,
-                            cellprob_threshold=self.cellprob_threshold.value,
-                            stitch_threshold=self.stitch_threshold.value,
+                            stitch_threshold=self.stitch_threshold.value, # is ignored if do_3D=True
                             min_size=self.min_size.value,
                             invert=self.invert.value,
                     )
@@ -691,11 +699,7 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
                             print(f"Unable to create masks. Check your module settings. {a}")
                 finally:
                     if self.use_gpu.value and model.torch:
-                        # Try to clear some GPU memory for other worker processes.
-                        try:
-                            cuda.empty_cache()
-                        except Exception as e:
-                            print(f"Unable to clear GPU memory. You may need to restart CellProfiler to change models. {e}")
+                        cleanup()
 
             elif self.cellpose_version.value == 'v3':
                 assert int(self.cellpose_ver[0])==3, "Cellpose version selected in RunCellpose module doesn't match version in Python"
@@ -749,7 +753,7 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
                         anisotropy=anisotropy,
                         flow_threshold=self.flow_threshold.value,
                         cellprob_threshold=self.cellprob_threshold.value,
-                        stitch_threshold=self.stitch_threshold.value,
+                        stitch_threshold=self.stitch_threshold.value, # is ignored if do_3D=True
                         min_size=self.min_size.value,
                         invert=self.invert.value,
                     )
@@ -762,15 +766,54 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
                             print(f"Unable to create masks. Check your module settings. {a}")
                 finally:
                     if self.use_gpu.value and model.torch:
-                        # Try to clear some GPU memory for other worker processes.
-                        try:
-                            cuda.empty_cache()
-                        except Exception as e:
-                            print(f"Unable to clear GPU memory. You may need to restart CellProfiler to change models. {e}")
+                        cleanup()
 
             elif self.cellpose_version.value == 'v4':
                 assert int(self.cellpose_ver[0])==4, "Cellpose version selected in RunCellpose module doesn't match version in Python"
-                # TODO
+                if self.mode.value == 'custom':
+                    model_file, model_directory, model_path  = get_custom_model_vars(self)
+                model_params = (self.mode.value, self.use_gpu.value)
+                LOGGER.info(f"Loading new model: {self.mode.value}")
+                self.current_model = models.CellposeModel(gpu=self.use_gpu.value)
+                self.current_model_params = model_params
+
+                if self.specify_diameter.value:
+                    try:
+                        y_data, flows, *_ = self.current_model.eval(
+                            x_data,
+                            diameter=diam,
+                            do_3D=self.do_3D.value,
+                            anisotropy=anisotropy,
+                            flow_threshold=self.flow_threshold.value,
+                            cellprob_threshold=self.cellprob_threshold.value,
+                            stitch_threshold=self.stitch_threshold.value, # is ignored if do_3D=True
+                            min_size=self.min_size.value,
+                            invert=self.invert.value,
+                        )
+
+                    except Exception as a:
+                                print(f"Unable to create masks. Check your module settings. {a}")
+                    finally:
+                        if self.use_gpu.value and model.torch:
+                            cleanup()
+                else:
+                    try:
+                        y_data, flows, *_ = self.current_model.eval(
+                            x_data,
+                            do_3D=self.do_3D.value,
+                            anisotropy=anisotropy,
+                            flow_threshold=self.flow_threshold.value,
+                            cellprob_threshold=self.cellprob_threshold.value,
+                            stitch_threshold=self.stitch_threshold.value, # is ignored if do_3D=True
+                            min_size=self.min_size.value,
+                            invert=self.invert.value,
+                        )
+
+                    except Exception as a:
+                                print(f"Unable to create masks. Check your module settings. {a}")
+                    finally:
+                        if self.use_gpu.value and model.torch:
+                            cleanup()
 
             if self.remove_edge_masks:
                 y_data = utils.remove_edge_masks(y_data)
