@@ -110,7 +110,7 @@ Choose how to you want to handle overlapping boxes:
         return [
             self.object_name,
             self.output_object_name,
-            self.operation
+            self.operation,
         ]
 
     def visible_settings(self):
@@ -122,7 +122,7 @@ Choose how to you want to handle overlapping boxes:
         input_objects = workspace.object_set.get_objects(self.object_name.value)
         output_objects = cellprofiler_core.object.Objects()
 
-        input_label = input_objects.get_segmented
+        input_label = input_objects.segmented
         bounding_boxes, input_indices = self.get_box_boundaries(input_label)
 
         if self.operation == O_ALLOW_OVERLAP:
@@ -148,6 +148,14 @@ Choose how to you want to handle overlapping boxes:
             ijv = numpy.vstack(ijv_list)
 
             output_objects.set_ijv(ijv)
+            
+            self.object_count = len(numpy.unique(ijv[:, 2]))
+            # Create a segmentation image from the IJV array
+            segmented = numpy.zeros(input_label.shape, dtype=numpy.int32)
+            segmented[ijv[:, 0], ijv[:, 1]] = ijv[:, 2]
+
+            # assign the full segmentation image to the output object
+            output_objects.segmented = segmented
 
         elif self.operation == O_ASSIGN_ARBITRARY:
             box_objects = []
@@ -164,11 +172,12 @@ Choose how to you want to handle overlapping boxes:
                 box_objects.append(region)
 
             output_objects.segmented = output_label 
-
+            self.object_count = numpy.max(output_objects.segmented)
+        
         add_object_count_measurements(
             workspace.measurements,
             self.output_object_name.value,
-            numpy.max(output_objects.segmented),
+            self.object_count,
         )
 
         add_object_location_measurements(
