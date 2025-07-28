@@ -1,22 +1,18 @@
-from cellprofiler_core.module import Module
-from cellprofiler_core.setting import Binary
+import cellprofiler_core.module as cpm
 from cellprofiler_core.setting.choice import Choice
 from cellprofiler_core.setting.subscriber import LabelSubscriber
 from cellprofiler_core.setting.text import LabelName, Integer
-from cellprofiler_core.setting import Measurement
 from cellprofiler_core.utilities.core.module.identify import (
     add_object_location_measurements,
     add_object_count_measurements,
     get_object_measurement_columns,
 )
 
-from cellprofiler_library.modules import expand_or_shrink_objects, measureobjectsizeshape
-from cellprofiler_library.opts.objectsizeshapefeatures import ObjectSizeShapeFeatures
-from cellprofiler_library.functions.measurement import measure_object_size_shape
 from cellprofiler.modules import _help
+from skimage.morphology import dilation, rectangle
 
 __doc__ = """\
-ExpandOrShrinkObjects
+BoxObjects
 =====================
 
 **ExpandOrShrinkObjects** expands or shrinks objects by a defined
@@ -63,7 +59,7 @@ Measurements made by this module
 import centrosome.cpmorphology
 import numpy
 import scipy.ndimage
-import skimage
+from skimage.measure import regionprops, label
 import cellprofiler_core.object
 
 O_ASSIGN_ARBITRARY = "Let the first box get the overlapping region"
@@ -79,8 +75,9 @@ library_mapping = {
 
 O_ALL = list(library_mapping.keys())
 
-class CreateBoundingBoxObject(Module):
-    module_name = "CreateBoundingBoxObject"
+class BoxObjects(cpm.Module):
+
+    module_name = "BoxObjects"
     category = "Object Processing"
     variable_revision_number = 1
 
@@ -93,7 +90,7 @@ class CreateBoundingBoxObject(Module):
 
         self.output_object_name = LabelName(
             "Name the output objects",
-            "NucleiBox",
+            "BoundingBoxes",
             doc="Enter a name for the resulting objects.",
         )
 
@@ -105,8 +102,7 @@ Choose how to you want to handle overlapping boxes:
 
 -  *{O_ASSIGN_ARBITRARY}:* Assign the overlapping region to the first box that gets those pixels.
 -  *{O_ALLOW_OVERLAP}:* Save each object as a complete box even if two boxes overlap.
--  *{O_FIX_OVERLAP}:* Expand each box pixel by pixel until two boxes intersect
-and then set those shapes as the box objects.
+-  *{O_FIX_OVERLAP}:* Perform watershed operation to figure out the separation between both boxes. 
 """.format(
                 **{
                     "O_ASSIGN_ARBITRARY":O_ASSIGN_ARBITRARY,
@@ -131,63 +127,81 @@ and then set those shapes as the box objects.
 
     def run(self, workspace):
         input_objects = workspace.object_set.get_objects(self.object_name.value)
-        
         output_objects = cellprofiler_core.object.Objects()
 
         # TODO
-        m = workspace.measurements
-        x_min, x_max, y_min, y_max = self.get_box_boundaries(input_objects, m)
-
-        input_labels, input_indices = workspace.object_set.get_labels(self.object_name.value)
+        input_label = input_objects.segmented
+        bounding_boxes, input_indices = self.get_box_boundaries(input_label)
+        label_to_bbox = dict(zip(input_indices, bounding_boxes))
 
         if self.operation == O_ALLOW_OVERLAP:   
-            box_objects = []
+            
+            output_label = numpy.zeros_like(input_label, dtype=numpy.int32)
+            for bbox, object_id in zip(bounding_boxes, input_indices):
+                y_min, x_min, y_max, x_max = bbox
+                output_label[y_min:y_max, x_min:x_max] = object_id
 
-            for i, label in enumerate(input_labels):
-                # Assuming objects is a list of 2D masks 
-                box = label[y_min[i]:y_max[i], x_min[i]:x_max[i]]
-                object_id = input_indices[i]
-                single_object_mask = (box == object_id).astype(numpy.uint8)
-                box_objects.append(single_object_mask)
-
-            output_objects.set_labels(box_objects, input_indices)
+            output_objects.segmented = output_label 
+            # output_objects.set_labels(box_objects, input_indices)
 
         elif self.operation == O_ASSIGN_ARBITRARY:
             box_objects = []
-            output_label = numpy.zeros_like(input_labels[0], dtype=numpy.int32)
+            output_label = numpy.zeros_like(input_label, dtype=numpy.int32)
 
-            for i, label in enumerate(input_labels):
-                # Assuming objects is a list of 2D masks 
-                box = label[y_min[i]:y_max[i], x_min[i]:x_max[i]]
-                mask = box > 0 
-                region = output_label[y_min[i]:y_max[i], x_min[i]:x_max[i]] # grab the box in the image
+            for bbox, object_id in zip(bounding_boxes, input_indices):
+                
+                y_min, x_min, y_max, x_max = bbox
+                mask = numpy.ones((y_max - y_min, x_max - x_min), dtype=bool)
+                region = output_label[y_min:y_max, x_min:x_max] # grab the box in the image
                 region_mask = (mask) & (region == 0) # get a mask of the box where the pixels are free
-                object_id = input_indices[i]
                 region[region_mask] = object_id # set it as a label 
-                output_label[y_min[i]:y_max[i], x_min[i]:x_max[i]] = region # save this object into the image 
+                output_label[y_min:y_max, x_min:x_max] = region # save this object into the image 
                 box_objects.append(region)
 
-            output_objects.set_labels(output_label, input_indices)
+            output_objects.segmented = output_label 
+            # output_objects.set_labels(output_label, input_indices)
 
         elif self.operation == O_FIX_OVERLAP:
-            output_label = numpy.zeros_like(input_labels[0], dtype=numpy.int32)
-            for i, label in enumerate(input_labels):
-                # Assuming objects is a list of 2D masks 
-                box = label[y_min[i]:y_max[i], x_min[i]:x_max[i]]
-                region = output_label[y_min[i]:y_max[i], x_min[i]:x_max[i]] # grab the box in the image
-                existing_labels = numpy.unique(region)
-                existing_labels = existing_labels[existing_labels > 0]
-                if len(existing_labels) > 0:
-                    labels = self.watershed_resolve(box,region)
-                    region_mask = labels == 1
-                    existing_labels = labels == 2
-                    object_id = input_indices[i]
-                    region[region_mask] = object_id # set it as a label 
+            
+            
+            output_label = numpy.zeros_like(input_label, dtype=numpy.int32)
+            for bbox, object_id in zip(bounding_boxes, input_indices):
+                
+                y_min, x_min, y_max, x_max = bbox
+                region = output_label[y_min:y_max, x_min:x_max] # grab the box in the image
+                existing_ids = numpy.unique(region)
+                existing_ids = existing_ids[existing_ids > 0]  # skip background
+            
+                if len(existing_ids) > 0:
+                    updated_region = self.expand_box_simple(existing_ids, object_id, region)
                 else:
-                    object_id = input_indices[i]
-                    region[box] = object_id # set it as a label 
-                output_label[y_min[i]:y_max[i], x_min[i]:x_max[i]] = region
-            output_objects.set_labels(output_label, input_indices)    
+                    updated_region = numpy.full(region.shape, object_id, dtype=numpy.int32)
+    
+                output_label[y_min:y_max, x_min:x_max] = updated_region
+            output_objects.segmented = output_label 
+           
+
+            
+            #     if len(existing_ids) > 0:
+            #         existing_id = existing_ids[0]
+            #         existing_mask = (output_label == existing_id).astype(numpy.uint8)
+            #         new_mask = numpy.zeros_like(output_label, dtype=numpy.uint8)
+            #         new_mask[y_min:y_max, x_min:x_max] = 2
+            #         combined_mask = existing_mask + 2 * new_mask
+
+            #         idx = input_indices.index(existing_id)  # if input_indices is a list
+            #         existing_bbox = bounding_boxes[idx]
+
+            #         labels = self.watershed_resolve(combined_mask, existing_bbox, bbox)
+            #         # Set the output label with the new watershed boxes
+            #         output_label[labels == 1] = existing_ids[0]
+            #         output_label[labels == 2] = object_id
+            #     else:
+            #         region = numpy.full(region.shape, object_id, dtype=numpy.int32)
+            #         output_label[y_min:y_max, x_min:x_max] = region
+
+            # output_objects.segmented = output_label 
+            # # output_objects.set_labels(output_label, input_indices)    
 
         workspace.object_set.add_objects(output_objects, self.output_object_name.value)
 
@@ -229,23 +243,115 @@ and then set those shapes as the box objects.
             colormap=cmap,
         )
 
-    def get_box_boundaries(self, object_name, m):
-        """"Retreive the boundary box coordinates for all four sides"""
-        x_min = m.get_current_measurement(object_name, ObjectSizeShapeFeatures.F_MIN_X.value)
-        x_max = m.get_current_measurement(object_name, ObjectSizeShapeFeatures.F_MAX_X.value)
-        y_min = m.get_current_measurement(object_name, ObjectSizeShapeFeatures.F_MIN_Y.value)
-        y_max = m.get_current_measurement(object_name, ObjectSizeShapeFeatures.F_MAX_Y.value)
-        return x_min, x_max, y_min, y_max
+    def get_box_boundaries(self, input_label):
+        """"Calculate the boundary box coordinates for all four sides"""
+        props = regionprops(input_label)
+        bounding_boxes = [prop.bbox for prop in props]
+        input_indices = [prop.label for prop in props]
+        return bounding_boxes, input_indices
     
-    def watershed_resolve(self, box1, box2):
-        image = numpy.logical_or(box1, box2)
-        distance = scipy.ndimage.distance_transform_edt(image)
-        coords = skimage.feature.peak_local_max(distance, footprint=numpy.ones((3, 3)), labels=image)
-        mask = numpy.zeros(distance.shape, dtype=bool)
-        mask[tuple(coords.T)] = True
-        markers, _ = scipy.ndimage.label(mask)
-        labels = skimage.segmentation.watershed(-distance, markers, mask=image)
-        return labels 
+    def watershed_resolve(self, combined_mask, existing_bbox, new_bbox):
 
+        # existing_mask = (combined_mask & 1) > 0  
+        # new_mask = (combined_mask & 2) > 0 
+        mask = (combined_mask > 0)
+        markers = numpy.zeros_like(combined_mask, dtype=numpy.int32)
+        # markers[existing_mask] = 1
+        # markers[new_mask] = 2
+
+        # Compute centers
+        existing_y_min, existing_x_min, existing_y_max, existing_x_max = box
+        existing_center_y = (existing_y_min + existing_y_max) // 2
+        existing_center_x = (existing_x_min + existing_x_max) // 2
+        new_y_min, new_x_min, new_y_max, new_x_max = new_bbox
+        new_center_y = (new_y_min + new_y_max) // 2
+        new_center_x = (new_x_min + new_x_max) // 2
+
+        # Set markers at those centers
+        markers[existing_center_y, existing_center_x] = 1
+        markers[new_center_y, new_center_x] = 2
+
+        distance = scipy.ndimage.distance_transform_edt(mask)
+        labels = skimage.segmentation.watershed( -distance, markers, mask=mask)
+        return labels
+    
+    def expand_box(self, existing_bboxes, new_bbox,existing_ids, new_id, output_label):
+ 
+        mask = numpy.zeros_like(output_label, dtype=bool)
+        ids = []
+        for box, id in zip(existing_bboxes, existing_ids):
+            existing_y_min, existing_x_min, existing_y_max, existing_x_max = box
+            existing_center_y = (existing_y_min + existing_y_max) // 2
+            existing_center_x = (existing_x_min + existing_x_max) // 2
+            
+            mask[existing_center_y, existing_center_x] = True
+            ids.append(id)
+
+        new_y_min, new_x_min, new_y_max, new_x_max = new_bbox
+        new_center_y = (new_y_min + new_y_max) // 2
+        new_center_x = (new_x_min + new_x_max) // 2
+        
+        mask[new_center_y, new_center_x] = True
+        ids.append(new_id)
+        
+
+        # for label in ids:
+        #     seed = (output_label == id) & mask
+        #     grown = dilation(seed, rectangle(3, 3))
+        #     new_region = numpy.logical_and(grown, output_label == 0)
+        #     if mask[new_region] == mask[region]:
+        #         break
+        #     else:
+        #         mask[new_region] = True
+        #         output_label[new_region] = label
+        #     region = new_region.copy()
+
+
+    def expand_box_simple(self, existing_ids, new_id, original_region):
+        ids = list(existing_ids) + [new_id]
+
+        # Blank canvas for the result
+        region = numpy.zeros_like(original_region, dtype=numpy.int32)
+
+
+        centroid_seeds = {}
+
+        for id in ids:
+            mask = (original_region == id)
+            props = regionprops(mask.astype(numpy.uint8))
+            if len(props) > 0:
+                y, x = map(int, props[0].centroid)
+                centroid_seeds[id] = (y, x)
+            else:
+                # Fallback: center of region if label not found
+                height, width = original_region.shape
+                centroid_seeds[id] = (height // 2, width // 2)
+
+        max_iters = 100
+        iter_count = 0
+        changed = True
+
+        while changed and iter_count < max_iters:
+            changed = False
+            for id in ids:
+                cy, cx = centroid_seeds[id]
+                seed = numpy.zeros_like(region, dtype=bool)
+                seed[cy, cx] = True
+
+                # Include already grown pixels for this label
+                seed |= (region == id)
+
+                grown = dilation(seed, rectangle(3, 3))
+                new_region = grown & (region == 0)
+                if numpy.any(new_region):
+                    region[new_region] = id
+                    changed = True
+            iter_count += 1
+        if iter_count == max_iters:
+            print("Warning: max iterations reached in expand_box_simple")
+
+        return region
+
+        
 
 
