@@ -13,21 +13,19 @@ __doc__ = """\
 BoxObjects
 =====================
 
-**ExpandOrShrinkObjects** expands or shrinks objects by a defined
-distance.
+**BoxObjects** creates objects which are bounding boxes around pre-defined objects. 
 
-The module expands or shrinks objects by adding or removing border
-pixels. You can specify a certain number of border pixels to be added or
-removed, expand objects until they are almost touching, or shrink objects
-down to a point. The module can also separate touching objects without
-otherwise shrinking them, and can perform some specialized morphological
-operations that remove pixels without completely removing an object.
+The module calculate the bounding box around each inputted object. 
+You can specify if you want the objects to overlap and be defined as ijv objects, 
+or if you do not want the objects to overlab and instead be defined as 
+segmented objects. In the case where you do not want the objects to overlap, 
+the pixels in the overlap region will be assigned to the object that first claims 
+them during assignment. 
 
-See also **IdentifySecondaryObjects** which allows creating new objects
-based on expansion of existing objects, with a a few different options
-than in this module. There are also several related modules in the
-*Advanced* category (e.g., **Dilation**, **Erosion**,
-**MorphologicalSkeleton**).
+See also **ExpandorShrinkObjects** which creates larger objects from the segmented 
+objects, it expands of shring these objects by a certain distance while maintaining 
+the object's shape. 
+
 
 {HELP_ON_SAVING_OBJECTS}
 
@@ -119,6 +117,7 @@ Choose how to you want to handle overlapping boxes:
         return result
 
     def run(self, workspace):
+        
         input_objects = workspace.object_set.get_objects(self.object_name.value)
         output_objects = cellprofiler_core.object.Objects()
 
@@ -126,6 +125,7 @@ Choose how to you want to handle overlapping boxes:
         bounding_boxes, input_indices = self.get_box_boundaries(input_label)
 
         if self.operation == O_ALLOW_OVERLAP:
+            # We use ijv objects as the outputted objects to allow for overlap
             ijv_list = []
 
             for bbox, object_id in zip(bounding_boxes, input_indices):
@@ -138,6 +138,7 @@ Choose how to you want to handle overlapping boxes:
                 i_coords = i_coords + y_min
                 j_coords = j_coords + x_min
 
+                # Save in the format expected by ijv objects
                 coords_flat = numpy.stack((i_coords.ravel(), j_coords.ravel()), axis=1)
                 labels_flat = numpy.full((coords_flat.shape[0], 1), object_id, dtype=numpy.int32)
 
@@ -146,32 +147,34 @@ Choose how to you want to handle overlapping boxes:
 
             # Combine all overlapping boxes into one IJV array
             ijv = numpy.vstack(ijv_list)
-
             output_objects.set_ijv(ijv)
-            
+
             self.object_count = len(numpy.unique(ijv[:, 2]))
-            # Create a segmentation image from the IJV array
+            # Create a segmentation image from the IJV array (only for displat)
             segmented = numpy.zeros(input_label.shape, dtype=numpy.int32)
             segmented[ijv[:, 0], ijv[:, 1]] = ijv[:, 2]
-
-            # assign the full segmentation image to the output object
             output_objects.segmented = segmented
 
         elif self.operation == O_ASSIGN_ARBITRARY:
             box_objects = []
+            # Create array with the dimensions of the image 
             output_label = numpy.zeros_like(input_label, dtype=numpy.int32)
 
             for bbox, object_id in zip(bounding_boxes, input_indices):
-                
+                # Extract coordinates of the sides for each bounding box 
                 y_min, x_min, y_max, x_max = bbox
                 mask = numpy.ones((y_max - y_min, x_max - x_min), dtype=bool)
-                region = output_label[y_min:y_max, x_min:x_max] # grab the box in the image
-                region_mask = (mask) & (region == 0) # get a mask of the box where the pixels are free
-                region[region_mask] = object_id # set it as a label 
-                output_label[y_min:y_max, x_min:x_max] = region # save this object into the image 
+                # Grab the box coordinates in the image
+                region = output_label[y_min:y_max, x_min:x_max] 
+                # Get a mask of the box where the pixels are free
+                region_mask = (mask) & (region == 0) 
+                region[region_mask] = object_id 
+                # Save this object into our image array  
+                output_label[y_min:y_max, x_min:x_max] = region 
                 box_objects.append(region)
-
-            output_objects.segmented = output_label 
+            
+            # Save boxes are segmented objects 
+            output_objects.segmented =  output_label 
             self.object_count = numpy.max(output_objects.segmented)
         
         add_object_count_measurements(
@@ -213,7 +216,15 @@ Choose how to you want to handle overlapping boxes:
         )
 
     def get_box_boundaries(self, input_label):
-        """"Calculate the boundary box coordinates for all four sides"""
+        """"Calculate the boundary box coordinates for all four sides
+        
+        Parameters: 
+            input_label (numpy.array) : internal representation of the image 
+        
+        Returns:
+            bounding_boxes (list): coodinates of the bounding box sides
+            input_indices (int): labels created by props method
+        """
         props = regionprops(input_label)
         bounding_boxes = [prop.bbox for prop in props]
         input_indices = [prop.label for prop in props]
