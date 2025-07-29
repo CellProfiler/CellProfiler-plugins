@@ -67,6 +67,9 @@ On the first time loading into CellProfiler, Cellpose will need to download some
 may take some time. If you want to use a GPU to run the model, you'll need a compatible version of PyTorch and a
 supported GPU. Instructions are avaiable at this link: {CUDA_LINK}
 
+Note that RunCellpose supports the Cellpose 3 functionality of using image restoration models to improve the input images before segmentation for both Docker and Python methods.
+However, it only supports saving out or visualizing the intermediate restored images when using the Python method.
+
 Stringer, C., Wang, T., Michaelos, M. et al. Cellpose: a generalist algorithm for cellular segmentation. Nat Methods 18, 100–106 (2021). {Cellpose_link}
 Kevin J. Cutler, Carsen Stringer, Paul A. Wiggins, Joseph D. Mougous. Omnipose: a high-precision morphology-independent solution for bacterial cell segmentation. bioRxiv 2021.11.03.467199. {Omnipose_link}
 ============ ============ ===============
@@ -435,6 +438,19 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
             N.b. for upsampling it is essential that the "Expected diameter" setting is correct for the input images
             """,
         )
+        self.denoise_image = Binary(
+            text="Save preprocessed image?",
+            value=False,
+            doc="""
+            If enabled, the intermediate preprocessed image will be recorded as a new image.
+            This is only supported for Python mode of Cellpose 3.
+        """,
+        )
+        self.denoise_name = ImageName(
+            "Name the preprocessed image",
+            "Preprocessed",
+            doc="Enter the name you want to call the preprocessed image produced by this module.",
+        )
 
     def settings(self):
         return [
@@ -471,10 +487,18 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
             self.probability_rescale_setting,
             self.denoise,
             self.denoise_type,
+            self.denoise_image,
+            self.denoise_name,
         ]
 
     def visible_settings(self):
-        vis_settings = [self.rescale, self.docker_or_python, self.cellpose_version]
+        vis_settings = [self.rescale, self.cellpose_version]
+
+        if self.cellpose_version.value == 'omnipose': # omnipose only supports Python, not Docker
+            self.docker_or_python.value = "Python"
+            vis_settings += [self.omni]
+        else:
+            vis_settings += [self.docker_or_python]
 
         if self.docker_or_python.value == "Docker":
             if self.cellpose_version.value == 'v2':
@@ -495,9 +519,6 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
             self.mode = self.mode_v4
 
         vis_settings += [self.x_name]
-
-        if self.docker_or_python.value == "Python":
-            vis_settings += [self.omni]
 
         if self.mode.value != "nuclei":
             vis_settings += [self.supply_nuclei]
@@ -520,6 +541,11 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
             self.y_name,
             self.save_probabilities,
         ]
+        if self.save_probabilities.value:
+            vis_settings += [self.probabilities_name]
+            if self.docker_or_python.value == 'Python':
+                vis_settings += [self.probability_rescale_setting]
+
         if self.cellpose_version.value in ['v2','v3']:
             vis_settings += [self.invert]
 
@@ -527,11 +553,6 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
 
         if self.do_3D.value:
             vis_settings.remove(self.stitch_threshold)
-
-        if self.save_probabilities.value:
-            vis_settings += [self.probabilities_name]
-            if self.docker_or_python.value == 'Python':
-                vis_settings += [self.probability_rescale_setting]
 
         vis_settings += [self.use_averaging, self.use_gpu]
 
@@ -542,7 +563,9 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
         if self.cellpose_version.value == 'v3':
             vis_settings += [self.denoise]
             if self.denoise.value:
-                vis_settings += [self.denoise_type]
+                vis_settings += [self.denoise_type, self.denoise_image]
+                if self.denoise_image.value:
+                    vis_settings += [self.denoise_name]
 
         return vis_settings
 
@@ -876,8 +899,6 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
                 cellpose_output = numpy.load(os.path.join(temp_img_dir, unique_name + "_seg.npy"), allow_pickle=True).item()
                 y_data = cellpose_output["masks"]
                 flows = cellpose_output["flows"]
-                if self.denoise.value:
-                    img_restore = cellpose_output["restore"] #TODO don't think this is correct for retrieving image for plotting
             finally:      
                 # Delete the temporary files
                 try:
@@ -896,11 +917,11 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
 
         if self.denoise.value and self.show_window:
             # Need to remove unnecessary extra axes
-            denoised_image = numpy.squeeze(img_restore)
+            denoised_image = numpy.squeeze(input_data)
             if "upsample" in self.denoise_type.value:
                 denoised_image = skimage.transform.resize(
                     denoised_image, x_data.shape)
-            workspace.display_data.recon = denoised_image
+            workspace.display_data.denoised_image = denoised_image
 
         if self.save_probabilities.value:
             if self.docker_or_python.value == "Docker":
@@ -1025,7 +1046,7 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
         if self.denoise.value:
             figure.subplot_imshow(
                 colormap="gray",
-                image=workspace.display_data.recon,
+                image=workspace.display_data.denoised_image,
                 sharexy=figure.subplot(0, 0),
                 title=self.denoise.value,
                 x=2,
