@@ -42,7 +42,7 @@ On Mac M1/M2, to create a new environment with CellProfiler and Cellpose 4, run 
 export LDFLAGS="-L/opt/homebrew/opt/mysql@8.0/lib"    
 export CPPFLAGS="-I/opt/homebrew/opt/mysql@8.0/include"
 export PKG_CONFIG_PATH="/opt/homebrew/opt/mysql@8.0/lib/pkgconfig"
-conda create -y --force -n cellpose3_cellprofiler python=3.9 h5py=3.6.0 python.app scikit-learn==0.24.2 scikit-image==0.18.3 openjdk 
+conda create -y --force -n cellpose3_cellprofiler python=3.9 h5py=3.6.0 python.app scikit-learn==0.24.2 scikit-image==0.18.3 openjdk --platform osx-arm64
 conda activate cellpose3_cellprofiler
 pip install cellpose==3.1.1.2
 pip install mysqlclient==1.4.6 cellprofiler
@@ -56,7 +56,7 @@ On Mac M1/M2, to create a new environment with CellProfiler and Cellpose 4, run 
 export LDFLAGS="-L/opt/homebrew/opt/mysql@8.0/lib"    
 export CPPFLAGS="-I/opt/homebrew/opt/mysql@8.0/include"
 export PKG_CONFIG_PATH="/opt/homebrew/opt/mysql@8.0/lib/pkgconfig"
-conda create -y --force -n cellposeSAM_cellprofiler python=3.9 h5py=3.6.0 python.app scikit-learn==0.24.2 scikit-image==0.18.3 openjdk 
+conda create -y --force -n cellposeSAM_cellprofiler python=3.9 h5py=3.6.0 python.app scikit-learn==0.24.2 scikit-image==0.18.3 openjdk --platform osx-arm64
 conda activate cellposeSAM_cellprofiler
 pip install cellpose==4.0.6
 pip install mysqlclient==1.4.6 cellprofiler

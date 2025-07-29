@@ -105,6 +105,14 @@ def get_custom_model_vars(self):
     model_path = os.path.join(model_directory, model_file)
     return model_file, model_directory, model_path
 
+def cleanup(self):
+    # Try to clear some GPU memory for other worker processes.
+    try:
+        from torch import cuda
+        cuda.empty_cache()
+    except Exception as e:
+        print(f"Unable to clear GPU memory. You may need to restart CellProfiler to change models. {e}")
+
 class RunCellpose(ImageSegmentation):
     category = "Object Processing"
 
@@ -592,14 +600,6 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
                         % model_path, self.model_file_name,
                     )
 
-    def cleanup(self):
-        from torch import cuda
-        # Try to clear some GPU memory for other worker processes.
-        try:
-            cuda.empty_cache()
-        except Exception as e:
-            print(f"Unable to clear GPU memory. You may need to restart CellProfiler to change models. {e}")
-
     def run(self, workspace):
         x_name = self.x_name.value
         y_name = self.y_name.value
@@ -662,10 +662,6 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
             from cellpose import models, io, core, utils
             self.cellpose_ver = importlib.metadata.version('cellpose')
 
-            if self.use_gpu.value and model.torch:
-                from torch import cuda
-                cuda.set_per_process_memory_fraction(self.manual_GPU_memory_share.value)
-
             if self.cellpose_version.value == 'omnipose':
                 assert int(self.cellpose_ver[0])<2, "Cellpose version selected in RunCellpose module doesn't match version in Python"
                 assert float(self.cellpose_ver[0:3]) >= 0.6, "Cellpose v1/omnipose requires Cellpose >= 0.6"
@@ -675,6 +671,11 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
                 else:
                     model_file, model_directory, model_path = get_custom_model_vars(self)
                     model = models.CellposeModel(pretrained_model=model_path, gpu=self.use_gpu.value)
+
+                if self.use_gpu.value and model.torch:
+                    from torch import cuda
+                    cuda.set_per_process_memory_fraction(self.manual_GPU_memory_share.value)
+
                 try:
                     y_data, flows, *_ = model.eval(
                         x_data,
@@ -694,7 +695,7 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
                             print(f"Unable to create masks. Check your module settings. {a}")
                 finally:
                     if self.use_gpu.value and model.torch:
-                        cleanup()
+                        cleanup(self)
                         
             if self.cellpose_version.value == 'v2':
                 assert int(self.cellpose_ver[0])==2, "Cellpose version selected in RunCellpose module doesn't match version in Python"
@@ -704,6 +705,11 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
                 else:
                     model_file, model_directory, model_path = get_custom_model_vars(self)
                     model = models.CellposeModel(pretrained_model=model_path, gpu=self.use_gpu.value)
+
+                if self.use_gpu.value and model.torch:
+                    from torch import cuda
+                    cuda.set_per_process_memory_fraction(self.manual_GPU_memory_share.value)
+
                 try:
                         y_data, flows, *_ = model.eval(
                             x_data,
@@ -722,7 +728,7 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
                             print(f"Unable to create masks. Check your module settings. {a}")
                 finally:
                     if self.use_gpu.value and model.torch:
-                        cleanup()
+                        cleanup(self)
 
             elif self.cellpose_version.value == 'v3':
                 assert int(self.cellpose_ver[0])==3, "Cellpose version selected in RunCellpose module doesn't match version in Python"
@@ -737,6 +743,15 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
                     self.current_model = models.CellposeModel(
                         model_type=self.mode.value, gpu=self.use_gpu.value)
                 self.current_model_params = model_params
+
+                if self.use_gpu.value:
+                    try:
+                        from torch import cuda
+                        cuda.set_per_process_memory_fraction(self.manual_GPU_memory_share.value)
+                    except:
+                        print(
+                            "Failed to set GPU memory share. Please check your PyTorch installation. Not setting per-process memory share."
+                        )
 
                 if self.denoise.value:
                     from cellpose import denoise
@@ -788,8 +803,8 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
                 except Exception as a:
                             print(f"Unable to create masks. Check your module settings. {a}")
                 finally:
-                    if self.use_gpu.value and model.torch:
-                        cleanup()
+                    if self.use_gpu.value:
+                        cleanup(self)
 
             elif self.cellpose_version.value == 'v4':
                 assert int(self.cellpose_ver[0])==4, "Cellpose version selected in RunCellpose module doesn't match version in Python"
@@ -799,6 +814,15 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
                 LOGGER.info(f"Loading new model: {self.mode.value}")
                 self.current_model = models.CellposeModel(gpu=self.use_gpu.value)
                 self.current_model_params = model_params
+
+                if self.use_gpu.value:
+                    try:
+                        from torch import cuda
+                        cuda.set_per_process_memory_fraction(self.manual_GPU_memory_share.value)
+                    except:
+                        print(
+                            "Failed to set GPU memory share. Please check your PyTorch installation. Not setting per-process memory share."
+                        )
 
                 if self.specify_diameter.value:
                     try:
@@ -818,7 +842,7 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
                                 print(f"Unable to create masks. Check your module settings. {a}")
                     finally:
                         if self.use_gpu.value and model.torch:
-                            cleanup()
+                            cleanup(self)
                 else:
                     try:
                         y_data, flows, *_ = self.current_model.eval(
@@ -835,8 +859,8 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
                     except Exception as a:
                                 print(f"Unable to create masks. Check your module settings. {a}")
                     finally:
-                        if self.use_gpu.value and model.torch:
-                            cleanup()
+                        if self.use_gpu.value:
+                            cleanup(self)
 
             if self.remove_edge_masks:
                 y_data = utils.remove_edge_masks(y_data)
@@ -1055,6 +1079,7 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
 
     def do_check_gpu(self):
         import importlib.util
+        from cellpose import core
         torch_installed = importlib.util.find_spec('torch') is not None
         self.cellpose_ver = importlib.metadata.version('cellpose')
         #if the old version of cellpose <2.0, then use istorch kwarg
