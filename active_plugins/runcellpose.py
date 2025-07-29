@@ -1048,7 +1048,7 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
                 colormap="gray",
                 image=workspace.display_data.denoised_image,
                 sharexy=figure.subplot(0, 0),
-                title=self.denoise.value,
+                title=self.denoise_name.value,
                 x=2,
                 y=1,
             )

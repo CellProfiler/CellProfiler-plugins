@@ -36,11 +36,16 @@ python -m pip install --force-reinstall -v cellpose==2.3.2
 
 ### Cellpose 3
 
-In a Python 3.9 environment that has Cellprofiler installed, run the following commands to install Cellpose 3:
+On Mac M1/M2, to create a new environment with CellProfiler and Cellpose 4, run the following commands:
 
 ```bash
-python3.9 -m pip install cellpose==3.1.1.2
-python3.9 -m pip install numpy==1.24.4
+export LDFLAGS="-L/opt/homebrew/opt/mysql@8.0/lib"    
+export CPPFLAGS="-I/opt/homebrew/opt/mysql@8.0/include"
+export PKG_CONFIG_PATH="/opt/homebrew/opt/mysql@8.0/lib/pkgconfig"
+conda create -y --force -n cellpose3_cellprofiler python=3.9 h5py=3.6.0 python.app scikit-learn==0.24.2 scikit-image==0.18.3 openjdk 
+conda activate cellpose3_cellprofiler
+pip install cellpose==3.1.1.2
+pip install mysqlclient==1.4.6 cellprofiler
 ```
 
 ### Cellpose-SAM (Cellpose 4)
