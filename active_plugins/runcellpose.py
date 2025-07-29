@@ -191,7 +191,7 @@ you can use any of the available Dockers, but those with pretrained models will 
 
         self.specify_diameter = Binary(
             text="Specify expected object diameter?",
-            value=True,
+            value=False,
             doc="""\
 Cellpose 4 was trained on images with ROI diameters from size 7.5 to 120, with a mean diameter of 30 pixels. 
 Thus the model has a good amount of size-invariance, meaning that specifying the diameter is optional. 
@@ -1114,8 +1114,11 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
             setting_values = setting_values + [False]
             variable_revision_number = 6
         if variable_revision_number == 6:
-            #TODO
-            setting_values = setting_values[0:2]
+            new_setting_values = setting_values[0:2]
+            new_setting_values += ['v3', setting_values[2], CELLPOSE_DOCKERS['v3'][0], CELLPOSE_DOCKERS['v4'][0], setting_values[3]]
+            new_setting_values += [False, setting_values[4], MODEL_NAMES['v3'][0], MODEL_NAMES['v4'][0]]
+            new_setting_values += [setting_values[5:], False, DENOISER_NAMES[0], False, "Preprocessed"]
+            setting_values = new_setting_values
             variable_revision_number = 7
         return setting_values, variable_revision_number
     
