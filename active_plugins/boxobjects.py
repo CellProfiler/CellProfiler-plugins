@@ -177,6 +177,8 @@ Choose how to you want to handle overlapping boxes:
             output_objects.segmented =  output_label 
             self.object_count = numpy.max(output_objects.segmented)
         
+        workspace.object_set.add_objects(output_objects, self.output_object_name.value)
+
         add_object_count_measurements(
             workspace.measurements,
             self.output_object_name.value,
