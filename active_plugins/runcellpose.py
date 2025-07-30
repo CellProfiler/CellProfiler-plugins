@@ -578,20 +578,20 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
         return vis_settings
 
     def validate_module(self, pipeline):
-        """If using custom model, validate the model file opens and works"""
-        from cellpose import models
-        if self.mode.value == "custom":
-            model_file = self.model_file_name.value
-            model_directory = self.model_directory.get_absolute_path()
-            model_path = os.path.join(model_directory, model_file)
-            try:
-                open(model_path)
-            except:
-                raise ValidationError(
-                    "Failed to load custom file: %s " % model_path,
-                    self.model_file_name,
-                )
-            if self.docker_or_python.value == "Python":
+        if self.docker_or_python.value == "Python":
+            """If using custom model, validate the model file opens and works"""
+            from cellpose import models
+            if self.mode.value == "custom":
+                model_file = self.model_file_name.value
+                model_directory = self.model_directory.get_absolute_path()
+                model_path = os.path.join(model_directory, model_file)
+                try:
+                    open(model_path)
+                except:
+                    raise ValidationError(
+                        "Failed to load custom file: %s " % model_path,
+                        self.model_file_name,
+                    )
                 try:
                     model = models.CellposeModel(pretrained_model=model_path, gpu=self.use_gpu.value)
                 except:
