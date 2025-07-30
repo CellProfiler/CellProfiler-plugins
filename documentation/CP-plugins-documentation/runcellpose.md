@@ -13,6 +13,11 @@ If you are running RunCellpose in a docker and you get an error like this:
 It is likely an issue with running out of memory in the Docker.
 See [this Github issue](https://github.com/CellProfiler/CellProfiler-plugins/issues/243) for more information.
 
+If you open a saved pipeline that contains the RunCellpose module and your saved settings are not parsed properly, we recommend you add a new RunCellpose module to your pipeline and copy the settings from the old module to the new module.
+
+If you get an error message indicating the Docker selected in your pipeline is not available, this is likely because we updated the Docker image names to more explicitly indicate which version of Cellpose they are using.
+Please select one of the updated Docker image names in your pipeline.
+
 ## Installing Cellpose in the same Python environment as CellProfiler
 
 We provide some information below about installations that have worked for us.
