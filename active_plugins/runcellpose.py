@@ -81,14 +81,16 @@ YES          YES          NO
 """
 
 "Select Cellpose Docker Image"
-CELLPOSE_DOCKERS = {'v2': ["cellprofiler/runcellpose_no_pretrained:2.3.2",
+CELLPOSE_DOCKERS = {'omnipose': ["gnodar01/runcellpose_omnipose_no_pretrained:0.0.1"], # TODO make official
+    'v2': ["cellprofiler/runcellpose_no_pretrained:2.3.2",
                      "cellprofiler/runcellpose_with_pretrained:2.3.2",
                      "cellprofiler/runcellpose_with_pretrained:2.2"],
-                     'v3': ["erinweisbart/cellpose:3.1.1.2"], #TODO
-                     'v4': ["erinweisbart/cellpose:4.0.5"]} #TODO
+                     'v3': ["erinweisbart/cellpose:3.1.1.2"], # TODO make official
+                     'v4': ["erinweisbart/cellpose:4.0.5"]} # TODO make official
 
 "Detection mode"
-MODEL_NAMES = {'v2':['cyto','nuclei','tissuenet','livecell', 'cyto2', 'general',
+MODEL_NAMES = {'omnipose':['bact_phase_omni','bact_fluor_omni','cyto2_omni','worm_omni','plant_omni','bact_phase_affinity','cyto','nuclei','custom'],
+    'v2':['cyto','nuclei','tissuenet','livecell', 'cyto2', 'general',
                 'CP', 'CPx', 'TN1', 'TN2', 'TN3', 'LC1', 'LC2', 'LC3', 'LC4', 'custom'],
                 'v3':[ "cyto3", "nuclei", "cyto2_cp3", "tissuenet_cp3", "livecell_cp3", "yeast_PhC_cp3",
     "yeast_BF_cp3", "bact_phase_cp3", "bact_fluor_cp3", "deepbacs_cp3", "cyto2", "cyto", "custom"],
@@ -160,6 +162,16 @@ are installed will be used.
             choices=['omnipose', 'v2', 'v3', 'v4'],
             value='v3',
             doc="Select the version of Cellpose you want to use.")
+        
+        self.docker_image_omnipose = Choice(
+            text="Select Cellpose docker image",
+            choices=CELLPOSE_DOCKERS['omnipose'],
+            value=CELLPOSE_DOCKERS['omnipose'][0],
+            doc="""\
+Select which Docker image to use for running Cellpose.
+If you are not using a custom model, you should select a Docker image **with pretrained**. If you are using a custom model,
+you can use any of the available Dockers, but those with pretrained models will be slightly larger (~500 MB).
+""")
             
         self.docker_image_v2 = Choice(
             text="Select Cellpose docker image",
@@ -211,7 +223,15 @@ If set to 0 in Cellpose 1-3, it will attempt to automatically detect object size
 Note that automatic diameter mode does not work when running on 3D images.
 """,
         )
-
+        self.mode_omnipose = Choice(
+            text="Detection mode",
+            choices=MODEL_NAMES['omnipose'],
+            value=MODEL_NAMES['omnipose'][0],
+            doc="""\
+CellPose comes with models for detecting nuclei or cells. Alternatively, you can supply a custom-trained model
+generated using the command line or Cellpose GUI. Custom models can be useful if working with unusual cell types.
+""",
+        )
         self.mode_v2 = Choice(
             text="Detection mode",
             choices=MODEL_NAMES['v2'],
@@ -244,7 +264,7 @@ generated using the command line or Cellpose GUI. Custom models can be useful if
             text="Use Omnipose for mask reconstruction",
             value=False,
             doc="""\
-If enabled, use omnipose mask recontruction features will be used (Omnipose installation required and CellPose >= 1.0)  """,
+If enabled, use omnipose mask recontruction features will be used (Omnipose installation required and CellPose >= 1.0, <2)  """,
         )
 
         self.do_3D = Binary(
@@ -466,11 +486,13 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
             self.rescale,
             self.docker_or_python,
             self.cellpose_version,
+            self.docker_image_omnipose,
             self.docker_image_v2,
             self.docker_image_v3,
             self.docker_image_v4,
             self.specify_diameter,
             self.expected_diameter,
+            self.mode_omnipose,
             self.mode_v2,
             self.mode_v3,
             self.mode_v4,
@@ -500,23 +522,25 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
         ]
 
     def visible_settings(self):
-        vis_settings = [self.rescale, self.cellpose_version]
+        vis_settings = [self.rescale, self.cellpose_version,self.docker_or_python]
 
-        if self.cellpose_version.value == 'omnipose': # omnipose only supports Python, not Docker
-            self.docker_or_python.value = "Python"
+        if self.cellpose_version.value == 'omnipose':
             vis_settings += [self.omni]
-        else:
-            vis_settings += [self.docker_or_python]
 
         if self.docker_or_python.value == "Docker":
-            if self.cellpose_version.value == 'v2':
+            if self.cellpose_version.value == 'omnipose':
+                vis_settings += [self.docker_image_omnipose]
+            elif self.cellpose_version.value == 'v2':
                 vis_settings += [self.docker_image_v2]
             elif self.cellpose_version.value == 'v3':
                 vis_settings += [self.docker_image_v3]
             elif self.cellpose_version.value == 'v4':
                 vis_settings += [self.docker_image_v4]
-        
-        if self.cellpose_version.value == 'v2':
+
+        if self.cellpose_version.value == 'omnipose':
+            vis_settings += [self.mode_omnipose]
+            self.mode = self.mode_omnipose        
+        elif self.cellpose_version.value == 'v2':
             vis_settings += [self.mode_v2]
             self.mode = self.mode_v2
         elif self.cellpose_version.value == 'v3':
@@ -542,19 +566,24 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
         if self.specify_diameter.value:
             vis_settings += [self.expected_diameter]
 
+        if self.cellpose_version.value != 'omnipose':
+            vis_settings += [
+                self.cellprob_threshold,
+                self.min_size,
+            ]
+
         vis_settings += [
-            self.cellprob_threshold,
-            self.min_size,
             self.flow_threshold,
             self.y_name,
             self.save_probabilities,
         ]
+
         if self.save_probabilities.value:
             vis_settings += [self.probabilities_name]
             if self.docker_or_python.value == 'Python':
                 vis_settings += [self.probability_rescale_setting]
 
-        if self.cellpose_version.value in ['v2','v3']:
+        if self.cellpose_version.value in ['omnipose','v2','v3']:
             vis_settings += [self.invert]
 
         vis_settings += [self.do_3D, self.stitch_threshold, self.remove_edge_masks]
@@ -609,7 +638,8 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
         x_data = x.pixel_data
 
         if self.cellpose_version.value == 'omnipose':
-            self.mode = self.mode_v2
+            self.mode = self.mode_omnipose
+            self.docker_image = self.docker_image_omnipose
             self.denoise.value = False  # Denoising only supported in v3
         if self.cellpose_version.value == 'v2':
             self.mode = self.mode_v2
@@ -901,8 +931,8 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
             if self.cellpose_version.value == 'v3':
                 if self.denoise.value:
                     cmd += ['--restore_type', self.denoise_type.value]
-            if self.cellpose_version.value in ['v2','v3']:
-                cmd += ['--chan', str(channels[0]), '--chan2', str(channels[1]), '--diameter', str(diam)] 
+            if self.cellpose_version.value in ['omnipose','v2','v3']:
+                cmd += ['--chan', str(channels[0]), '--chan2', str(channels[1]), '--diameter', str(self.expected_diameter)] 
             if self.cellpose_version.value in ['v4']:
                 if self.specify_diameter.value:
                     cmd += ['--diameter', str(diam)]
@@ -910,9 +940,10 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
                 cmd += ['--net_avg']
             if self.do_3D.value:
                 cmd += ['--do_3D']
-            cmd += ['--anisotropy', str(anisotropy), '--flow_threshold', str(self.flow_threshold.value), '--cellprob_threshold', 
-                    str(self.cellprob_threshold.value), '--stitch_threshold', str(self.stitch_threshold.value), '--min_size', str(self.min_size.value)]
-            if self.cellpose_version.value in ['v2','v3']:
+            if self.cellpose_version.value != 'omnipose':
+                cmd += ['--cellprob_threshold', str(self.cellprob_threshold.value), '--min_size', str(self.min_size.value)]
+            cmd += ['--anisotropy', str(anisotropy), '--flow_threshold', str(self.flow_threshold.value),  '--stitch_threshold', str(self.stitch_threshold.value)]
+            if self.cellpose_version.value in ['omnipose','v2','v3']:
                 if self.invert.value:
                     cmd += ['--invert']
             if self.remove_edge_masks.value:
@@ -1115,8 +1146,8 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
             variable_revision_number = 6
         if variable_revision_number == 6:
             new_setting_values = setting_values[0:2]
-            new_setting_values += ['v3', setting_values[2], CELLPOSE_DOCKERS['v3'][0], CELLPOSE_DOCKERS['v4'][0], setting_values[3]]
-            new_setting_values += [False, setting_values[4], MODEL_NAMES['v3'][0], MODEL_NAMES['v4'][0]]
+            new_setting_values += ['v3', CELLPOSE_DOCKERS['omnipose'][0], setting_values[2], CELLPOSE_DOCKERS['v3'][0], CELLPOSE_DOCKERS['v4'][0], setting_values[3]]
+            new_setting_values += [False, MODEL_NAMES['omnipose'][0], setting_values[4], MODEL_NAMES['v3'][0], MODEL_NAMES['v4'][0]]
             new_setting_values += [setting_values[5:], False, DENOISER_NAMES[0], False, "Preprocessed"]
             setting_values = new_setting_values
             variable_revision_number = 7
