@@ -1,4 +1,4 @@
-NAME ?= runcellpose_omnipose_no_pretrained
+NAME ?= runcellpose_omnipose_with_pretrained
 TAG ?= 1.0.2
 REPO ?= cellprofiler
 IMG := $(REPO)/$(NAME):$(TAG)
