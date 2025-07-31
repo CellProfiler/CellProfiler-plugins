@@ -6,3 +6,7 @@ RUN pip install omnipose
 # hotfix for the now-deprecated `peakdetect` package
 # latest omnipose on github fixes this by no longer using `peakdetect` library, but not on pypi
 RUN sed -i 's/from\ scipy\ import\ fft/from\ scipy.fftpack import\ fft/g' /opt/conda/lib/python3.9/site-packages/peakdetect/peakdetect.py
+
+# Include if you wish the image to contain Cellpose pretrained models
+COPY download_cellpose_models.py /
+RUN python /download_cellpose_models.py
