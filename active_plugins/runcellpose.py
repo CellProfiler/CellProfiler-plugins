@@ -563,7 +563,9 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
             ]
         if self.cellpose_version.value == 'v4':
             vis_settings += [self.specify_diameter]
-        if self.specify_diameter.value:
+            if self.specify_diameter.value:
+                vis_settings += [self.expected_diameter]
+        else:
             vis_settings += [self.expected_diameter]
 
         if self.cellpose_version.value != 'omnipose':
@@ -663,7 +665,10 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
         if self.do_3D.value:
             anisotropy = x.spacing[0] / x.spacing[1]
 
-        if self.specify_diameter.value:
+        if self.cellpose_version.value == 'v4':
+            if self.specify_diameter.value:
+                diam = self.expected_diameter.value
+        else:
             diam = self.expected_diameter.value if self.expected_diameter.value > 0 else None
 
         if x.multichannel:
@@ -932,7 +937,7 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
                 if self.denoise.value:
                     cmd += ['--restore_type', self.denoise_type.value]
             if self.cellpose_version.value in ['omnipose','v2','v3']:
-                cmd += ['--chan', str(channels[0]), '--chan2', str(channels[1]), '--diameter', str(self.expected_diameter)] 
+                cmd += ['--chan', str(channels[0]), '--chan2', str(channels[1]), '--diameter', str(diam)] 
             if self.cellpose_version.value in ['v4']:
                 if self.specify_diameter.value:
                     cmd += ['--diameter', str(diam)]
