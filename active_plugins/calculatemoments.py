@@ -5,7 +5,6 @@
 #################################
 
 import numpy as np
-import scipy.ndimage as scind
 
 #################################
 #
@@ -14,14 +13,14 @@ import scipy.ndimage as scind
 ##################################
 
 import cellprofiler_core.module as cpm
-import cellprofiler_core.measurement as cpmeas
-import cellprofiler_core.object as cpo
 import cellprofiler_core.setting as cps
 from cellprofiler_core.constants.measurement import COLTYPE_FLOAT
 from cellprofiler_core.setting.do_something import DoSomething
 from cellprofiler_core.setting.multichoice import MultiChoice
 from cellprofiler_core.setting.subscriber import ImageSubscriber, LabelSubscriber
 from cellprofiler_core.utilities.core.object import size_similarly
+from centrosome.cpmorphology import fixup_scipy_ndimage_result as fix
+
 
 __doc__ = """\
 CalculateMoments
@@ -29,12 +28,12 @@ CalculateMoments
 
 **CalculateMoments** extracts moments statistics from a given distribution of pixel values.
 
-This module extracts a collection of quantitative measures of the shape of a distribution of pixel values. 
-The user can use all pixels to compute the moments or can restrict to pixels within objects. 
-If the image has a mask, only unmasked pixels will be used.
+This module extracts a collection of quantitative measures of the shape of a distribution of
+pixel values.  The user can use all pixels to compute the moments or can restrict to pixels
+within objects. If the image has a mask, only unmasked pixels will be used.
 
-Available measurements:  
-- Mean  
+Available measurements:
+- Mean
 - Standard deviation (computed using the unbiased estimator)
 - Skewness (the third moment about the mean, scaled by the standard deviation to the third power)
 - Kurtosis (the fourth moment about the mean, scaled by the standard deviation to the fourth power)
@@ -50,14 +49,14 @@ YES          NO            YES
 """
 
 
-def get_object_moment(pixels, func):
-    labs = np.unique(pixels)
-    moms = np.zeros([np.max(labs) + 1, 1])
-    for l in labs:
-        if l != 0:
-            px = pixels[np.where(pixels == l)]
-            moms[l] = func(px)
-    return moms
+def get_object_moment(pixels, labels, func):
+    labs = np.unique(labels)
+    moms = np.zeros(np.max(labs) + 1)
+    for lab in labs:
+        if lab != 0:
+            px = pixels[np.where(labels == lab)]
+            moms[lab] = func(px)
+    return moms[1:]  # ignore the 0th label
 
 
 def mean(pixels):
@@ -76,7 +75,6 @@ def skewness(pixels):
     mean = np.mean(pixels)
 
     num = np.sum(np.power(pixels - mean, 3))
-    # num=num/(len(pixels)*len(pixels[0]))
     num = num / pixels.size
     denom = np.std(pixels)
 
@@ -142,13 +140,17 @@ class CalculateMoments(cpm.Module):
             "Moments to compute",
             MOM_ALL,
             MOM_ALL,
-            doc="""Moments are statistics describing the distribution of values in the set of pixels of interest:
-                
-                - %(MOM_1)s - the first image moment, which corresponds to the central value of the collection of pixels of interest.
-                - %(MOM_2)s - the second image moment, which measures the amount of variation or dispersion of pixel values about its mean.
-                - %(MOM_3)s - a scaled version of the third moment, which measures the asymmetry of the pixel values distribution about its mean.
-                - %(MOM_4)s - a scaled version of the fourth moment, which measures the "peakedness" of the pixel values distribution.
-                
+            doc="""Moments are statistics describing the distribution of values in the set
+            of pixels of interest:
+                - %(MOM_1)s - the first image moment, which corresponds to the central value
+                    of the collection of pixels of interest.
+                - %(MOM_2)s - the second image moment, which measures the amount of variation
+                    or dispersion of pixel values about its mean.
+                - %(MOM_3)s - a scaled version of the third moment, which measures the asymmetry
+                    of the pixel values distribution about its mean.
+                - %(MOM_4)s - a scaled version of the fourth moment, which measures the
+                    "peakedness" of the pixel values distribution.
+
                 Choose one or more moments to measure."""
             % globals(),
         )
@@ -205,8 +207,8 @@ class CalculateMoments(cpm.Module):
             ImageSubscriber(
                 "Select an image to measure",
                 "None",
-                doc="""
-                                             What did you call the grayscale images whose moments you want to calculate?""",
+                doc="""What did you call the grayscale images whose moments you want
+                to calculate?""",
             ),
         )
         if can_remove:
@@ -233,13 +235,13 @@ class CalculateMoments(cpm.Module):
                 "Select objects to measure",
                 "None",
                 doc="""
-                     What did you call the objects from which you want to calculate moments?
-                     If you only want to calculate moments of
-                     the image overall, you can remove all objects using the "Remove this object" button.
-                     Objects specified here will have moments computed against *all* images specified above, which
-                     may lead to image-object combinations that are unnecessary. If you
-                     do not want this behavior, use multiple CalculateMoments
-                     modules to specify the particular image-object measures that you want.""",
+                What did you call the objects from which you want to calculate moments?
+                If you only want to calculate moments of
+                the image overall, you can remove all objects using the "Remove this object"
+                button. Objects specified here will have moments computed against *all* images
+                specified above, which may lead to image-object combinations that are unnecessary.
+                If you do not want this behavior, use multiple CalculateMoments
+                modules to specify the particular image-object measures that you want.""",
             ),
         )
         if can_remove:
@@ -328,22 +330,18 @@ class CalculateMoments(cpm.Module):
 
         for name in self.moms.value.split(","):
             fn = MOM_TO_F[name]
-            value = get_object_moment(pixels, fn)
+            moments = get_object_moment(pixels, labels, fn)
             statistics += self.record_measurement(
-                workspace, image_name, object_name, name, value
+                workspace, image_name, object_name, name, moments
             )
         return statistics
 
     def is_interactive(self):
         return False
 
-    def display(self, workspace):
+    def display(self, workspace, figure):
         statistics = workspace.display_data.statistics
-        figure = workspace.create_or_find_figure(
-            title="CalculateMoments, image cycle #%d"
-            % (workspace.measurements.image_set_number),
-            subplots=(1, 1),
-        )
+        figure.set_subplots((1, 1))
         figure.subplot_table(0, 0, statistics, ratio=(0.25, 0.25, 0.25, 0.25))
 
     def get_features(self):
@@ -418,8 +416,7 @@ class CalculateMoments(cpm.Module):
     ):
         """Record the result of a measurement in the workspace's
         measurements"""
-        # Todo: The line below previous referred to "fix", assumed this meant the numpy version
-        data = np.fix(result)
+        data = fix(result)
         data[~np.isfinite(data)] = 0
         workspace.add_measurement(
             object_name, "%s_%s_%s" % (MOMENTS, feature_name, image_name), data
