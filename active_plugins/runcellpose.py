@@ -81,15 +81,15 @@ YES          YES          NO
 """
 
 "Select Cellpose Docker Image"
-CELLPOSE_DOCKERS = {'omnipose': ["gnodar01/runcellpose_omnipose_no_pretrained:0.0.1"], # TODO make official
+CELLPOSE_DOCKERS = {'omnipose': ["cellprofiler/runcellpose_omnipose_no_pretrained:1.0.2"],
     'v2': ["cellprofiler/runcellpose_no_pretrained:2.3.2",
                      "cellprofiler/runcellpose_with_pretrained:2.3.2",
                      "cellprofiler/runcellpose_with_pretrained:2.2"],
-                     'v3': ["erinweisbart/cellpose:3.1.1.2"], # TODO make official
-                     'v4': ["erinweisbart/cellpose:4.0.5"]} # TODO make official
+                     'v3': ["cellprofiler/cellpose:3.1.1.2"],
+                     'v4': ["cellprofiler/cellpose:4.0.5"]}
 
 "Detection mode"
-MODEL_NAMES = {'omnipose':['bact_phase_omni','bact_fluor_omni','cyto2_omni','worm_omni','plant_omni','bact_phase_affinity','cyto','nuclei','custom'],
+MODEL_NAMES = {'omnipose':['cyto','nuclei','cyto2','custom'],
     'v2':['cyto','nuclei','tissuenet','livecell', 'cyto2', 'general',
                 'CP', 'CPx', 'TN1', 'TN2', 'TN3', 'LC1', 'LC2', 'LC3', 'LC4', 'custom'],
                 'v3':[ "cyto3", "nuclei", "cyto2_cp3", "tissuenet_cp3", "livecell_cp3", "yeast_PhC_cp3",
@@ -950,8 +950,9 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
 
             temp_img_path = os.path.join(temp_img_dir, unique_name+".tiff")
             if self.mode.value == "custom":
-                model_file, model_directory, model_path = get_custom_model_vars(self)
-                model = models.CellposeModel(pretrained_model=model_path, gpu=self.use_gpu.value)
+                model_file = self.model_file_name.value
+                model_directory = self.model_directory.get_absolute_path()
+                model_path = os.path.join(model_directory, model_file)
                 
                 temp_model_dir = os.path.join(temp_dir, "model")
                 os.makedirs(temp_model_dir, exist_ok=True)
