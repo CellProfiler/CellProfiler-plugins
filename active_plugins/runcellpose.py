@@ -86,7 +86,7 @@ CELLPOSE_DOCKERS = {'omnipose': ["cellprofiler/runcellpose_omnipose_no_pretraine
                      "cellprofiler/runcellpose_with_pretrained:2.3.2",
                      "cellprofiler/runcellpose_with_pretrained:2.2"],
                      'v3': ["cellprofiler/runcellpose_with_pretrained:3.1.1.2"],
-                     'v4': ["cellprofiler/runcellpose_with_pretrained:4.0.5"]}
+                     'v4': ["cellprofiler/runcellpose_with_pretrained:4.0.6"]}
 
 "Detection mode"
 MODEL_NAMES = {'omnipose':['cyto','nuclei','cyto2','custom'],

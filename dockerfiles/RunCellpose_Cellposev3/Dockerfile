@@ -1,4 +1,4 @@
-FROM pytorch/pytorch:1.13.0-cuda11.6-cudnn8-runtime
+FROM pytorch/pytorch:2.7.1-cuda11.8-cudnn9-devel
 
 RUN pip install numpy==1.26.4 cellpose==3.1.1.2
 
