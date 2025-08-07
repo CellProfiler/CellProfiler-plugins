@@ -85,8 +85,8 @@ CELLPOSE_DOCKERS = {'omnipose': ["cellprofiler/runcellpose_omnipose_no_pretraine
     'v2': ["cellprofiler/runcellpose_no_pretrained:2.3.2",
                      "cellprofiler/runcellpose_with_pretrained:2.3.2",
                      "cellprofiler/runcellpose_with_pretrained:2.2"],
-                     'v3': ["cellprofiler/cellpose:3.1.1.2"],
-                     'v4': ["cellprofiler/cellpose:4.0.5"]}
+                     'v3': ["cellprofiler/runcellpose_with_pretrained:3.1.1.2"],
+                     'v4': ["cellprofiler/runcellpose_with_pretrained:4.0.5"]}
 
 "Detection mode"
 MODEL_NAMES = {'omnipose':['cyto','nuclei','cyto2','custom'],
@@ -1199,4 +1199,5 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
             variable_revision_number = 7
         return setting_values, variable_revision_number
     
+
 
