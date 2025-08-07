@@ -1000,6 +1000,8 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
                 cellpose_output = numpy.load(os.path.join(temp_img_dir, unique_name + "_seg.npy"), allow_pickle=True).item()
                 y_data = cellpose_output["masks"]
                 flows = cellpose_output["flows"]
+            except FileNotFoundError:
+                raise(FileNotFoundError("I'm sorry, Cellpose seems to have crashed and I'm not sure why, since it's in its own container."))
             finally:      
                 # Delete the temporary files
                 try:
