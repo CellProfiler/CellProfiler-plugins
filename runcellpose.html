@@ -389,6 +389,14 @@ document.write(`
             </div>
             <nav aria-label="Page">
                 <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#troubleshooting">Troubleshooting</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#installing-cellpose-in-the-same-python-environment-as-cellprofiler">Installing Cellpose in the same Python environment as CellProfiler</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#omnipose-cellpose-1">Omnipose (Cellpose 1)</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cellpose-2">Cellpose 2</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cellpose-3">Cellpose 3</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cellpose-sam-cellpose-4">Cellpose-SAM (Cellpose 4)</a></li>
+</ul>
+</li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#using-runcellpose-with-a-gpu">Using RunCellpose with a GPU</a></li>
 </ul>
             </nav>
@@ -403,9 +411,70 @@ document.write(`
                   
   <section id="runcellpose">
 <h1>RunCellpose<a class="headerlink" href="#runcellpose" title="Permalink to this heading">#</a></h1>
-<p>RunCellpose is one of the modules that has additional dependencies that are not packaged with the built CellProfiler.
-Therefore, you must additionally download RunCellpose’s dependencies.
-See <a class="reference internal" href="using_plugins.html"><span class="doc std std-doc">Using Plugins</span></a> for more information.</p>
+<p>You can run RunCellpose using Cellpose in a Docker that the module will automatically download for you so you do not have to perform any installation yourself.
+See <span class="xref myst">Using plugins - Using Docker</span> for more information on using Docker with CellProfiler.</p>
+<p>You can also this module using Cellpose installed to the same Python environment as CellProfiler.
+See <span class="xref myst">Using plugins - Installing dependencies</span> for more information on installing dependencies for CellProfiler plugins.</p>
+<section id="troubleshooting">
+<h2>Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permalink to this heading">#</a></h2>
+<p>If you are running RunCellpose in a docker and you get an error like this:
+<code class="docutils literal notranslate"><span class="pre">No</span> <span class="pre">such</span> <span class="pre">file</span> <span class="pre">or</span> <span class="pre">directory:</span> <span class="pre">'/Users/eweisbar/Documents/CPoutput/.cellprofiler_temp/c564a507-17e5-4256-837d-6e1d59892524/img/c564a507-17e5-4256-837d-6e1d59892524_seg.npy</span></code>
+It is likely an issue with running out of memory in the Docker.
+See <a class="reference external" href="https://github.com/CellProfiler/CellProfiler-plugins/issues/243">this Github issue</a> for more information.</p>
+<p>If you open a saved pipeline that contains the RunCellpose module and your saved settings are not parsed properly, we recommend you add a new RunCellpose module to your pipeline and copy the settings from the old module to the new module.</p>
+<p>If you get an error message indicating the Docker selected in your pipeline is not available, this is likely because we updated the Docker image names to more explicitly indicate which version of Cellpose they are using.
+Please select one of the updated Docker image names in your pipeline.</p>
+</section>
+<section id="installing-cellpose-in-the-same-python-environment-as-cellprofiler">
+<h2>Installing Cellpose in the same Python environment as CellProfiler<a class="headerlink" href="#installing-cellpose-in-the-same-python-environment-as-cellprofiler" title="Permalink to this heading">#</a></h2>
+<p>We provide some information below about installations that have worked for us.
+If you are having challenges with installing Cellpose in your CellProfiler environment, please reach out on the <a class="reference external" href="https://forum.image.sc/">forum</a>.</p>
+<section id="omnipose-cellpose-1">
+<h3>Omnipose (Cellpose 1)<a class="headerlink" href="#omnipose-cellpose-1" title="Permalink to this heading">#</a></h3>
+<p>In an environment that has Cellprofiler installed, run the following commands to install Omnipose and Cellpose 1:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>omnipose
+pip<span class="w"> </span>install<span class="w"> </span><span class="nv">cellpose</span><span class="o">==</span><span class="m">1</span>.0.2
+</pre></div>
+</div>
+</section>
+<section id="cellpose-2">
+<h3>Cellpose 2<a class="headerlink" href="#cellpose-2" title="Permalink to this heading">#</a></h3>
+<p>In an environment that has Cellprofiler installed, run the following commands to install Cellpose 2:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span><span class="nv">cellpose</span><span class="o">==</span><span class="m">2</span>.3.2
+</pre></div>
+</div>
+<p>If you have an older version of Cellpose, run the following command to reinstall Cellpose 2:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>--force-reinstall<span class="w"> </span>-v<span class="w"> </span><span class="nv">cellpose</span><span class="o">==</span><span class="m">2</span>.3.2
+</pre></div>
+</div>
+</section>
+<section id="cellpose-3">
+<h3>Cellpose 3<a class="headerlink" href="#cellpose-3" title="Permalink to this heading">#</a></h3>
+<p>On Mac M1/M2, to create a new environment with CellProfiler and Cellpose 4, run the following commands:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">export</span><span class="w"> </span><span class="nv">LDFLAGS</span><span class="o">=</span><span class="s2">&quot;-L/opt/homebrew/opt/mysql@8.0/lib&quot;</span><span class="w">    </span>
+<span class="nb">export</span><span class="w"> </span><span class="nv">CPPFLAGS</span><span class="o">=</span><span class="s2">&quot;-I/opt/homebrew/opt/mysql@8.0/include&quot;</span>
+<span class="nb">export</span><span class="w"> </span><span class="nv">PKG_CONFIG_PATH</span><span class="o">=</span><span class="s2">&quot;/opt/homebrew/opt/mysql@8.0/lib/pkgconfig&quot;</span>
+conda<span class="w"> </span>create<span class="w"> </span>-y<span class="w"> </span>--force<span class="w"> </span>-n<span class="w"> </span>cellpose3_cellprofiler<span class="w"> </span><span class="nv">python</span><span class="o">=</span><span class="m">3</span>.9<span class="w"> </span><span class="nv">h5py</span><span class="o">=</span><span class="m">3</span>.6.0<span class="w"> </span>python.app<span class="w"> </span>scikit-learn<span class="o">==</span><span class="m">0</span>.24.2<span class="w"> </span>scikit-image<span class="o">==</span><span class="m">0</span>.18.3<span class="w"> </span>openjdk<span class="w"> </span>--platform<span class="w"> </span>osx-arm64
+conda<span class="w"> </span>activate<span class="w"> </span>cellpose3_cellprofiler
+pip<span class="w"> </span>install<span class="w"> </span><span class="nv">cellpose</span><span class="o">==</span><span class="m">3</span>.1.1.2
+pip<span class="w"> </span>install<span class="w"> </span><span class="nv">mysqlclient</span><span class="o">==</span><span class="m">1</span>.4.6<span class="w"> </span>cellprofiler
+</pre></div>
+</div>
+</section>
+<section id="cellpose-sam-cellpose-4">
+<h3>Cellpose-SAM (Cellpose 4)<a class="headerlink" href="#cellpose-sam-cellpose-4" title="Permalink to this heading">#</a></h3>
+<p>On Mac M1/M2, to create a new environment with CellProfiler and Cellpose 4, run the following commands:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">export</span><span class="w"> </span><span class="nv">LDFLAGS</span><span class="o">=</span><span class="s2">&quot;-L/opt/homebrew/opt/mysql@8.0/lib&quot;</span><span class="w">    </span>
+<span class="nb">export</span><span class="w"> </span><span class="nv">CPPFLAGS</span><span class="o">=</span><span class="s2">&quot;-I/opt/homebrew/opt/mysql@8.0/include&quot;</span>
+<span class="nb">export</span><span class="w"> </span><span class="nv">PKG_CONFIG_PATH</span><span class="o">=</span><span class="s2">&quot;/opt/homebrew/opt/mysql@8.0/lib/pkgconfig&quot;</span>
+conda<span class="w"> </span>create<span class="w"> </span>-y<span class="w"> </span>--force<span class="w"> </span>-n<span class="w"> </span>cellposeSAM_cellprofiler<span class="w"> </span><span class="nv">python</span><span class="o">=</span><span class="m">3</span>.9<span class="w"> </span><span class="nv">h5py</span><span class="o">=</span><span class="m">3</span>.6.0<span class="w"> </span>python.app<span class="w"> </span>scikit-learn<span class="o">==</span><span class="m">0</span>.24.2<span class="w"> </span>scikit-image<span class="o">==</span><span class="m">0</span>.18.3<span class="w"> </span>openjdk<span class="w"> </span>--platform<span class="w"> </span>osx-arm64
+conda<span class="w"> </span>activate<span class="w"> </span>cellposeSAM_cellprofiler
+pip<span class="w"> </span>install<span class="w"> </span><span class="nv">cellpose</span><span class="o">==</span><span class="m">4</span>.0.6
+pip<span class="w"> </span>install<span class="w"> </span><span class="nv">mysqlclient</span><span class="o">==</span><span class="m">1</span>.4.6<span class="w"> </span>cellprofiler
+</pre></div>
+</div>
+</section>
+</section>
 <section id="using-runcellpose-with-a-gpu">
 <h2>Using RunCellpose with a GPU<a class="headerlink" href="#using-runcellpose-with-a-gpu" title="Permalink to this heading">#</a></h2>
 <p>If you want to use a GPU to run the model (this is recommended for speed), you’ll need a compatible version of PyTorch and a supported GPU.
@@ -416,29 +485,30 @@ If your GPU isn’t there, you likely need to install drivers.
 <a class="reference external" href="https://www.nvidia.com/Download/Find.aspx">Here</a> is where you can find NVIDIA GPU drivers if you need to install them.</p></li>
 <li><p>To test whether the GPU is configured correctly:</p></li>
 </ol>
-<ul class="simple">
+<ul>
 <li><p>Run <code class="docutils literal notranslate"><span class="pre">python</span></code> on the command line (i.e., in Command Prompt or Terminal) to start an interactive session</p></li>
-<li><p>Then run the following</p></li>
-</ul>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch</span>
-<span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">is_available</span><span class="p">()</span>
+<li><p>Then run the following</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>import<span class="w"> </span>torch
+torch.cuda.is_available<span class="o">()</span>
 </pre></div>
 </div>
-<ul class="simple">
+</li>
 <li><p>If this returns <code class="docutils literal notranslate"><span class="pre">True</span></code>, you’re all set</p></li>
 <li><p>If this returns <code class="docutils literal notranslate"><span class="pre">False</span></code>, you likely need to install/reinstall torch. See <a class="reference external" href="https://pytorch.org/get-started/locally/">here</a> for your exact command.</p></li>
-<li><p>Exit the session with <code class="docutils literal notranslate"><span class="pre">exit()</span></code> then install torch if necessary</p></li>
-</ul>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pip3</span> <span class="n">install</span> <span class="n">torch</span> <span class="n">torchvision</span> <span class="n">torchaudio</span> <span class="o">--</span><span class="n">extra</span><span class="o">-</span><span class="n">index</span><span class="o">-</span><span class="n">url</span> <span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">download</span><span class="o">.</span><span class="n">pytorch</span><span class="o">.</span><span class="n">org</span><span class="o">/</span><span class="n">whl</span><span class="o">/</span><span class="n">cu113</span>
+<li><p>Exit the session with <code class="docutils literal notranslate"><span class="pre">exit()</span></code> then install torch if necessary</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip3<span class="w"> </span>install<span class="w"> </span>torch<span class="w"> </span>torchvision<span class="w"> </span>torchaudio<span class="w"> </span>--extra-index-url<span class="w"> </span>https://download.pytorch.org/whl/cu113
 </pre></div>
 </div>
 <p>If you have a previous version of torch installed, make sure to run <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">uninstall</span> <span class="pre">torch</span></code> first.</p>
+</li>
+</ul>
 <p><strong>NOTE</strong>: You might get a warning like this:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">W</span> <span class="n">tensorflow</span><span class="o">/</span><span class="n">stream_executor</span><span class="o">/</span><span class="n">platform</span><span class="o">/</span><span class="n">default</span><span class="o">/</span><span class="n">dso_loader</span><span class="o">.</span><span class="n">cc</span><span class="p">:</span><span class="mi">64</span><span class="p">]</span> <span class="n">Could</span> <span class="ow">not</span> <span class="n">load</span> <span class="n">dynamic</span> <span class="n">library</span> <span class="s1">&#39;cudart64_110.dll&#39;</span><span class="p">;</span> <span class="n">dlerror</span><span class="p">:</span> <span class="n">cudart64_110</span><span class="o">.</span><span class="n">dll</span> <span class="ow">not</span> <span class="n">found</span>
-<span class="mi">2022</span><span class="o">-</span><span class="mi">05</span><span class="o">-</span><span class="mi">26</span> <span class="mi">20</span><span class="p">:</span><span class="mi">24</span><span class="p">:</span><span class="mf">21.906286</span><span class="p">:</span> <span class="n">I</span> <span class="n">tensorflow</span><span class="o">/</span><span class="n">stream_executor</span><span class="o">/</span><span class="n">cuda</span><span class="o">/</span><span class="n">cudart_stub</span><span class="o">.</span><span class="n">cc</span><span class="p">:</span><span class="mi">29</span><span class="p">]</span> <span class="n">Ignore</span> <span class="n">above</span> <span class="n">cudart</span> <span class="n">dlerror</span> <span class="k">if</span> <span class="n">you</span> <span class="n">do</span> <span class="ow">not</span> <span class="n">have</span> <span class="n">a</span> <span class="n">GPU</span> <span class="nb">set</span> <span class="n">up</span> <span class="n">on</span> <span class="n">your</span> <span class="n">machine</span><span class="o">.</span>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>W<span class="w"> </span>tensorflow/stream_executor/platform/default/dso_loader.cc:64<span class="o">]</span><span class="w"> </span>Could<span class="w"> </span>not<span class="w"> </span>load<span class="w"> </span>dynamic<span class="w"> </span>library<span class="w"> </span><span class="s1">&#39;cudart64_110.dll&#39;</span><span class="p">;</span><span class="w"> </span>dlerror:<span class="w"> </span>cudart64_110.dll<span class="w"> </span>not<span class="w"> </span>found
+<span class="m">2022</span>-05-26<span class="w"> </span><span class="m">20</span>:24:21.906286:<span class="w"> </span>I<span class="w"> </span>tensorflow/stream_executor/cuda/cudart_stub.cc:29<span class="o">]</span><span class="w"> </span>Ignore<span class="w"> </span>above<span class="w"> </span>cudart<span class="w"> </span>dlerror<span class="w"> </span><span class="k">if</span><span class="w"> </span>you<span class="w"> </span><span class="k">do</span><span class="w"> </span>not<span class="w"> </span>have<span class="w"> </span>a<span class="w"> </span>GPU<span class="w"> </span><span class="nb">set</span><span class="w"> </span>up<span class="w"> </span>on<span class="w"> </span>your<span class="w"> </span>machine.
 </pre></div>
 </div>
-<p>If you don’t have a GPU, this is not a problem. If you do, your configuration is incorrect and you need to try reinstalling drivers and the correct version of CUDA for your system.</p>
+<p>If you don’t have a GPU, this is not a problem.
+If you do, your configuration is incorrect and you need to try reinstalling drivers and the correct version of CUDA for your system.</p>
 </section>
 </section>
 
@@ -496,6 +566,14 @@ If your GPU isn’t there, you likely need to install drivers.
   </div>
   <nav class="bd-toc-nav page-toc">
     <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#troubleshooting">Troubleshooting</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#installing-cellpose-in-the-same-python-environment-as-cellprofiler">Installing Cellpose in the same Python environment as CellProfiler</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#omnipose-cellpose-1">Omnipose (Cellpose 1)</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cellpose-2">Cellpose 2</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cellpose-3">Cellpose 3</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cellpose-sam-cellpose-4">Cellpose-SAM (Cellpose 4)</a></li>
+</ul>
+</li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#using-runcellpose-with-a-gpu">Using RunCellpose with a GPU</a></li>
 </ul>
   </nav></div>
