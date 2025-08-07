@@ -8,10 +8,10 @@ else:
     install_deps = [
         "cellprofiler",
         "cellprofiler-core",
-                ]
+    ]
 
     cellpose_deps = [
-        "cellpose>=1.0.2,<3.0"
+        "cellpose>=1.0.2,<5.0"
     ]
 
     omnipose_deps = [
