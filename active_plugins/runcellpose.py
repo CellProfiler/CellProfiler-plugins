@@ -1191,10 +1191,10 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
             setting_values = setting_values + [False]
             variable_revision_number = 6
         if variable_revision_number == 6:
-            new_setting_values = setting_values[0:2]
-            new_setting_values += ['v3', CELLPOSE_DOCKERS['omnipose'][0], setting_values[2], CELLPOSE_DOCKERS['v3'][0], CELLPOSE_DOCKERS['v4'][0], setting_values[3]]
-            new_setting_values += [False, MODEL_NAMES['omnipose'][0], setting_values[4], MODEL_NAMES['v3'][0], MODEL_NAMES['v4'][0]]
-            new_setting_values += [setting_values[5:], False, DENOISER_NAMES[0], False, "Preprocessed", False]
+            new_setting_values = setting_values[0:3]
+            new_setting_values += ['v3', CELLPOSE_DOCKERS['omnipose'][0], setting_values[3], CELLPOSE_DOCKERS['v3'][0], CELLPOSE_DOCKERS['v4'][0], setting_values[4]]
+            new_setting_values += [False, MODEL_NAMES['omnipose'][0], setting_values[5], MODEL_NAMES['v3'][0], MODEL_NAMES['v4'][0]]
+            new_setting_values += setting_values[6:]+ [False, DENOISER_NAMES[0], False, "Preprocessed", False]
             setting_values = new_setting_values
             variable_revision_number = 7
         return setting_values, variable_revision_number
