@@ -61,13 +61,13 @@ This module is compatible with Omnipose, Cellpose 2, Cellpose 3, and Cellpose-SA
 You can run this module using Cellpose installed to the same Python environment as CellProfiler.
 See our documentation at https://plugins.cellprofiler.org/runcellpose.html for more information on installation.
 
-Alternatively, you can run this module using Cellpose in a Docker that the module will automatically download for you so you do not have to perform any installation yourself.
+Alternatively, you can run this module using Cellpose in a Docker or Podman container that the module will automatically download for you so you do not have to perform any installation yourself.
 
 On the first time loading into CellProfiler, Cellpose will need to download some model files from the internet. This
 may take some time. If you want to use a GPU to run the model, you'll need a compatible version of PyTorch and a
 supported GPU. Instructions are avaiable at this link: {CUDA_LINK}
 
-Note that RunCellpose supports the Cellpose 3 functionality of using image restoration models to improve the input images before segmentation for both Docker and Python methods.
+Note that RunCellpose supports the Cellpose 3 functionality of using image restoration models to improve the input images before segmentation for both container and Python methods.
 However, it only supports saving out or visualizing the intermediate restored images when using the Python method.
 
 Stringer, C., Wang, T., Michaelos, M. et al. Cellpose: a generalist algorithm for cellular segmentation. Nat Methods 18, 100–106 (2021). {Cellpose_link}
@@ -137,19 +137,20 @@ class RunCellpose(ImageSegmentation):
             text="Rescale images before running Cellpose",
             value=True,
             doc="""\
-Reminds the user that the  normalization step will be performed to ensure suimilar segmentation behaviour in the RunCellpose
+Reminds the user that the  normalization step will be performed to ensure similar segmentation behaviour in the RunCellpose
 module and the Cellpose app.
 """
         )
 
 
         self.docker_or_python = Choice(
-            text="Run CellPose in docker or local python environment",
-            choices=["Docker", "Python"],
+            text="Run CellPose in a Docker/Podman container or local python environment",
+            choices=["Docker", "Podman", "Python"],
             value="Docker",
             doc="""\
 If Docker is selected, ensure that Docker Desktop is open and running on your
-computer. On first run of the RunCellpose plugin, the Docker container will be
+computer; likewise for Podman, ensure Podman Desktop is running. On first run 
+of the RunCellpose plugin, the Docker container will be
 downloaded. However, this slow downloading process will only have to happen
 once.
 
@@ -539,7 +540,7 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
         if self.cellpose_version.value == 'omnipose':
             vis_settings += [self.omni]
 
-        if self.docker_or_python.value == "Docker":
+        if self.docker_or_python.value in ["Docker","Podman"]:
             if self.cellpose_version.value == 'omnipose':
                 vis_settings += [self.docker_image_omnipose]
             elif self.cellpose_version.value == 'v2':
@@ -936,9 +937,12 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
             if self.remove_edge_masks:
                 y_data = utils.remove_edge_masks(y_data)
 
-        elif self.docker_or_python.value == "Docker":
-            # Define how to call docker
-            docker_path = "docker" if sys.platform.lower().startswith("win") else "/usr/local/bin/docker"
+        else:
+            if self.docker_or_python.value == "Docker":
+                # Define how to call docker
+                docker_path = "docker" if sys.platform.lower().startswith("win") else "/usr/local/bin/docker"
+            else:
+                docker_path = "podman" if sys.platform.lower().startswith("win") else "/opt/podman/bin/podman"
             # Create a UUID for this run
             unique_name = str(uuid.uuid4())
             # Directory that will be used to pass images to the docker container
@@ -1021,7 +1025,7 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
             workspace.display_data.denoised_image = denoised_image
 
         if self.save_probabilities.value:
-            if self.docker_or_python.value == "Docker":
+            if self.docker_or_python.value in ["Docker", "Podman"]:
                 # get rid of extra dimension
                 prob_map = numpy.squeeze(flows[1], axis=0) # ranges 0-255
             else:
