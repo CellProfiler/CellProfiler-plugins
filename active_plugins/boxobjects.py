@@ -153,7 +153,7 @@ Choose how to you want to handle overlapping boxes:
             # Create a segmentation image from the IJV array (only for displat)
             segmented = numpy.zeros(input_label.shape, dtype=numpy.int32)
             segmented[ijv[:, 0], ijv[:, 1]] = ijv[:, 2]
-            output_objects.segmented = segmented
+            self.object_location = ijv
 
         elif self.operation == O_ASSIGN_ARBITRARY:
             box_objects = []
@@ -172,9 +172,11 @@ Choose how to you want to handle overlapping boxes:
                 # Save this object into our image array  
                 output_label[y_min:y_max, x_min:x_max] = region 
                 box_objects.append(region)
+
             
             # Save boxes are segmented objects 
             output_objects.segmented =  output_label 
+            self.object_location = output_objects.segmented
             self.object_count = numpy.max(output_objects.segmented)
         
         workspace.object_set.add_objects(output_objects, self.output_object_name.value)
@@ -188,7 +190,7 @@ Choose how to you want to handle overlapping boxes:
         add_object_location_measurements(
             workspace.measurements,
             self.output_object_name.value,
-            output_objects.segmented,
+            self.object_location,
         )
 
         if self.show_window:
