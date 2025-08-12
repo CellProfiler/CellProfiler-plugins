@@ -59,6 +59,7 @@ from skimage.measure import regionprops
 import skimage 
 import cellprofiler_core.object
 import os
+import csv
 
 O_ASSIGN_ARBITRARY = "Let the first box get the overlapping region"
 O_ALLOW_OVERLAP = "Allow overlap between boxes"
@@ -228,7 +229,15 @@ Choose how to you want to handle overlapping boxes:
         elif self.operation == O_USE_CROP:
             directory = self.directory.get_absolute_path(workspace.measurements)
             # Loop through each selected image
-            
+            load_data_rows = []
+            header = None  # will store all feature names
+
+            # Get all image-level features once
+            feature_names = workspace.measurements.get_feature_names("Image")
+
+            # Prepare CSV header only once
+            header = feature_names
+
             for bbox, object_id in zip(bounding_boxes, input_indices):
 
                 for image_name in self.image_list.value:
@@ -248,7 +257,18 @@ Choose how to you want to handle overlapping boxes:
                         compression=(8,6),
                         check_contrast=False,
                     )
-                
+
+                    row = [workspace.measurements.get_current_image_measurement(feat)
+                        for feat in header]
+
+                    # Optionally update filename/path for this new crop
+                    for i, feat in enumerate(header):
+                        if feat.startswith(f"FileName_{image_name}"):
+                            row[i] = label_save_filename
+                        elif feat.startswith(f"PathName_{image_name}"):
+                            row[i] = directory
+                            load_data_rows.append(row)
+                            
                 mask = numpy.ones(cropped_image.shape[:2], dtype=bool)
                 output_objects = cellprofiler_core.object.Objects()
                 segmented = numpy.zeros_like(image_data, dtype=numpy.int32)
@@ -275,6 +295,13 @@ Choose how to you want to handle overlapping boxes:
                     self.object_location,
                 )
 
+
+            # Write the CSV after loop
+            with open(os.path.join(directory, "LoadData_Cropped.csv"), "w", newline="") as f:
+                writer = csv.writer(f)
+                writer.writerow(header)
+                writer.writerows(load_data_rows)
+            
         if self.show_window:
             workspace.display_data.input_objects_segmented = input_objects.segmented
             workspace.display_data.output_objects_segmented = output_objects.segmented
