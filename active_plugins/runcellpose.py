@@ -872,6 +872,13 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
 
             elif self.cellpose_version.value == 'v4':
                 assert int(self.cellpose_ver[0])==4, "Cellpose version selected in RunCellpose module doesn't match version in Python"
+                
+                # For processing 3D data, model requires to specify which axis defines z dimension
+                if x.volumetric:
+                    z_axis=0
+                else:
+                    z_axis=None
+
                 if self.mode.value == 'custom':
                     model_file, model_directory, model_path  = get_custom_model_vars(self)
                 model_params = (self.mode.value, self.use_gpu.value)
@@ -892,6 +899,7 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
                     try:
                         y_data, flows, *_ = self.current_model.eval(
                             x_data,
+                            z_axis=z_axis,                            
                             diameter=diam,
                             do_3D=self.do_3D.value,
                             anisotropy=anisotropy,
@@ -915,6 +923,8 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
                     try:
                         y_data, flows, *_ = self.current_model.eval(
                             x_data,
+                            # channel_axis=,
+                            z_axis=z_axis,
                             do_3D=self.do_3D.value,
                             anisotropy=anisotropy,
                             flow_threshold=self.flow_threshold.value,
@@ -1102,7 +1112,9 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
         else:
             layout = (2, 2)
 
-        figure.set_subplots(subplots=layout)
+        dimensions = workspace.display_data.dimensions
+
+        figure.set_subplots(subplots=layout, dimensions=dimensions)
         
         title = "Input image, cycle #%d" % (workspace.measurements.image_number,)
         figure.subplot_imshow(
@@ -1121,13 +1133,26 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
             y=0,
         )
         
-        cplabels = [
-                dict(name=self.y_name.value, labels=[workspace.display_data.primary_labels]),
-            ]
+        # Only display labels when processing 2D data
+        x_name = self.x_name.value
+        images = workspace.image_set
+        x = images.get_image(x_name)
+
+        if x.volumetric:
+            cplabels=None
+        else:
+            cplabels = [
+                    dict(name=self.y_name.value, labels=[workspace.display_data.primary_labels]),
+                ]
 
         title = "%s outlines" % self.y_name.value
         figure.subplot_imshow_grayscale(
-            0, 1, workspace.display_data.x_data, title, cplabels=cplabels, sharexy=figure.subplot(0, 0),
+            x=0, 
+            y=1, 
+            image=workspace.display_data.x_data, 
+            title=title, 
+            cplabels=cplabels, 
+            sharexy=figure.subplot(0, 0),
         )
 
         figure.subplot_table(
