@@ -872,6 +872,13 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
 
             elif self.cellpose_version.value == 'v4':
                 assert int(self.cellpose_ver[0])==4, "Cellpose version selected in RunCellpose module doesn't match version in Python"
+                
+                # For processing 3D data, model requires to specify which axis defines z dimension
+                if x.volumetric:
+                    z_axis=0
+                else:
+                    z_axis=None
+
                 if self.mode.value == 'custom':
                     model_file, model_directory, model_path  = get_custom_model_vars(self)
                 model_params = (self.mode.value, self.use_gpu.value)
@@ -892,6 +899,7 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
                     try:
                         y_data, flows, *_ = self.current_model.eval(
                             x_data,
+                            z_axis=z_axis,                            
                             diameter=diam,
                             do_3D=self.do_3D.value,
                             anisotropy=anisotropy,
@@ -915,6 +923,8 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
                     try:
                         y_data, flows, *_ = self.current_model.eval(
                             x_data,
+                            # channel_axis=,
+                            z_axis=z_axis,
                             do_3D=self.do_3D.value,
                             anisotropy=anisotropy,
                             flow_threshold=self.flow_threshold.value,
