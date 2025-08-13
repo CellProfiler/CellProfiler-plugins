@@ -1133,9 +1133,17 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
             y=0,
         )
         
-        cplabels = [
-                dict(name=self.y_name.value, labels=[workspace.display_data.primary_labels]),
-            ]
+        # Only display labels when processing 2D data
+        x_name = self.x_name.value
+        images = workspace.image_set
+        x = images.get_image(x_name)
+
+        if x.volumetric:
+            cplabels=None
+        else:
+            cplabels = [
+                    dict(name=self.y_name.value, labels=[workspace.display_data.primary_labels]),
+                ]
 
         title = "%s outlines" % self.y_name.value
         figure.subplot_imshow_grayscale(
