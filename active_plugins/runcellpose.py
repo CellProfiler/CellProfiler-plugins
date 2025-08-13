@@ -1112,7 +1112,9 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
         else:
             layout = (2, 2)
 
-        figure.set_subplots(subplots=layout)
+        dimensions = workspace.display_data.dimensions
+
+        figure.set_subplots(subplots=layout, dimensions=dimensions)
         
         title = "Input image, cycle #%d" % (workspace.measurements.image_number,)
         figure.subplot_imshow(
@@ -1137,7 +1139,12 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
 
         title = "%s outlines" % self.y_name.value
         figure.subplot_imshow_grayscale(
-            0, 1, workspace.display_data.x_data, title, cplabels=cplabels, sharexy=figure.subplot(0, 0),
+            x=0, 
+            y=1, 
+            image=workspace.display_data.x_data, 
+            title=title, 
+            cplabels=cplabels, 
+            sharexy=figure.subplot(0, 0),
         )
 
         figure.subplot_table(
