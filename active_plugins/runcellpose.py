@@ -872,12 +872,13 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
 
             elif self.cellpose_version.value == 'v4':
                 assert int(self.cellpose_ver[0])==4, "Cellpose version selected in RunCellpose module doesn't match version in Python"
+                LOGGER.info(f"Loading new model: {self.mode.value}")
                 if self.mode.value == 'custom':
                     model_file, model_directory, model_path  = get_custom_model_vars(self)
-                model_params = (self.mode.value, self.use_gpu.value)
-                LOGGER.info(f"Loading new model: {self.mode.value}")
-                self.current_model = models.CellposeModel(gpu=self.use_gpu.value)
-                self.current_model_params = model_params
+                    self.current_model = models.CellposeModel(
+                        pretrained_model=model_path, gpu=self.use_gpu.value)
+                else:
+                    self.current_model = models.CellposeModel(gpu=self.use_gpu.value)
 
                 if self.use_gpu.value:
                     try:
