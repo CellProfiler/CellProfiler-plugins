@@ -151,10 +151,11 @@ You can use metadata tags to provide unique labels, for this module it's best to
             metadata=True,
             doc="""\
             
-Specify the folder name here. If you have metadata associated with
+Specify the folder name. If you have metadata associated with
 your images, enter the folder name with the metadata tags.
 {USING_METADATA_TAGS_REF}
 The default name is Crop_Folder, you can append your identifier to this folder name.
+The best choice is an identifier that seperates each row. 
 """.format(
                 **{
                     "FN_SINGLE_NAME": FN_SINGLE_NAME,
@@ -219,6 +220,7 @@ Choose how to you want to handle overlapping boxes:
         output_objects = cellprofiler_core.object.Objects()
         # Calculate bounding boxes based on the segmented and labeled objects
         bounding_boxes, input_indices = self.get_box_boundaries(input_label)
+        output_label = numpy.zeros_like(input_label, dtype=numpy.int32)
 
         ## Option does not work with any Measure modules -- depricated
         # if self.operation == O_ALLOW_OVERLAP:
@@ -267,8 +269,6 @@ Choose how to you want to handle overlapping boxes:
 
         if self.operation == O_ASSIGN_ARBITRARY:
             box_objects = []
-            # Create array with the dimensions of the image 
-            output_label = numpy.zeros_like(input_label, dtype=numpy.int32)
 
             for bbox, object_id in zip(bounding_boxes, input_indices):
                 # Extract coordinates of the sides for each bounding box 
@@ -284,7 +284,7 @@ Choose how to you want to handle overlapping boxes:
                 box_objects.append(region)
 
             
-            # Save boxes are segmented objects 
+            # Save boxes as segmented objects 
             output_objects.segmented =  output_label 
             self.object_location = output_objects.segmented
             self.object_count = numpy.max(output_objects.segmented)
@@ -292,45 +292,45 @@ Choose how to you want to handle overlapping boxes:
 
 
         elif self.operation == O_USE_CROP:
-
+            
+            # Get the user's directory
             directory = self.directory.get_absolute_path(workspace.measurements)
-            output_objects = cellprofiler_core.object.Objects()
             all_rows = []
+            box_objects = []
 
             # Extract metadata from the inputted load_data csv
             metadata_features, metadata_values, filename_values = self.extract_metadata(workspace)
             # Create CSV columns based on the inputted load_data csv
             csv_columns = self.create_csv_columns(metadata_features)
 
-            # Make folder reflect the original image either based on custom name or image prefix
+            # Make folder based on custom name or image prefix
             self.directory_name = self.get_folder_name(workspace, filename_values)
             save_directory = os.path.join(directory, self.directory_name)
+
             if not os.path.exists(save_directory):
                 os.mkdir(save_directory)
             
             # Loop through each selected image
             for bbox, object_id in zip(bounding_boxes, input_indices):
-
-
+                
+                # region Crop Logic
                 row = {col: "" for col in csv_columns}
-
                 # Assign object ID and metadata
                 row["Metadata_Crop_ID"] = object_id
                 for feature_name, value in zip(metadata_features, metadata_values):
                     row[feature_name] = value
 
+                # Raw image crop
                 for image_name in self.image_list.value:
-                
                     # Get the pixel data 
                     img = workspace.image_set.get_image(image_name)
                     image_data = img.pixel_data
-
-
                     y_min, x_min, y_max, x_max = bbox
-                    # Save cropped raw image
                     cropped_image = image_data[y_min:y_max, x_min:x_max] 
                     image_save_filename = f"{image_name}_{self.output_object_name.value}_{object_id}.tiff"
                     image_full_path = os.path.join(save_directory, image_save_filename)
+
+                    # Save cropped raw image
                     skimage.io.imsave(
                         image_full_path,
                         skimage.img_as_ubyte(cropped_image),
@@ -339,6 +339,7 @@ Choose how to you want to handle overlapping boxes:
                     )
                     row[f"URL_{image_name}"] = image_full_path
 
+                    # Mask crop
                     if self.create_masks.value:
                         # Create cropped mask image
                         segmented = numpy.zeros_like(image_data, dtype=numpy.int32)
@@ -356,15 +357,34 @@ Choose how to you want to handle overlapping boxes:
                         row[f"URL_Object{image_name}"] = mask_full_path
 
                     all_rows.append(row)
+                
+                # endregion
 
-            save_path = os.path.join(save_directory, "load_data.csv")
+
+                # region For visulization: create bounding boxes on the same image 
+                # assigns the last object to the region
+                # Extract coordinates of the sides for each bounding box 
+                y_min, x_min, y_max, x_max = bbox
+                mask = numpy.ones((y_max - y_min, x_max - x_min), dtype=bool)
+                # Grab the box coordinates in the image
+                region = output_label[y_min:y_max, x_min:x_max] 
+                region_mask = mask
+                region[region_mask] = object_id 
+                # Save this object into our image array  
+                output_label[y_min:y_max, x_min:x_max] = region 
+                box_objects.append(region)
+                # endregion
+
+            
+            # save load_data.csv
+            save_path = os.path.join(save_directory, f"load_data_{self.directory_name}.csv")
             with open(save_path, "w", newline="") as f:
                 writer = csv.DictWriter(f, fieldnames=csv_columns)
                 writer.writeheader()
                 writer.writerows(all_rows)
                 
             # Save each object individually based on inputted object (just for visualization)
-            output_objects.segmented =  input_label 
+            output_objects.segmented =  output_label 
             self.object_location = output_objects.segmented
             self.object_count = numpy.max(output_objects.segmented)
             workspace.object_set.add_objects(output_objects, self.output_object_name.value)
