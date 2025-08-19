@@ -19,22 +19,19 @@ __doc__ = """\
 BoxObjects
 =====================
 
-**BoxObjects** creates objects which are bounding boxes around pre-defined objects. 
+**BoxObjects** creates a new set of objects which are the bounding boxes of input objects.  It supports two methods for saving bounding box objects.
 
-The module calculate the bounding box around each inputted object. It is able to support non-overlapping boxes using 
-the assign arbitrary method. Since most pipelines do not support overlapping objects, the use crop method allows 
-overlapping obejcts to be saved as individual images. 
-The assign arbitrary method allows the first assigned object to get assigned the region where two objects overlap, 
-the next object is assigned only the free space. This method saves and displays bounding boxes as segmented objects.
-The use crop method crops each previously labeled cell and saves it as an individual image. For each row in the
-inputted load_data.csv it creates a folder, named either after the raw image prefix or the custom user inputted name. 
-The method also allows the user to save the masked inputted objects as cropped binary images, the dimensions will match 
-the corresponding cropped image and serve as a reference for the initially segmented intput. 
-In the folder it creates, it will save the cropped raw image, the newly created load_data.csv and the optional 
-cropped masked cell. 
+Since most measurement modules in CellProfiler do not currently support overlapping objects, the "Let the first box get the overlapping region" method 
+assigns any overlapping object pixels to the first object. The next object is assigned only the free space. 
 
-See also **ExpandorShrinkObjects** which creates larger objects from the segmented 
-objects, it expands of shring these objects by a certain distance while maintaining 
+The "Crop each object from the image" method crops each object from the image and saves 
+it as an individual image, thus enabling measurement of overlapping objects in a separate pipeline. Note that objects created by this method 
+should not be used in downstream measurement modules in the same pipeline as they will cause an error.
+The input objects can optionally be saved as cropped binary images that match the dimensions of the cropped raw image.
+For each image set, BoxObjects creates a folder in the specified directory that can be named either after the raw image prefix or a custom user inputted name.
+Additionally, it creates a load_data.csv file that contains the cropped images' URLs and metadata information.
+
+See also **ExpandOrShrinkObjects** which creates larger objects from input objects, expanding or shrinking by a certain distance while maintaining 
 the object's shape. 
 
 
@@ -53,7 +50,7 @@ Measurements made by this module
 
 **Image measurements:**
 
--  *Count:* Number ofbounding boxes objects in the images. 
+-  *Count:* Number of bounding boxes objects in the images. 
 
 **Object measurements:**
 
@@ -108,36 +105,21 @@ class BoxObjects(cpm.Module):
         )
         self.directory = Directory(
             "Directory to save the folder",
-            doc="Enter the directory where object crops are saved -- Add the load data csv output .",
+            doc="Enter the directory where object crops and load_data.csv are saved.",
             value=DEFAULT_OUTPUT_FOLDER_NAME,
         )
         self.file_name_method = Choice(
             "Select method for constructing folder name",
             [FN_FROM_IMAGE, FN_SINGLE_NAME],
             FN_FROM_IMAGE,
-            doc="""\
-*(Used only if saving non-movie files)*
+            doc="""
+            Select a method for constructing the folder name where cropped images and load_data.csv will be saved.
 
-Several choices are available for constructing the image file name:
+            -  *{FN_FROM_IMAGE}:* The folder will be constructed based on the original image filename.
+            -  *{FN_SINGLE_NAME}:* A custom name will be given to the folder. You can use metadata tags to provide unique folder names per image set. Ensure that the metadata tags you use are sufficient to disambiguate between image sets.
 
--  *{FN_FROM_IMAGE}:* The folder will be constructed based on the
-   original filename prefix.
-
-   If you have metadata associated with your images, you can append
-   text to the image filename using a metadata tag. This is especially
-   useful if you want your output given a unique label according to the
-   metadata corresponding to an image group. The name of the metadata to
-   substitute can be provided for each image for each cycle using the
-   **Metadata** module.
--  *{FN_SINGLE_NAME}:* A single name will be given to the folder. Since
-   the folder is fixed and corresponds to one site and well, 
-   the best name to use is one that uniquely identifies each row in the 
-   load_data.csv.
-
-{USING_METADATA_TAGS_REF}
-
-You can use metadata tags to provide unique labels, for this module it's best to use %(Site)s, %(Well)s.
-""".format(
+            {USING_METADATA_TAGS_REF}
+            """.format(
                 **{
                     "FN_FROM_IMAGE": FN_FROM_IMAGE,
                     "FN_SINGLE_NAME": FN_SINGLE_NAME,
@@ -149,14 +131,12 @@ You can use metadata tags to provide unique labels, for this module it's best to
             SINGLE_NAME_TEXT,
             "Crop_Folder",
             metadata=True,
-            doc="""\
-            
-Specify the folder name. If you have metadata associated with
-your images, enter the folder name with the metadata tags.
-{USING_METADATA_TAGS_REF}
-The default name is Crop_Folder, you can append your identifier to this folder name.
-The best choice is an identifier that seperates each row. 
-""".format(
+            doc="""
+            Specify the folder name. You can use metadata tags to provide unique folder names per image set. 
+            Ensure that the metadata tags you use are sufficient to disambiguate between image sets.
+            {USING_METADATA_TAGS_REF}
+
+            """.format(
                 **{
                     "FN_SINGLE_NAME": FN_SINGLE_NAME,
                     "USING_METADATA_TAGS_REF": _help.USING_METADATA_TAGS_REF,
@@ -167,22 +147,19 @@ The best choice is an identifier that seperates each row.
         self.create_masks = Binary(
             CREATE_MASKS_TEXT,
             True, 
-            doc="Choose Yes to save original labeled objects as cropped images" \
-            "No to skip."
+            doc="Choose Yes to save original labeled objects as cropped images, No to skip."
         )
 
         self.operation = Choice(
             "Select the method",
             O_ALL,
-            doc="""\
-        
-        
-Choose how to you want to handle overlapping boxes:
+            doc="""
+            Choose how to you want to handle overlapping boxes:
 
--  *{O_ASSIGN_ARBITRARY}:* Assign the overlapping region to the first box that gets those pixels.
--  *{O_USE_CROP}:* Save cropped object from each image.
+            -  *{O_ASSIGN_ARBITRARY}:* Assign the overlapping region to the first box that gets those pixels.
+            -  *{O_USE_CROP}:* Save cropped object from each image.
 
-""".format(
+            """.format(
                 **{
                     "O_ASSIGN_ARBITRARY":O_ASSIGN_ARBITRARY,
                     "O_USE_CROP": O_USE_CROP,
