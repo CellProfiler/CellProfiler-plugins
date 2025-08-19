@@ -339,24 +339,24 @@ Choose how to you want to handle overlapping boxes:
                     )
                     row[f"URL_{image_name}"] = image_full_path
 
-                    # Mask crop
-                    if self.create_masks.value:
-                        # Create cropped mask image
-                        segmented = numpy.zeros_like(image_data, dtype=numpy.int32)
-                        segmented[y_min:y_max, x_min:x_max] = object_id
+                # Mask crop
+                if self.create_masks.value:
+                    # Create cropped mask image
+                    segmented = numpy.zeros_like(image_data, dtype=numpy.int32)
+                    segmented[y_min:y_max, x_min:x_max] = object_id
 
-                        cropped_mask = input_label[y_min:y_max, x_min:x_max] == object_id
-                        mask_save_filename = f"Object{image_name}_{self.output_object_name.value}_{object_id}.tiff"
-                        mask_full_path = os.path.join(save_directory, mask_save_filename)
-                        skimage.io.imsave(
-                            mask_full_path,
-                            skimage.img_as_ubyte(cropped_mask),
-                            compression=(8,6),
-                            check_contrast=False,
-                        )
-                        row[f"URL_Object{image_name}"] = mask_full_path
+                    cropped_mask = input_label[y_min:y_max, x_min:x_max] == object_id
+                    mask_save_filename = f"Object_{self.output_object_name.value}_{object_id}.tiff"
+                    mask_full_path = os.path.join(save_directory, mask_save_filename)
+                    skimage.io.imsave(
+                        mask_full_path,
+                        skimage.img_as_ubyte(cropped_mask),
+                        compression=(8,6),
+                        check_contrast=False,
+                    )
+                    row[f"URL_Object"] = mask_full_path
 
-                    all_rows.append(row)
+                all_rows.append(row)
                 
                 # endregion
 
@@ -377,7 +377,7 @@ Choose how to you want to handle overlapping boxes:
 
             
             # save load_data.csv
-            save_path = os.path.join(save_directory, f"load_data_{self.directory_name}.csv")
+            save_path = os.path.join(save_directory, f"load_data_{self.output_object_name.value}.csv")
             with open(save_path, "w", newline="") as f:
                 writer = csv.DictWriter(f, fieldnames=csv_columns)
                 writer.writeheader()
@@ -446,8 +446,7 @@ Choose how to you want to handle overlapping boxes:
     def get_folder_name(self, workspace, filename_values):
         """Get original folder name based on user input"""
         if self.file_name_method == FN_FROM_IMAGE:   
-            filename_image = [f for f in filename_values if f.startswith("r")][0]
-            name = filename_image.split("-")[0]
+            name = [f for f in filename_values if f.endswith(".tiff")][0].split(".tiff")[0]
         elif self.file_name_method == FN_SINGLE_NAME:
             image_number = workspace.measurements.image_number
             # Get the text from the setting and replace any metadata placeholders
@@ -460,8 +459,8 @@ Choose how to you want to handle overlapping boxes:
 
         for image_name in self.image_list.value:
             csv_columns.append(f"URL_{image_name}")
-            if self.create_masks.value:
-                csv_columns.append(f"URL_Object{image_name}")
+        if self.create_masks.value:
+            csv_columns.append(f"URL_Object")
 
         csv_columns.append("Metadata_Crop_ID")
         csv_columns += metadata_features
