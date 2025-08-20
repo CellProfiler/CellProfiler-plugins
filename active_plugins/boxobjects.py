@@ -110,18 +110,16 @@ class BoxObjects(cpm.Module):
         )
         self.file_name_method = Choice(
             "Select method for constructing folder name",
-            [FN_FROM_IMAGE, FN_SINGLE_NAME],
-            FN_FROM_IMAGE,
+            [FN_SINGLE_NAME],
+            FN_SINGLE_NAME,
             doc="""
             Select a method for constructing the folder name where cropped images and load_data.csv will be saved.
 
-            -  *{FN_FROM_IMAGE}:* The folder will be constructed based on the original image filename.
             -  *{FN_SINGLE_NAME}:* A custom name will be given to the folder. You can use metadata tags to provide unique folder names per image set. Ensure that the metadata tags you use are sufficient to disambiguate between image sets.
 
             {USING_METADATA_TAGS_REF}
             """.format(
                 **{
-                    "FN_FROM_IMAGE": FN_FROM_IMAGE,
                     "FN_SINGLE_NAME": FN_SINGLE_NAME,
                     "USING_METADATA_TAGS_REF": _help.USING_METADATA_TAGS_REF,
                 }
@@ -422,9 +420,9 @@ class BoxObjects(cpm.Module):
     
     def get_folder_name(self, workspace, filename_values):
         """Get original folder name based on user input"""
-        if self.file_name_method == FN_FROM_IMAGE:   
-            name = [f for f in filename_values if f.endswith(".tiff")][0].split(".tiff")[0]
-        elif self.file_name_method == FN_SINGLE_NAME:
+        # if self.file_name_method == FN_FROM_IMAGE:   
+        #     name = [f for f in filename_values if f.endswith(".tiff")][0].split(".tiff")[0]
+        if self.file_name_method == FN_SINGLE_NAME:
             image_number = workspace.measurements.image_number
             # Get the text from the setting and replace any metadata placeholders
             name_template = self.single_file_name.value
@@ -453,11 +451,11 @@ class BoxObjects(cpm.Module):
         img_num = image_numbers[0]
         # Grab the image's metadata values
         metadata_values = [workspace.measurements.get_measurement("Image", feat, img_num) for feat in metadata_features]
-        if self.file_name_method == FN_FROM_IMAGE:   
-            filename_features = [f for f in feature_names if f.startswith("FileName_")]
-            filename_values = [
-                workspace.measurements.get_measurement("Image", feat, img_num)
-                for feat in filename_features
-            ]
-        else: filename_values = []
+        # if self.file_name_method == FN_FROM_IMAGE:   
+        #     filename_features = [f for f in feature_names if f.startswith("FileName_")]
+        #     filename_values = [
+        #         workspace.measurements.get_measurement("Image", feat, img_num)
+        #         for feat in filename_features
+        #     ]
+        filename_values = []
         return metadata_features, metadata_values, filename_values
