@@ -92,10 +92,15 @@ ENCODING_TYPES = ["One Hot Exponentially Multiplexed (ie 4-color SBS/ISS)", "Exp
 
 BASE_OPTIONS = ["Dark", "Single channel", "Dual channel"]
 
-BASE_DESCRIPTION = "Select how *{ZZZ}* is encoded - by a dark base, a single channel, or multiple channels"
+BASE_DESCRIPTION = "Select how {ZZZ} is encoded - by a dark base, a single channel, or multiple channels"
 
 BASE_MEASUREMENT_DESCRIPTION = "Select the {YYY} measurement indicating that *{ZZZ}* is encoded"
 
+BASE_ORDER_OPTION = ["First", "Second", "Third", "Fourth"]
+
+BASE_ORDER_DESCRIPTION = "Select if {ZZZ} should be called first, second, third, or fourth"
+
+BASE_ORDER_LONG_DESCRIPTION = "This module works by calling each base sequentially - this is the easiest way to handle combinatorial calling. Base calls which requires two bases (ie 488 and 568) should be done before base calls which require one base, which should be done before any dark base. Unexpected results may occur if this order is not followed."
 
 class CallBarcodes(cellprofiler_core.module.Module):
 
@@ -250,6 +255,15 @@ No other channel formats are available at this time, though you are free to open
             ),
         )
 
+        self.a_order = cellprofiler_core.setting.choice.Choice(
+            BASE_ORDER_DESCRIPTION.format(
+                **{"ZZZ": "A"}
+            ),
+            value=BASE_ORDER_OPTION[0],
+            choices=BASE_ORDER_OPTION,
+            doc=BASE_ORDER_LONG_DESCRIPTION,
+        )
+
         self.a_measure_1 = cellprofiler_core.setting.Measurement(
             BASE_MEASUREMENT_DESCRIPTION.format(
                 **{"YYY":"first","ZZZ": "A"}
@@ -279,6 +293,14 @@ No other channel formats are available at this time, though you are free to open
             doc=BASE_DESCRIPTION.format(
                 **{"ZZZ": "C"}
             ),
+        )
+        self.c_order = cellprofiler_core.setting.choice.Choice(
+            BASE_ORDER_DESCRIPTION.format(
+                **{"ZZZ": "C"}
+            ),
+            value=BASE_ORDER_OPTION[1],
+            choices=BASE_ORDER_OPTION,
+            doc=BASE_ORDER_LONG_DESCRIPTION,
         )
 
         self.c_measure_1 = cellprofiler_core.setting.Measurement(
@@ -311,7 +333,14 @@ No other channel formats are available at this time, though you are free to open
                 **{"ZZZ": "G"}
             ),
         )
-
+        self.g_order = cellprofiler_core.setting.choice.Choice(
+            BASE_ORDER_DESCRIPTION.format(
+                **{"ZZZ": "G"}
+            ),
+            value=BASE_ORDER_OPTION[3],
+            choices=BASE_ORDER_OPTION,
+            doc=BASE_ORDER_LONG_DESCRIPTION,
+        )
         self.g_measure_1 = cellprofiler_core.setting.Measurement(
             BASE_MEASUREMENT_DESCRIPTION.format(
                 **{"YYY":"first","ZZZ": "G"}
@@ -342,7 +371,14 @@ No other channel formats are available at this time, though you are free to open
                 **{"ZZZ": "T"}
             ),
         )
-
+        self.t_order = cellprofiler_core.setting.choice.Choice(
+            BASE_ORDER_DESCRIPTION.format(
+                **{"ZZZ": "T"}
+            ),
+            value=BASE_ORDER_OPTION[2],
+            choices=BASE_ORDER_OPTION,
+            doc=BASE_ORDER_LONG_DESCRIPTION,
+        )
         self.t_measure_1 = cellprofiler_core.setting.Measurement(
             BASE_MEASUREMENT_DESCRIPTION.format(
                 **{"YYY":"first","ZZZ": "T"}
@@ -382,15 +418,19 @@ No other channel formats are available at this time, though you are free to open
             self.empty_vector_barcode_sequence,
             self.n_colors,
             self.a_type,
+            self.a_order,
             self.a_measure_1,
             self.a_measure_2,
             self.c_type,
+            self.c_order,
             self.c_measure_1,
             self.c_measure_2,
             self.g_type,
+            self.g_order,
             self.g_measure_1,
             self.g_measure_2,
             self.t_type,
+            self.t_order,
             self.t_measure_1,
             self.t_measure_2,
         ]
@@ -407,6 +447,7 @@ No other channel formats are available at this time, though you are free to open
         else:
             result += [
                 self.a_type,
+                self.a_order,
             ]
             if self.a_type.value == BASE_OPTIONS[1]:
                 result += [
@@ -420,6 +461,7 @@ No other channel formats are available at this time, though you are free to open
                 ]
             result += [
                 self.c_type,
+                self.c_order,
             ]
             if self.c_type.value == BASE_OPTIONS[1]:
                 result += [
@@ -433,6 +475,7 @@ No other channel formats are available at this time, though you are free to open
                 ]
             result += [
                 self.g_type,
+                self.g_order,
             ]
             if self.g_type.value == BASE_OPTIONS[1]:
                 result += [
@@ -446,6 +489,7 @@ No other channel formats are available at this time, though you are free to open
                 ]
             result += [
                 self.t_type,
+                self.t_order,
             ]
             if self.t_type.value == BASE_OPTIONS[1]:
                 result += [
@@ -512,6 +556,8 @@ No other channel formats are available at this time, though you are free to open
                 % (self.csv_path, e),
                 self.csv_file_name,
             )
+        
+        #TODO - add check for base orders being unique
 
     @property
     def csv_path(self):
@@ -891,8 +937,8 @@ No other channel formats are available at this time, though you are free to open
     def upgrade_settings(self, setting_values, variable_revision_number, module_name):
         if variable_revision_number == 1:
             setting_values += [ENCODING_TYPES[0]]  
-            setting_values += [BASE_OPTIONS[2]] + ['AreaShape_Area']*2 #A
-            setting_values += [BASE_OPTIONS[1]] + ['AreaShape_Area']*2 #C
-            setting_values += [BASE_OPTIONS[0]] + ['AreaShape_Area']*2 #G
-            setting_values += [BASE_OPTIONS[1]] + ['AreaShape_Area']*2 #T
+            setting_values += [BASE_OPTIONS[2], BASE_ORDER_OPTION[0]] + ['AreaShape_Area']*2 #A
+            setting_values += [BASE_OPTIONS[1], BASE_ORDER_OPTION[1]] + ['AreaShape_Area']*2 #C
+            setting_values += [BASE_OPTIONS[0], BASE_ORDER_OPTION[3]] + ['AreaShape_Area']*2 #G
+            setting_values += [BASE_OPTIONS[1], BASE_ORDER_OPTION[2]] + ['AreaShape_Area']*2 #T
             variable_revision_number = 2
