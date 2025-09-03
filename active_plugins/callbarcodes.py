@@ -88,12 +88,20 @@ YES          YES           YES
 
 C_CALL_BARCODES = "Barcode"
 
+ENCODING_TYPES = ["One Hot Exponentially Multiplexed (ie 4-color SBS/ISS)", "Exponentially Multiplexed (SBS/ISS only)"]
+
+BASE_OPTIONS = ["Dark", "Single channel", "Dual channel"]
+
+BASE_DESCRIPTION = "Select how *{ZZZ}* is encoded - by a dark base, a single channel, or multiple channels"
+
+BASE_MEASUREMENT_DESCRIPTION = "Select the {YYY} measurement indicating that *{ZZZ}* is encoded"
+
 
 class CallBarcodes(cellprofiler_core.module.Module):
 
     module_name = "CallBarcodes"
     category = "Data Tools"
-    variable_revision_number = 1
+    variable_revision_number = 2
 
     def create_settings(self):
         self.csv_directory = cellprofiler_core.setting.text.Directory(
@@ -220,6 +228,143 @@ backbone sequence to look out for in every barcoding set).""".format(
 Enter the sequence that represents barcoding reads of an empty vector""",
         )
 
+        self.n_colors = cellprofiler_core.setting.choice.Choice(
+            "What kind of encoding is used here?",
+            value=ENCODING_TYPES[0],
+            choices=ENCODING_TYPES,
+            doc="""\
+Select "*{4COLOR}*" if using a a code where each thing has its own single-letter code 
+and its own channel (such as in SBS 4 color chemistry kit where each channel has its own image). 
+For 2- or 3- color kits SBS/ISS kits, select "*{SBS_OTHER}*" and you will be directed to explain your channel mapping. 
+No other channel formats are available at this time, though you are free to open a GitHub issue or pull request.""".format(
+                **{"4COLOR": ENCODING_TYPES[0],"SBS_OTHER":ENCODING_TYPES[1]}
+            ),
+        )
+
+        self.a_type = cellprofiler_core.setting.choice.Choice(
+            "Is A the dark base, a single channel base, or a dual-channel base?",
+            value=BASE_OPTIONS[2],
+            choices=BASE_OPTIONS,
+            doc=BASE_DESCRIPTION.format(
+                **{"ZZZ": "A"}
+            ),
+        )
+
+        self.a_measure_1 = cellprofiler_core.setting.Measurement(
+            BASE_MEASUREMENT_DESCRIPTION.format(
+                **{"YYY":"first","ZZZ": "A"}
+            ),
+            self.input_object_name.get_value,
+            "AreaShape_Area",
+            doc=BASE_MEASUREMENT_DESCRIPTION.format(
+                **{"YYY":"first","ZZZ": "A"}
+            ),
+        )
+
+        self.a_measure_2 = cellprofiler_core.setting.Measurement(
+            BASE_MEASUREMENT_DESCRIPTION.format(
+                **{"YYY":"second","ZZZ": "A"}
+            ),
+            self.input_object_name.get_value,
+            "AreaShape_Area",
+            doc=BASE_MEASUREMENT_DESCRIPTION.format(
+                **{"YYY":"second","ZZZ": "A"}
+            ),
+        )
+
+        self.c_type = cellprofiler_core.setting.choice.Choice(
+            "Is C the dark base, a single channel base, or a dual-channel base?",
+            value=BASE_OPTIONS[1],
+            choices=BASE_OPTIONS,
+            doc=BASE_DESCRIPTION.format(
+                **{"ZZZ": "C"}
+            ),
+        )
+
+        self.c_measure_1 = cellprofiler_core.setting.Measurement(
+            BASE_MEASUREMENT_DESCRIPTION.format(
+                **{"YYY":"first","ZZZ": "C"}
+            ),
+            self.input_object_name.get_value,
+            "AreaShape_Area",
+            doc=BASE_MEASUREMENT_DESCRIPTION.format(
+                **{"YYY":"first","ZZZ": "C"}
+            ),
+        )
+
+        self.c_measure_2 = cellprofiler_core.setting.Measurement(
+            BASE_MEASUREMENT_DESCRIPTION.format(
+                **{"YYY":"second","ZZZ": "C"}
+            ),
+            self.input_object_name.get_value,
+            "AreaShape_Area",
+            doc=BASE_MEASUREMENT_DESCRIPTION.format(
+                **{"YYY":"second","ZZZ": "C"}
+            ),
+        )
+
+        self.g_type = cellprofiler_core.setting.choice.Choice(
+            "Is G the dark base, a single channel base, or a dual-channel base?",
+            value=BASE_OPTIONS[0],
+            choices=BASE_OPTIONS,
+            doc=BASE_DESCRIPTION.format(
+                **{"ZZZ": "G"}
+            ),
+        )
+
+        self.g_measure_1 = cellprofiler_core.setting.Measurement(
+            BASE_MEASUREMENT_DESCRIPTION.format(
+                **{"YYY":"first","ZZZ": "G"}
+            ),
+            self.input_object_name.get_value,
+            "AreaShape_Area",
+            doc=BASE_MEASUREMENT_DESCRIPTION.format(
+                **{"YYY":"first","ZZZ": "G"}
+            ),
+        )
+
+        self.g_measure_2 = cellprofiler_core.setting.Measurement(
+            BASE_MEASUREMENT_DESCRIPTION.format(
+                **{"YYY":"second","ZZZ": "G"}
+            ),
+            self.input_object_name.get_value,
+            "AreaShape_Area",
+            doc=BASE_MEASUREMENT_DESCRIPTION.format(
+                **{"YYY":"second","ZZZ": "G"}
+            ),
+        )
+
+        self.t_type = cellprofiler_core.setting.choice.Choice(
+            "Is T the dark base, a single channel base, or a dual-channel base?",
+            value=BASE_OPTIONS[1],
+            choices=BASE_OPTIONS,
+            doc=BASE_DESCRIPTION.format(
+                **{"ZZZ": "T"}
+            ),
+        )
+
+        self.t_measure_1 = cellprofiler_core.setting.Measurement(
+            BASE_MEASUREMENT_DESCRIPTION.format(
+                **{"YYY":"first","ZZZ": "T"}
+            ),
+            self.input_object_name.get_value,
+            "AreaShape_Area",
+            doc=BASE_MEASUREMENT_DESCRIPTION.format(
+                **{"YYY":"first","ZZZ": "T"}
+            ),
+        )
+
+        self.t_measure_2 = cellprofiler_core.setting.Measurement(
+            BASE_MEASUREMENT_DESCRIPTION.format(
+                **{"YYY":"second","ZZZ": "T"}
+            ),
+            self.input_object_name.get_value,
+            "AreaShape_Area",
+            doc=BASE_MEASUREMENT_DESCRIPTION.format(
+                **{"YYY":"second","ZZZ": "T"}
+            ),
+        )
+
     def settings(self):
         return [
             self.ncycles,
@@ -235,13 +380,85 @@ Enter the sequence that represents barcoding reads of an empty vector""",
             self.outimage_score_name,
             self.has_empty_vector_barcode,
             self.empty_vector_barcode_sequence,
+            self.n_colors,
+            self.a_type,
+            self.a_measure_1,
+            self.a_measure_2,
+            self.c_type,
+            self.c_measure_1,
+            self.c_measure_2,
+            self.g_type,
+            self.g_measure_1,
+            self.g_measure_2,
+            self.t_type,
+            self.t_measure_1,
+            self.t_measure_2,
         ]
 
     def visible_settings(self):
         result = [
+            self.n_colors,
             self.ncycles,
-            self.input_object_name,
-            self.cycle1measure,
+            self.input_object_name]
+        if self.n_colors.value == ENCODING_TYPES[0]:
+            result += [
+            self.cycle1measure
+            ]
+        else:
+            result += [
+                self.a_type,
+            ]
+            if self.a_type.value == BASE_OPTIONS[1]:
+                result += [
+                    self.a_measure_1
+                ]
+            
+            elif self.a_type.value == BASE_OPTIONS[2]:
+                result += [
+                    self.a_measure_1,
+                    self.a_measure_2
+                ]
+            result += [
+                self.c_type,
+            ]
+            if self.c_type.value == BASE_OPTIONS[1]:
+                result += [
+                    self.c_measure_1
+                ]
+            
+            elif self.c_type.value == BASE_OPTIONS[2]:
+                result += [
+                    self.c_measure_1,
+                    self.c_measure_2
+                ]
+            result += [
+                self.g_type,
+            ]
+            if self.g_type.value == BASE_OPTIONS[1]:
+                result += [
+                    self.g_measure_1
+                ]
+            
+            elif self.g_type.value == BASE_OPTIONS[2]:
+                result += [
+                    self.g_measure_1,
+                    self.g_measure_2
+                ]
+            result += [
+                self.t_type,
+            ]
+            if self.t_type.value == BASE_OPTIONS[1]:
+                result += [
+                    self.t_measure_1
+                ]
+            
+            elif self.t_type.value == BASE_OPTIONS[2]:
+                result += [
+                    self.t_measure_1,
+                    self.t_measure_2
+                ]
+
+        result += [
             self.csv_directory,
             self.csv_file_name,
             self.metadata_field_barcode,
@@ -386,25 +603,28 @@ Enter the sequence that represents barcoding reads of an empty vector""",
             )
         )
 
-        calledbarcodes, quality_scores = self.callonebarcode(
-            measurements_for_calls,
-            measurements,
-            self.input_object_name.value,
-            self.ncycles.value,
-            objectcount,
-        )
+        if self.n_colors.value == ENCODING_TYPES[0]:
+            calledbarcodes, quality_scores = self.callonehotbarcode(
+                measurements_for_calls,
+                measurements,
+                self.input_object_name.value,
+                self.ncycles.value,
+                objectcount,
+            )
+        else:
+            TODO
 
         workspace.measurements.add_measurement(
             self.input_object_name.value,
             "_".join([C_CALL_BARCODES, "BarcodeCalled"]),
             calledbarcodes,
         )
-
-        workspace.measurements.add_measurement(
-            self.input_object_name.value,
-            "_".join([C_CALL_BARCODES, "MeanQualityScore"]),
-            quality_scores,
-        )
+        if self.n_colors.value == ENCODING_TYPES[0]:
+            workspace.measurements.add_measurement(
+                self.input_object_name.value,
+                "_".join([C_CALL_BARCODES, "MeanQualityScore"]),
+                quality_scores,
+            )
 
         barcodes = self.barcodeset(
             self.metadata_field_barcode.value, self.metadata_field_tag.value
@@ -519,7 +739,7 @@ Enter the sequence that represents barcoding reads of an empty vector""",
                         measurementdict[parsed_cycle].update({eachmeas: parsed_base})
         return measurementdict
 
-    def callonebarcode(
+    def callonehotbarcode(
         self, measurementdict, measurements, object_name, ncycles, objectcount
     ):
 
@@ -629,12 +849,15 @@ Enter the sequence that represents barcoding reads of an empty vector""",
                 "_".join([C_CALL_BARCODES, "MatchedTo_Score"]),
                 cellprofiler_core.constants.measurement.COLTYPE_FLOAT,
             ),
-            (
-                input_object_name,
-                "_".join([C_CALL_BARCODES, "MeanQualityScore"]),
-                cellprofiler_core.constants.measurement.COLTYPE_FLOAT,
-            ),
         ]
+        if self.n_colors.value == ENCODING_TYPES[0]:
+            result += [
+                (
+                    input_object_name,
+                    "_".join([C_CALL_BARCODES, "MeanQualityScore"]),
+                    cellprofiler_core.constants.measurement.COLTYPE_FLOAT,
+                ),
+            ]
 
         return result
 
@@ -646,14 +869,17 @@ Enter the sequence that represents barcoding reads of an empty vector""",
 
     def get_measurements(self, pipeline, object_name, category):
         if object_name == self.input_object_name and category == C_CALL_BARCODES:
-            return [
+            result = [
                 "BarcodeCalled",
                 "MatchedTo_Barcode",
                 "MatchedTo_ID",
                 "MatchedTo_GeneCode",
                 "MatchedTo_Score",
-                "MeanQualityScore",
             ]
+            if self.n_colors.value == ENCODING_TYPES[0]:
+                result.append("MeanQualityScore")
+
+            return result
 
         elif object_name == object_name == "Image":
             return [
@@ -662,3 +888,12 @@ Enter the sequence that represents barcoding reads of an empty vector""",
             ]
 
         return []
+
+    def upgrade_settings(self, setting_values, variable_revision_number, module_name):
+        if variable_revision_number == 1:
+            setting_values += [ENCODING_TYPES[0]]  
+            setting_values += [BASE_OPTIONS[2]] + ['AreaShape_Area']*2 #A
+            setting_values += [BASE_OPTIONS[1]] + ['AreaShape_Area']*2 #C
+            setting_values += [BASE_OPTIONS[0]] + ['AreaShape_Area']*2 #G
+            setting_values += [BASE_OPTIONS[1]] + ['AreaShape_Area']*2 #T
+            variable_revision_number = 2
