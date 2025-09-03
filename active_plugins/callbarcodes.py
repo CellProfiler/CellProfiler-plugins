@@ -593,10 +593,6 @@ No other channel formats are available at this time, though you are free to open
             self.input_object_name.value
         )
 
-        measurements_for_calls = self.getallbarcodemeasurements(
-            listofmeasurements, self.ncycles.value, self.cycle1measure.value
-        )
-
         objectcount = len(
             measurements.get_current_measurement(
                 self.input_object_name.value, listofmeasurements[0]
@@ -604,6 +600,9 @@ No other channel formats are available at this time, though you are free to open
         )
 
         if self.n_colors.value == ENCODING_TYPES[0]:
+            measurements_for_calls = self.getallonehotbarcodemeasurements(
+                listofmeasurements, self.ncycles.value, self.cycle1measure.value
+            )
             calledbarcodes, quality_scores = self.callonehotbarcode(
                 measurements_for_calls,
                 measurements,
@@ -722,7 +721,7 @@ No other channel formats are available at this time, though you are free to open
 
         figure.subplot_table(0, 0, statistics)
 
-    def getallbarcodemeasurements(self, measurements, ncycles, examplemeas):
+    def getallonehotbarcodemeasurements(self, measurements, ncycles, examplemeas):
         stem = re.split("Cycle", examplemeas)[0]
         measurementdict = {}
         for eachmeas in measurements:
