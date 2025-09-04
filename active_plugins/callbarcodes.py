@@ -557,7 +557,10 @@ No other channel formats are available at this time, though you are free to open
                 self.csv_file_name,
             )
         
-        #TODO - add check for base orders being unique
+        if self.n_colors.value == ENCODING_TYPES[1]:
+            orders = [self.a_order.value, self.c_order.value, self.g_order.value, self.t_order.value]
+            if len(list(set(orders))) != 4:
+                raise cellprofiler_core.setting.ValidationError("A's, C's, G's, and T's call order must all be unique (one each 'First', 'Second', 'Third', and 'Fourth')",self.a_order)
 
     @property
     def csv_path(self):
@@ -766,6 +769,22 @@ No other channel formats are available at this time, though you are free to open
         figure.set_subplots((1, 1))
 
         figure.subplot_table(0, 0, statistics)
+
+    def getallcyclebarcodemeasurements(self, measurements, ncycles, examplemeas):
+        measurementdict = {}
+        cycle_string = re.search("Cycle.*[0-9]{1,2}",examplemeas).group()
+        for cycle in range(1,ncycles+1):
+            if cycle <10:
+                updated_cycle_string_with_pad = re.sub("[0-9]{1,2}",f"{cycle:02d}",cycle_string)
+                updated_full_measurement = examplemeas.replace(cycle_string,updated_cycle_string_with_pad)
+                if updated_full_measurement in measurements:
+                    measurementdict[cycle] = updated_full_measurement
+            updated_cycle_string_no_pad = re.sub("[0-9]{1,2}",f"{cycle}",cycle_string)
+            updated_full_measurement = examplemeas.replace(cycle_string,updated_cycle_string_no_pad)
+            if updated_full_measurement in measurements:
+                measurementdict[cycle] = updated_full_measurement
+
+        return measurementdict
 
     def getallonehotbarcodemeasurements(self, measurements, ncycles, examplemeas):
         stem = re.split("Cycle", examplemeas)[0]
