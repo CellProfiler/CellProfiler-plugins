@@ -90,17 +90,16 @@ C_CALL_BARCODES = "Barcode"
 
 ENCODING_TYPES = ["One Hot Exponentially Multiplexed (ie 4-color SBS/ISS)", "Exponentially Multiplexed (SBS/ISS only)"]
 
-BASE_OPTIONS = ["Dark", "Single channel", "Dual channel"]
+BASE_MEASUREMENT_DESCRIPTION = "Select the {YYY} measurement indicating that {ZZZ} is encoded"
 
-BASE_DESCRIPTION = "Select how {ZZZ} is encoded - by a dark base, a single channel, or multiple channels"
+BASE_BOOLEAN_DESCRIPTION = "Does a positive value here mean the base SHOULD be called {ZZZ}?"
 
-BASE_MEASUREMENT_DESCRIPTION = "Select the {YYY} measurement indicating that *{ZZZ}* is encoded"
+BASE_BOOLEAN_LONG_DESCRIPTION = "Select *Yes* if this measurement is *inclusive* (ie if this measurement is above zero, this is all or part of the information that indicates the base SHOULD be called); Select *No* if this measurement is *exclusive* (if this measurement is above zero, this is all or part of the information that indicates the base SHOULD NOT be called)"
 
-BASE_ORDER_OPTION = ["First", "Second", "Third", "Fourth"]
+# The number of settings per metric
+METRIC_SETTING_COUNT = 3
 
-BASE_ORDER_DESCRIPTION = "Select if {ZZZ} should be called first, second, third, or fourth"
-
-BASE_ORDER_LONG_DESCRIPTION = "This module works by calling each base sequentially - this is the easiest way to handle combinatorial calling. Base calls which requires two bases (ie 488 and 568) should be done before base calls which require one base, which should be done before any dark base. Unexpected results may occur if this order is not followed."
+FIXED_SETTING_COUNT = 14
 
 class CallBarcodes(cellprofiler_core.module.Module):
 
@@ -246,163 +245,92 @@ No other channel formats are available at this time, though you are free to open
             ),
         )
 
-        self.a_type = cellprofiler_core.setting.choice.Choice(
-            "Is A the dark base, a single channel base, or a dual-channel base?",
-            value=BASE_OPTIONS[2],
-            choices=BASE_OPTIONS,
-            doc=BASE_DESCRIPTION.format(
-                **{"ZZZ": "A"}
-            ),
-        )
+        self.base_measurements = {"A":[], "C":[], "G":[], "T":[]}
 
-        self.a_order = cellprofiler_core.setting.choice.Choice(
-            BASE_ORDER_DESCRIPTION.format(
-                **{"ZZZ": "A"}
-            ),
-            value=BASE_ORDER_OPTION[0],
-            choices=BASE_ORDER_OPTION,
-            doc=BASE_ORDER_LONG_DESCRIPTION,
-        )
+        self.add_measurement(base="A", removable=False)
 
-        self.a_measure_1 = cellprofiler_core.setting.Measurement(
+        self.add_button_a = cellprofiler_core.setting.do_something.DoSomething("", "Add another measurement for calling A", self.add_measurement,"A")
+
+        self.divider_1 = cellprofiler_core.setting.Divider(line=True)
+
+        self.add_measurement(base="C", removable=False)
+
+        self.add_button_c = cellprofiler_core.setting.do_something.DoSomething("", "Add another measurement for calling C", self.add_measurement,"C")
+
+        self.divider_2 = cellprofiler_core.setting.Divider(line=True)
+
+        self.add_measurement(base="G", removable=False)
+
+        self.add_button_g = cellprofiler_core.setting.do_something.DoSomething("", "Add another measurement for calling G", self.add_measurement,"G")
+
+        self.divider_3 = cellprofiler_core.setting.Divider(line=True)
+    
+        self.add_measurement(base="T", removable=False)
+
+        self.add_button_t = cellprofiler_core.setting.do_something.DoSomething("", "Add another measurement for calling T", self.add_measurement,"T")
+
+
+    def add_measurement(self, base, removable=True):
+        group = cellprofiler_core.setting.SettingsGroup()
+        group.removable = removable
+        group.append("base",
+                     cellprofiler_core.setting.choice.Choice(
+                         'Base we are currently calling',
+                         value = base,
+                         choices= [base],
+                         doc="Base we are currently calling"
+                     )
+        )
+        if removable:
+            YYY="next"
+        else:
+            YYY="first"
+        group.append(
+            "measurement_name",
+            cellprofiler_core.setting.Measurement(
             BASE_MEASUREMENT_DESCRIPTION.format(
-                **{"YYY":"first","ZZZ": "A"}
+                **{"YYY":YYY,"ZZZ": base}
             ),
             self.input_object_name.get_value,
             "AreaShape_Area",
             doc=BASE_MEASUREMENT_DESCRIPTION.format(
-                **{"YYY":"first","ZZZ": "A"}
+                **{"YYY":YYY,"ZZZ": base}
             ),
+            )
         )
 
-        self.a_measure_2 = cellprofiler_core.setting.Measurement(
-            BASE_MEASUREMENT_DESCRIPTION.format(
-                **{"YYY":"second","ZZZ": "A"}
-            ),
-            self.input_object_name.get_value,
-            "AreaShape_Area",
-            doc=BASE_MEASUREMENT_DESCRIPTION.format(
-                **{"YYY":"second","ZZZ": "A"}
-            ),
+        group.append(
+            "base_boolean",
+            cellprofiler_core.setting.Binary(
+                BASE_BOOLEAN_DESCRIPTION.format(**{"ZZZ":base}),
+                True,
+                doc = BASE_BOOLEAN_LONG_DESCRIPTION
+            )
         )
 
-        self.c_type = cellprofiler_core.setting.choice.Choice(
-            "Is C the dark base, a single channel base, or a dual-channel base?",
-            value=BASE_OPTIONS[1],
-            choices=BASE_OPTIONS,
-            doc=BASE_DESCRIPTION.format(
-                **{"ZZZ": "C"}
-            ),
-        )
-        self.c_order = cellprofiler_core.setting.choice.Choice(
-            BASE_ORDER_DESCRIPTION.format(
-                **{"ZZZ": "C"}
-            ),
-            value=BASE_ORDER_OPTION[1],
-            choices=BASE_ORDER_OPTION,
-            doc=BASE_ORDER_LONG_DESCRIPTION,
-        )
+        if removable:
+            group.append(
+                "remover",
+                cellprofiler_core.setting.do_something.RemoveSettingButton("", "Remove this image", self.base_measurements[base], group),
+            )
 
-        self.c_measure_1 = cellprofiler_core.setting.Measurement(
-            BASE_MEASUREMENT_DESCRIPTION.format(
-                **{"YYY":"first","ZZZ": "C"}
-            ),
-            self.input_object_name.get_value,
-            "AreaShape_Area",
-            doc=BASE_MEASUREMENT_DESCRIPTION.format(
-                **{"YYY":"first","ZZZ": "C"}
-            ),
-        )
+        self.base_measurements[base].append(group)
 
-        self.c_measure_2 = cellprofiler_core.setting.Measurement(
-            BASE_MEASUREMENT_DESCRIPTION.format(
-                **{"YYY":"second","ZZZ": "C"}
-            ),
-            self.input_object_name.get_value,
-            "AreaShape_Area",
-            doc=BASE_MEASUREMENT_DESCRIPTION.format(
-                **{"YYY":"second","ZZZ": "C"}
-            ),
-        )
 
-        self.g_type = cellprofiler_core.setting.choice.Choice(
-            "Is G the dark base, a single channel base, or a dual-channel base?",
-            value=BASE_OPTIONS[0],
-            choices=BASE_OPTIONS,
-            doc=BASE_DESCRIPTION.format(
-                **{"ZZZ": "G"}
-            ),
-        )
-        self.g_order = cellprofiler_core.setting.choice.Choice(
-            BASE_ORDER_DESCRIPTION.format(
-                **{"ZZZ": "G"}
-            ),
-            value=BASE_ORDER_OPTION[3],
-            choices=BASE_ORDER_OPTION,
-            doc=BASE_ORDER_LONG_DESCRIPTION,
-        )
-        self.g_measure_1 = cellprofiler_core.setting.Measurement(
-            BASE_MEASUREMENT_DESCRIPTION.format(
-                **{"YYY":"first","ZZZ": "G"}
-            ),
-            self.input_object_name.get_value,
-            "AreaShape_Area",
-            doc=BASE_MEASUREMENT_DESCRIPTION.format(
-                **{"YYY":"first","ZZZ": "G"}
-            ),
-        )
-
-        self.g_measure_2 = cellprofiler_core.setting.Measurement(
-            BASE_MEASUREMENT_DESCRIPTION.format(
-                **{"YYY":"second","ZZZ": "G"}
-            ),
-            self.input_object_name.get_value,
-            "AreaShape_Area",
-            doc=BASE_MEASUREMENT_DESCRIPTION.format(
-                **{"YYY":"second","ZZZ": "G"}
-            ),
-        )
-
-        self.t_type = cellprofiler_core.setting.choice.Choice(
-            "Is T the dark base, a single channel base, or a dual-channel base?",
-            value=BASE_OPTIONS[1],
-            choices=BASE_OPTIONS,
-            doc=BASE_DESCRIPTION.format(
-                **{"ZZZ": "T"}
-            ),
-        )
-        self.t_order = cellprofiler_core.setting.choice.Choice(
-            BASE_ORDER_DESCRIPTION.format(
-                **{"ZZZ": "T"}
-            ),
-            value=BASE_ORDER_OPTION[2],
-            choices=BASE_ORDER_OPTION,
-            doc=BASE_ORDER_LONG_DESCRIPTION,
-        )
-        self.t_measure_1 = cellprofiler_core.setting.Measurement(
-            BASE_MEASUREMENT_DESCRIPTION.format(
-                **{"YYY":"first","ZZZ": "T"}
-            ),
-            self.input_object_name.get_value,
-            "AreaShape_Area",
-            doc=BASE_MEASUREMENT_DESCRIPTION.format(
-                **{"YYY":"first","ZZZ": "T"}
-            ),
-        )
-
-        self.t_measure_2 = cellprofiler_core.setting.Measurement(
-            BASE_MEASUREMENT_DESCRIPTION.format(
-                **{"YYY":"second","ZZZ": "T"}
-            ),
-            self.input_object_name.get_value,
-            "AreaShape_Area",
-            doc=BASE_MEASUREMENT_DESCRIPTION.format(
-                **{"YYY":"second","ZZZ": "T"}
-            ),
-        )
+    def prepare_settings(self, setting_values):
+        value_count = len(setting_values)
+        assert (value_count - FIXED_SETTING_COUNT) % METRIC_SETTING_COUNT == 0
+        bases_encountered = []
+        for x in range(FIXED_SETTING_COUNT,value_count,METRIC_SETTING_COUNT):
+            print(x,setting_values[x])
+            if setting_values[x] not in bases_encountered:
+                #don't add an "extra" setting for the first one of each base, added in create_settings
+                bases_encountered.append(setting_values[x])
+            else:
+                self.add_measurement(base=setting_values[x])
 
     def settings(self):
-        return [
+        result = [
             self.ncycles,
             self.input_object_name,
             self.cycle1measure,
@@ -417,23 +345,16 @@ No other channel formats are available at this time, though you are free to open
             self.has_empty_vector_barcode,
             self.empty_vector_barcode_sequence,
             self.n_colors,
-            self.a_type,
-            self.a_order,
-            self.a_measure_1,
-            self.a_measure_2,
-            self.c_type,
-            self.c_order,
-            self.c_measure_1,
-            self.c_measure_2,
-            self.g_type,
-            self.g_order,
-            self.g_measure_1,
-            self.g_measure_2,
-            self.t_type,
-            self.t_order,
-            self.t_measure_1,
-            self.t_measure_2,
         ]
+
+        for eachbase in self.base_measurements.values():
+            for measurement in eachbase:
+                result += [
+                    measurement.base,
+                    measurement.measurement_name,
+                    measurement.base_boolean,
+                ]
+        return result
 
     def visible_settings(self):
         result = [
@@ -445,62 +366,17 @@ No other channel formats are available at this time, though you are free to open
             self.cycle1measure
             ]
         else:
-            result += [
-                self.a_type,
-                self.a_order,
-            ]
-            if self.a_type.value == BASE_OPTIONS[1]:
-                result += [
-                    self.a_measure_1
-                ]
-            
-            elif self.a_type.value == BASE_OPTIONS[2]:
-                result += [
-                    self.a_measure_1,
-                    self.a_measure_2
-                ]
-            result += [
-                self.c_type,
-                self.c_order,
-            ]
-            if self.c_type.value == BASE_OPTIONS[1]:
-                result += [
-                    self.c_measure_1
-                ]
-            
-            elif self.c_type.value == BASE_OPTIONS[2]:
-                result += [
-                    self.c_measure_1,
-                    self.c_measure_2
-                ]
-            result += [
-                self.g_type,
-                self.g_order,
-            ]
-            if self.g_type.value == BASE_OPTIONS[1]:
-                result += [
-                    self.g_measure_1
-                ]
-            
-            elif self.g_type.value == BASE_OPTIONS[2]:
-                result += [
-                    self.g_measure_1,
-                    self.g_measure_2
-                ]
-            result += [
-                self.t_type,
-                self.t_order,
-            ]
-            if self.t_type.value == BASE_OPTIONS[1]:
-                result += [
-                    self.t_measure_1
-                ]
-            
-            elif self.t_type.value == BASE_OPTIONS[2]:
-                result += [
-                    self.t_measure_1,
-                    self.t_measure_2
-                ]
+            add_buttons = {"A":[self.add_button_a, self.divider_1], "C":[self.add_button_c, self.divider_2],
+                           "G":[self.add_button_g, self.divider_3], "T":[self.add_button_t]}
+            for base in self.base_measurements.keys():
+                for base_meas in self.base_measurements[base]:
+                    result += [
+                        base_meas.measurement_name,
+                        base_meas.base_boolean
+                    ]
+                    if base_meas.removable:
+                        result += [base_meas.remover]
+                result += add_buttons[base]
 
         result += [
             self.csv_directory,
@@ -557,10 +433,6 @@ No other channel formats are available at this time, though you are free to open
                 self.csv_file_name,
             )
         
-        if self.n_colors.value == ENCODING_TYPES[1]:
-            orders = [self.a_order.value, self.c_order.value, self.g_order.value, self.t_order.value]
-            if len(list(set(orders))) != 4:
-                raise cellprofiler_core.setting.ValidationError("A's, C's, G's, and T's call order must all be unique (one each 'First', 'Second', 'Third', and 'Fourth')",self.a_order)
 
     @property
     def csv_path(self):
@@ -570,8 +442,6 @@ No other channel formats are available at this time, though you are free to open
 
     def open_csv(self, do_not_cache=False):
         """Open the csv file or URL, returning a file descriptor"""
-
-        print(f"self.csv_path: {self.csv_path}")
 
         if cellprofiler_core.preferences.is_url_path(self.csv_path):
             if self.csv_path not in self.header_cache:
@@ -660,7 +530,13 @@ No other channel formats are available at this time, though you are free to open
                 objectcount,
             )
         else:
-            TODO
+
+            calledbarcodes = self.calloneexpISSbarcode(
+                self.base_measurements.value,
+                measurements,
+                self.input_object_name.value,
+                self.ncycles.value,
+                objectcount)
 
         workspace.measurements.add_measurement(
             self.input_object_name.value,
@@ -769,6 +645,29 @@ No other channel formats are available at this time, though you are free to open
         figure.set_subplots((1, 1))
 
         figure.subplot_table(0, 0, statistics)
+
+    def calloneexpISSbarcode(self, calling_setting_dict, measurements, 
+                             object_name, ncycles,objectcount):
+        def first(x):
+           return x[0][0]
+        barcodes = numpy.zeros(objectcount,dtype="str")
+        call_order_dict = {}
+        for key in calling_setting_dict.keys():
+            base_dict = calling_setting_dict[key]
+            call_order_dict[base_dict["order"]]={"base":key, "nmetrics":base_dict["type"],
+                                                 1:False, 2:False}
+            if base_dict["type"]>0:
+                for eachmeas in range(1,base_dict["type"]+1):
+                    all_cycle_measurements = self.getallcyclebarcodemeasurements(measurements,ncycles,base_dict[eachmeas])
+                    if list(all_cycle_measurements.keys()) != range(1,ncycles+1):
+                        raise RuntimeError(f"CellProfiler could not find all the cycle measurements required which should match {base_dict[eachmeas]}. Please check that these measurements exist and are named properly.")
+                    call_order_dict[base_dict["order"]][eachmeas] = all_cycle_measurements
+        for cycle in range(1,ncycles+1):
+            base_array = numpy.zeros(objectcount,dtype="str")
+            for base_order in range (1,5):
+                pass
+        #numpy.apply_along_axis(first,1,c.reshape([5,1]))
+        return barcodes
 
     def getallcyclebarcodemeasurements(self, measurements, ncycles, examplemeas):
         measurementdict = {}
@@ -956,8 +855,8 @@ No other channel formats are available at this time, though you are free to open
     def upgrade_settings(self, setting_values, variable_revision_number, module_name):
         if variable_revision_number == 1:
             setting_values += [ENCODING_TYPES[0]]  
-            setting_values += [BASE_OPTIONS[2], BASE_ORDER_OPTION[0]] + ['AreaShape_Area']*2 #A
-            setting_values += [BASE_OPTIONS[1], BASE_ORDER_OPTION[1]] + ['AreaShape_Area']*2 #C
-            setting_values += [BASE_OPTIONS[0], BASE_ORDER_OPTION[3]] + ['AreaShape_Area']*2 #G
-            setting_values += [BASE_OPTIONS[1], BASE_ORDER_OPTION[2]] + ['AreaShape_Area']*2 #T
+            setting_values += ["A", "AreaShape_Area", True] #A
+            setting_values += ["C", "AreaShape_Area", True] #C
+            setting_values += ["G", "AreaShape_Area", True] #G
+            setting_values += ["T", "AreaShape_Area", True] #T
             variable_revision_number = 2
