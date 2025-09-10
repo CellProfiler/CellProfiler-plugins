@@ -322,7 +322,6 @@ No other channel formats are available at this time, though you are free to open
         assert (value_count - FIXED_SETTING_COUNT) % METRIC_SETTING_COUNT == 0
         bases_encountered = []
         for x in range(FIXED_SETTING_COUNT,value_count,METRIC_SETTING_COUNT):
-            print(x,setting_values[x])
             if setting_values[x] not in bases_encountered:
                 #don't add an "extra" setting for the first one of each base, added in create_settings
                 bases_encountered.append(setting_values[x])
@@ -529,10 +528,22 @@ No other channel formats are available at this time, though you are free to open
                 self.ncycles.value,
                 objectcount,
             )
+
+            workspace.measurements.add_measurement(
+                self.input_object_name.value,
+                "_".join([C_CALL_BARCODES, "MeanQualityScore"]),
+                quality_scores,
+            )
+
+            imagemeanquality = numpy.mean(quality_scores)
+
+            workspace.measurements.add_measurement(
+                "Image", "_".join([C_CALL_BARCODES, "MeanQualityScore"]), imagemeanquality
+            )
         else:
 
             calledbarcodes = self.calloneexpISSbarcode(
-                self.base_measurements.value,
+                self.base_measurements,
                 measurements,
                 self.input_object_name.value,
                 self.ncycles.value,
@@ -543,12 +554,6 @@ No other channel formats are available at this time, though you are free to open
             "_".join([C_CALL_BARCODES, "BarcodeCalled"]),
             calledbarcodes,
         )
-        if self.n_colors.value == ENCODING_TYPES[0]:
-            workspace.measurements.add_measurement(
-                self.input_object_name.value,
-                "_".join([C_CALL_BARCODES, "MeanQualityScore"]),
-                quality_scores,
-            )
 
         barcodes = self.barcodeset(
             self.metadata_field_barcode.value, self.metadata_field_tag.value
@@ -589,12 +594,6 @@ No other channel formats are available at this time, though you are free to open
 
         workspace.measurements.add_measurement(
             "Image", "_".join([C_CALL_BARCODES, "MeanBarcodeScore"]), imagemeanscore
-        )
-
-        imagemeanquality = numpy.mean(quality_scores)
-
-        workspace.measurements.add_measurement(
-            "Image", "_".join([C_CALL_BARCODES, "MeanQualityScore"]), imagemeanquality
         )
 
         workspace.measurements.add_measurement(
@@ -648,39 +647,54 @@ No other channel formats are available at this time, though you are free to open
 
     def calloneexpISSbarcode(self, calling_setting_dict, measurements, 
                              object_name, ncycles,objectcount):
-        def first(x):
-           return x[0][0]
-        barcodes = numpy.zeros(objectcount,dtype="str")
-        call_order_dict = {}
-        for key in calling_setting_dict.keys():
-            base_dict = calling_setting_dict[key]
-            call_order_dict[base_dict["order"]]={"base":key, "nmetrics":base_dict["type"],
-                                                 1:False, 2:False}
-            if base_dict["type"]>0:
-                for eachmeas in range(1,base_dict["type"]+1):
-                    all_cycle_measurements = self.getallcyclebarcodemeasurements(measurements,ncycles,base_dict[eachmeas])
-                    if list(all_cycle_measurements.keys()) != range(1,ncycles+1):
-                        raise RuntimeError(f"CellProfiler could not find all the cycle measurements required which should match {base_dict[eachmeas]}. Please check that these measurements exist and are named properly.")
-                    call_order_dict[base_dict["order"]][eachmeas] = all_cycle_measurements
+        def call_by_column(base_array):
+            base_order = ['A','C','G','T']
+            if sum(base_array) != 1:
+                return 'X'
+            else:
+                return base_order[base_array.argmax()]
+        call_bool_dict = {}
+        for base in calling_setting_dict.keys():
+            base_list = calling_setting_dict[base]
+            call_bool_dict[base]={}
+            for eachmeas in base_list:
+                all_cycle_measurements = self.getallcyclebarcodemeasurements(measurements,ncycles,eachmeas.measurement_name.value, object_name)
+                if list(all_cycle_measurements.keys()) != list(range(1,ncycles+1)):
+                    raise RuntimeError(f"CellProfiler could not find all the cycle measurements required which should match {eachmeas.measurement_name}. Please check that these measurements exist and are named properly.")
+                if eachmeas.base_boolean.value not in call_bool_dict[base].keys():
+                    call_bool_dict[base][eachmeas.base_boolean.value] = [all_cycle_measurements]
+                else:
+                    call_bool_dict[base][eachmeas.base_boolean.value] += [all_cycle_measurements]
+        full_base_array = numpy.zeros(objectcount,dtype="str")
+        base_list = ["A", "C", "G", "T"]
         for cycle in range(1,ncycles+1):
-            base_array = numpy.zeros(objectcount,dtype="str")
-            for base_order in range (1,5):
-                pass
-        #numpy.apply_along_axis(first,1,c.reshape([5,1]))
-        return barcodes
+            which_base_array = numpy.zeros([objectcount,4])
+            for base_order in range (4):
+                this_base_array = numpy.ones(objectcount)
+                base = call_bool_dict[base_list[base_order]]
+                if True in base.keys():
+                    for eachmeas in base[True]:
+                        this_base_array = this_base_array * (measurements.get_current_measurement(object_name,eachmeas[cycle]) > 0)
+                if False in base.keys():
+                    for eachmeas in base[False]:
+                        this_base_array = this_base_array * ~(measurements.get_current_measurement(object_name,eachmeas[cycle]) > 0)
+                which_base_array[:,base_order] = this_base_array
+            full_base_array = numpy.char.add(full_base_array,numpy.apply_along_axis(call_by_column,1,which_base_array)) 
+        return list(full_base_array)
 
-    def getallcyclebarcodemeasurements(self, measurements, ncycles, examplemeas):
+    def getallcyclebarcodemeasurements(self, measurements, ncycles, examplemeas, object_name):
         measurementdict = {}
+        obj_measurement_columns = [x[1] for x in measurements.get_measurement_columns() if x[0]=='Foci']
         cycle_string = re.search("Cycle.*[0-9]{1,2}",examplemeas).group()
         for cycle in range(1,ncycles+1):
             if cycle <10:
                 updated_cycle_string_with_pad = re.sub("[0-9]{1,2}",f"{cycle:02d}",cycle_string)
                 updated_full_measurement = examplemeas.replace(cycle_string,updated_cycle_string_with_pad)
-                if updated_full_measurement in measurements:
+                if updated_full_measurement in obj_measurement_columns:
                     measurementdict[cycle] = updated_full_measurement
             updated_cycle_string_no_pad = re.sub("[0-9]{1,2}",f"{cycle}",cycle_string)
             updated_full_measurement = examplemeas.replace(cycle_string,updated_cycle_string_no_pad)
-            if updated_full_measurement in measurements:
+            if updated_full_measurement in obj_measurement_columns:
                 measurementdict[cycle] = updated_full_measurement
 
         return measurementdict
@@ -860,3 +874,4 @@ No other channel formats are available at this time, though you are free to open
             setting_values += ["G", "AreaShape_Area", True] #G
             setting_values += ["T", "AreaShape_Area", True] #T
             variable_revision_number = 2
+        return setting_values, variable_revision_number
