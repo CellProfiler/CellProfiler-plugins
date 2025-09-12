@@ -923,7 +923,8 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
                     try:
                         y_data, flows, *_ = self.current_model.eval(
                             x_data,
-                            # channel_axis=,
+                            # channel_axis=None,
+                            # channels=channels,
                             z_axis=z_axis,
                             do_3D=self.do_3D.value,
                             anisotropy=anisotropy,
@@ -944,8 +945,8 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
                             self.current_model = None
                             self.current_model_params = None
 
-            if self.remove_edge_masks:
-                y_data = utils.remove_edge_masks(y_data)
+                if self.remove_edge_masks:
+                    y_data = utils.remove_edge_masks(y_data)
 
         else:
             if self.docker_or_python.value == "Docker":
