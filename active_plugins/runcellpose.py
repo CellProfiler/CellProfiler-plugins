@@ -1049,10 +1049,11 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
                 prob_map = numpy.clip((rescale_prob_map - prob_map01) / (prob_map99 - prob_map01), a_min=0, a_max=1)
             # Flows come out sized relative to CellPose's inbuilt model size.
             # We need to slightly resize to match the original image.
-            size_corrected = skimage.transform.resize(prob_map, y_data.shape)
+            size_corrected = skimage.transform.resize(prob_map, x_data.shape)
             prob_image = Image(
                 size_corrected,
                 parent_image=x.parent_image,
+                mask=x.mask,
                 convert=False,
                 dimensions=len(size_corrected.shape),
             )
