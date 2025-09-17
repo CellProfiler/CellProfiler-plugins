@@ -29,12 +29,6 @@ nosetests.xml
 # Translations
 *.mo
 
-# Mr Developer
-.mr.developer.cfg
-.project
-.pydevproject
-.idea
-
 *.egg-info/
 *.iml
 *.pyc
@@ -46,7 +40,6 @@ build/
 dist/
 frozen_version.py
 plugins/
-src/
 
 #mac
 .DS_Store

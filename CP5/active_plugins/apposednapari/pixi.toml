@@ -1,0 +1,17 @@
+[workspace]
+authors = ["Nodar Gogoberidze <gnodar01@gmail.com>"]
+channels = ["conda-forge"]
+name = "apposednapari"
+platforms = ["osx-64"]
+version = "0.1.0"
+
+[tasks]
+
+[dependencies]
+python = ">=3.10"
+napari = ">=0.6.4,<0.7"
+appose = ">=0.7.0,<0.8"
+pyqt = "*"
+
+[pypi-dependencies]
+#apposednapari = { path = ".", editable = true }
