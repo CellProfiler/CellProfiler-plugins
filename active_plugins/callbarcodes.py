@@ -88,12 +88,24 @@ YES          YES           YES
 
 C_CALL_BARCODES = "Barcode"
 
+ENCODING_TYPES = ["One Hot Exponentially Multiplexed (ie 4-color SBS/ISS)", "Exponentially Multiplexed (SBS/ISS only)"]
+
+BASE_MEASUREMENT_DESCRIPTION = "Select the {YYY} measurement indicating that {ZZZ} is encoded"
+
+BASE_BOOLEAN_DESCRIPTION = "Does a positive value here mean the base SHOULD be called {ZZZ}?"
+
+BASE_BOOLEAN_LONG_DESCRIPTION = "Select *Yes* if this measurement is *inclusive* (ie if this measurement is above zero, this is all or part of the information that indicates the base SHOULD be called); Select *No* if this measurement is *exclusive* (if this measurement is above zero, this is all or part of the information that indicates the base SHOULD NOT be called)"
+
+# The number of settings per metric
+METRIC_SETTING_COUNT = 3
+
+FIXED_SETTING_COUNT = 14
 
 class CallBarcodes(cellprofiler_core.module.Module):
 
     module_name = "CallBarcodes"
     category = "Data Tools"
-    variable_revision_number = 1
+    variable_revision_number = 2
 
     def create_settings(self):
         self.csv_directory = cellprofiler_core.setting.text.Directory(
@@ -220,8 +232,104 @@ backbone sequence to look out for in every barcoding set).""".format(
 Enter the sequence that represents barcoding reads of an empty vector""",
         )
 
+        self.n_colors = cellprofiler_core.setting.choice.Choice(
+            "What kind of encoding is used here?",
+            value=ENCODING_TYPES[0],
+            choices=ENCODING_TYPES,
+            doc="""\
+Select "*{4COLOR}*" if using a a code where each thing has its own single-letter code 
+and its own channel (such as in SBS 4 color chemistry kit where each channel has its own image). 
+For 2- or 3- color kits SBS/ISS kits, select "*{SBS_OTHER}*" and you will be directed to explain your channel mapping. 
+No other channel formats are available at this time, though you are free to open a GitHub issue or pull request.""".format(
+                **{"4COLOR": ENCODING_TYPES[0],"SBS_OTHER":ENCODING_TYPES[1]}
+            ),
+        )
+
+        self.base_measurements = {"A":[], "C":[], "G":[], "T":[]}
+
+        self.add_measurement(base="A", removable=False)
+
+        self.add_button_a = cellprofiler_core.setting.do_something.DoSomething("", "Add another measurement for calling A", self.add_measurement,"A")
+
+        self.divider_1 = cellprofiler_core.setting.Divider(line=True)
+
+        self.add_measurement(base="C", removable=False)
+
+        self.add_button_c = cellprofiler_core.setting.do_something.DoSomething("", "Add another measurement for calling C", self.add_measurement,"C")
+
+        self.divider_2 = cellprofiler_core.setting.Divider(line=True)
+
+        self.add_measurement(base="G", removable=False)
+
+        self.add_button_g = cellprofiler_core.setting.do_something.DoSomething("", "Add another measurement for calling G", self.add_measurement,"G")
+
+        self.divider_3 = cellprofiler_core.setting.Divider(line=True)
+    
+        self.add_measurement(base="T", removable=False)
+
+        self.add_button_t = cellprofiler_core.setting.do_something.DoSomething("", "Add another measurement for calling T", self.add_measurement,"T")
+
+
+    def add_measurement(self, base, removable=True):
+        group = cellprofiler_core.setting.SettingsGroup()
+        group.removable = removable
+        group.append("base",
+                     cellprofiler_core.setting.choice.Choice(
+                         'Base we are currently calling',
+                         value = base,
+                         choices= [base],
+                         doc="Base we are currently calling"
+                     )
+        )
+        if removable:
+            YYY="next"
+        else:
+            YYY="first"
+        group.append(
+            "measurement_name",
+            cellprofiler_core.setting.Measurement(
+            BASE_MEASUREMENT_DESCRIPTION.format(
+                **{"YYY":YYY,"ZZZ": base}
+            ),
+            self.input_object_name.get_value,
+            "AreaShape_Area",
+            doc=BASE_MEASUREMENT_DESCRIPTION.format(
+                **{"YYY":YYY,"ZZZ": base}
+            ),
+            )
+        )
+
+        group.append(
+            "base_boolean",
+            cellprofiler_core.setting.Binary(
+                BASE_BOOLEAN_DESCRIPTION.format(**{"ZZZ":base}),
+                True,
+                doc = BASE_BOOLEAN_LONG_DESCRIPTION
+            )
+        )
+
+        if removable:
+            group.append(
+                "remover",
+                cellprofiler_core.setting.do_something.RemoveSettingButton("", "Remove this image", self.base_measurements[base], group),
+            )
+
+        self.base_measurements[base].append(group)
+
+
+    def prepare_settings(self, setting_values):
+        value_count = len(setting_values)
+        assert (value_count - FIXED_SETTING_COUNT) % METRIC_SETTING_COUNT == 0
+        bases_encountered = []
+        for x in range(FIXED_SETTING_COUNT,value_count,METRIC_SETTING_COUNT):
+            if setting_values[x] not in bases_encountered:
+                #don't add an "extra" setting for the first one of each base, added in create_settings
+                bases_encountered.append(setting_values[x])
+            else:
+                self.add_measurement(base=setting_values[x])
+
     def settings(self):
-        return [
+        result = [
             self.ncycles,
             self.input_object_name,
             self.cycle1measure,
@@ -235,13 +343,41 @@ Enter the sequence that represents barcoding reads of an empty vector""",
             self.outimage_score_name,
             self.has_empty_vector_barcode,
             self.empty_vector_barcode_sequence,
+            self.n_colors,
         ]
+
+        for eachbase in self.base_measurements.values():
+            for measurement in eachbase:
+                result += [
+                    measurement.base,
+                    measurement.measurement_name,
+                    measurement.base_boolean,
+                ]
+        return result
 
     def visible_settings(self):
         result = [
+            self.n_colors,
             self.ncycles,
-            self.input_object_name,
-            self.cycle1measure,
+            self.input_object_name]
+        if self.n_colors.value == ENCODING_TYPES[0]:
+            result += [
+            self.cycle1measure
+            ]
+        else:
+            add_buttons = {"A":[self.add_button_a, self.divider_1], "C":[self.add_button_c, self.divider_2],
+                           "G":[self.add_button_g, self.divider_3], "T":[self.add_button_t]}
+            for base in self.base_measurements.keys():
+                for base_meas in self.base_measurements[base]:
+                    result += [
+                        base_meas.measurement_name,
+                        base_meas.base_boolean
+                    ]
+                    if base_meas.removable:
+                        result += [base_meas.remover]
+                result += add_buttons[base]
+
+        result += [
             self.csv_directory,
             self.csv_file_name,
             self.metadata_field_barcode,
@@ -295,6 +431,7 @@ Enter the sequence that represents barcoding reads of an empty vector""",
                 % (self.csv_path, e),
                 self.csv_file_name,
             )
+        
 
     @property
     def csv_path(self):
@@ -304,8 +441,6 @@ Enter the sequence that represents barcoding reads of an empty vector""",
 
     def open_csv(self, do_not_cache=False):
         """Open the csv file or URL, returning a file descriptor"""
-
-        print(f"self.csv_path: {self.csv_path}")
 
         if cellprofiler_core.preferences.is_url_path(self.csv_path):
             if self.csv_path not in self.header_cache:
@@ -376,34 +511,48 @@ Enter the sequence that represents barcoding reads of an empty vector""",
             self.input_object_name.value
         )
 
-        measurements_for_calls = self.getallbarcodemeasurements(
-            listofmeasurements, self.ncycles.value, self.cycle1measure.value
-        )
-
         objectcount = len(
             measurements.get_current_measurement(
                 self.input_object_name.value, listofmeasurements[0]
             )
         )
 
-        calledbarcodes, quality_scores = self.callonebarcode(
-            measurements_for_calls,
-            measurements,
-            self.input_object_name.value,
-            self.ncycles.value,
-            objectcount,
-        )
+        if self.n_colors.value == ENCODING_TYPES[0]:
+            measurements_for_calls = self.getallonehotbarcodemeasurements(
+                listofmeasurements, self.ncycles.value, self.cycle1measure.value
+            )
+            calledbarcodes, quality_scores = self.callonehotbarcode(
+                measurements_for_calls,
+                measurements,
+                self.input_object_name.value,
+                self.ncycles.value,
+                objectcount,
+            )
+
+            workspace.measurements.add_measurement(
+                self.input_object_name.value,
+                "_".join([C_CALL_BARCODES, "MeanQualityScore"]),
+                quality_scores,
+            )
+
+            imagemeanquality = numpy.mean(quality_scores)
+
+            workspace.measurements.add_measurement(
+                "Image", "_".join([C_CALL_BARCODES, "MeanQualityScore"]), imagemeanquality
+            )
+        else:
+
+            calledbarcodes = self.calloneexpISSbarcode(
+                self.base_measurements,
+                measurements,
+                self.input_object_name.value,
+                self.ncycles.value,
+                objectcount)
 
         workspace.measurements.add_measurement(
             self.input_object_name.value,
             "_".join([C_CALL_BARCODES, "BarcodeCalled"]),
             calledbarcodes,
-        )
-
-        workspace.measurements.add_measurement(
-            self.input_object_name.value,
-            "_".join([C_CALL_BARCODES, "MeanQualityScore"]),
-            quality_scores,
         )
 
         barcodes = self.barcodeset(
@@ -445,12 +594,6 @@ Enter the sequence that represents barcoding reads of an empty vector""",
 
         workspace.measurements.add_measurement(
             "Image", "_".join([C_CALL_BARCODES, "MeanBarcodeScore"]), imagemeanscore
-        )
-
-        imagemeanquality = numpy.mean(quality_scores)
-
-        workspace.measurements.add_measurement(
-            "Image", "_".join([C_CALL_BARCODES, "MeanQualityScore"]), imagemeanquality
         )
 
         workspace.measurements.add_measurement(
@@ -502,7 +645,61 @@ Enter the sequence that represents barcoding reads of an empty vector""",
 
         figure.subplot_table(0, 0, statistics)
 
-    def getallbarcodemeasurements(self, measurements, ncycles, examplemeas):
+    def calloneexpISSbarcode(self, calling_setting_dict, measurements, 
+                             object_name, ncycles,objectcount):
+        def call_by_column(base_array):
+            base_order = ['A','C','G','T']
+            if sum(base_array) != 1:
+                return 'X'
+            else:
+                return base_order[base_array.argmax()]
+        call_bool_dict = {}
+        for base in calling_setting_dict.keys():
+            base_list = calling_setting_dict[base]
+            call_bool_dict[base]={}
+            for eachmeas in base_list:
+                all_cycle_measurements = self.getallcyclebarcodemeasurements(measurements,ncycles,eachmeas.measurement_name.value, object_name)
+                if list(all_cycle_measurements.keys()) != list(range(1,ncycles+1)):
+                    raise RuntimeError(f"CellProfiler could not find all the cycle measurements required which should match {eachmeas.measurement_name}. Please check that these measurements exist and are named properly.")
+                if eachmeas.base_boolean.value not in call_bool_dict[base].keys():
+                    call_bool_dict[base][eachmeas.base_boolean.value] = [all_cycle_measurements]
+                else:
+                    call_bool_dict[base][eachmeas.base_boolean.value] += [all_cycle_measurements]
+        full_base_array = numpy.zeros(objectcount,dtype="str")
+        base_list = ["A", "C", "G", "T"]
+        for cycle in range(1,ncycles+1):
+            which_base_array = numpy.zeros([objectcount,4])
+            for base_order in range (4):
+                this_base_array = numpy.ones(objectcount)
+                base = call_bool_dict[base_list[base_order]]
+                if True in base.keys():
+                    for eachmeas in base[True]:
+                        this_base_array = this_base_array * (measurements.get_current_measurement(object_name,eachmeas[cycle]) > 0)
+                if False in base.keys():
+                    for eachmeas in base[False]:
+                        this_base_array = this_base_array * ~(measurements.get_current_measurement(object_name,eachmeas[cycle]) > 0)
+                which_base_array[:,base_order] = this_base_array
+            full_base_array = numpy.char.add(full_base_array,numpy.apply_along_axis(call_by_column,1,which_base_array)) 
+        return list(full_base_array)
+
+    def getallcyclebarcodemeasurements(self, measurements, ncycles, examplemeas, object_name):
+        measurementdict = {}
+        obj_measurement_columns = [x[1] for x in measurements.get_measurement_columns() if x[0]=='Foci']
+        cycle_string = re.search("Cycle.*[0-9]{1,2}",examplemeas).group()
+        for cycle in range(1,ncycles+1):
+            if cycle <10:
+                updated_cycle_string_with_pad = re.sub("[0-9]{1,2}",f"{cycle:02d}",cycle_string)
+                updated_full_measurement = examplemeas.replace(cycle_string,updated_cycle_string_with_pad)
+                if updated_full_measurement in obj_measurement_columns:
+                    measurementdict[cycle] = updated_full_measurement
+            updated_cycle_string_no_pad = re.sub("[0-9]{1,2}",f"{cycle}",cycle_string)
+            updated_full_measurement = examplemeas.replace(cycle_string,updated_cycle_string_no_pad)
+            if updated_full_measurement in obj_measurement_columns:
+                measurementdict[cycle] = updated_full_measurement
+
+        return measurementdict
+
+    def getallonehotbarcodemeasurements(self, measurements, ncycles, examplemeas):
         stem = re.split("Cycle", examplemeas)[0]
         measurementdict = {}
         for eachmeas in measurements:
@@ -519,7 +716,7 @@ Enter the sequence that represents barcoding reads of an empty vector""",
                         measurementdict[parsed_cycle].update({eachmeas: parsed_base})
         return measurementdict
 
-    def callonebarcode(
+    def callonehotbarcode(
         self, measurementdict, measurements, object_name, ncycles, objectcount
     ):
 
@@ -629,12 +826,15 @@ Enter the sequence that represents barcoding reads of an empty vector""",
                 "_".join([C_CALL_BARCODES, "MatchedTo_Score"]),
                 cellprofiler_core.constants.measurement.COLTYPE_FLOAT,
             ),
-            (
-                input_object_name,
-                "_".join([C_CALL_BARCODES, "MeanQualityScore"]),
-                cellprofiler_core.constants.measurement.COLTYPE_FLOAT,
-            ),
         ]
+        if self.n_colors.value == ENCODING_TYPES[0]:
+            result += [
+                (
+                    input_object_name,
+                    "_".join([C_CALL_BARCODES, "MeanQualityScore"]),
+                    cellprofiler_core.constants.measurement.COLTYPE_FLOAT,
+                ),
+            ]
 
         return result
 
@@ -646,14 +846,17 @@ Enter the sequence that represents barcoding reads of an empty vector""",
 
     def get_measurements(self, pipeline, object_name, category):
         if object_name == self.input_object_name and category == C_CALL_BARCODES:
-            return [
+            result = [
                 "BarcodeCalled",
                 "MatchedTo_Barcode",
                 "MatchedTo_ID",
                 "MatchedTo_GeneCode",
                 "MatchedTo_Score",
-                "MeanQualityScore",
             ]
+            if self.n_colors.value == ENCODING_TYPES[0]:
+                result.append("MeanQualityScore")
+
+            return result
 
         elif object_name == object_name == "Image":
             return [
@@ -662,3 +865,13 @@ Enter the sequence that represents barcoding reads of an empty vector""",
             ]
 
         return []
+
+    def upgrade_settings(self, setting_values, variable_revision_number, module_name):
+        if variable_revision_number == 1:
+            setting_values += [ENCODING_TYPES[0]]  
+            setting_values += ["A", "AreaShape_Area", True] #A
+            setting_values += ["C", "AreaShape_Area", True] #C
+            setting_values += ["G", "AreaShape_Area", True] #G
+            setting_values += ["T", "AreaShape_Area", True] #T
+            variable_revision_number = 2
+        return setting_values, variable_revision_number
