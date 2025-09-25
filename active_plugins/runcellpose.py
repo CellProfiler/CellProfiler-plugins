@@ -967,10 +967,13 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
             # Save the image to the Docker mounted directory
             skimage.io.imsave(temp_img_path, x_data)
 
-            cmd = [docker_path, 'run', '--rm', '-v', f'{temp_dir}:/data', self.docker_image.value]
+            cmd = [docker_path, 'run', '--rm', '-v', f'{temp_dir}:/data',]
             if self.use_gpu.value:
                 cmd += ['--gpus', 'all']
-            cmd += ['cellpose', '--verbose', '--dir', '/data/img', '--pretrained_model']
+            cmd += [self.docker_image.value, 'cellpose']
+            if self.use_gpu.value:
+                cmd += ['--use_gpu']
+            cmd += ['--verbose', '--dir', '/data/img', '--pretrained_model']
             if self.mode.value !='custom':
                 cmd += [self.mode.value]
             else:
