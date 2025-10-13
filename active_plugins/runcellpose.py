@@ -1137,10 +1137,10 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
         
         # Only display labels when processing 2D data
         x_name = self.x_name.value
-        images = workspace.image_set
-        x = images.get_image(x_name)
+        images = getattr(workspace, "image_set", None)
+        x = images.get_image(x_name) if images is not None else None
 
-        if x.volumetric:
+        if x is not None and getattr(x, "volumetric", False):
             cplabels=None
         else:
             cplabels = [
@@ -1228,5 +1228,6 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
             variable_revision_number = 7
         return setting_values, variable_revision_number
     
+
 
 
