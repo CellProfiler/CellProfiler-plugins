@@ -1,5 +1,4 @@
 import numpy
-import scipy.ndimage
 from cellprofiler_core.image import Image
 from cellprofiler_core.module import Module
 from cellprofiler_core.setting import SettingsGroup, HiddenCount
@@ -15,8 +14,8 @@ class BrightfieldProjectChannels(Module):
     def create_settings(self):
         self.output_image_name = ImageName(
             "Name the output image",
-            "BrightfieldProjected",
-            doc="Enter a name for the resulting projected image."
+            "ProjectionBlue",
+            doc="Enter the name for the projected image."
         )
 
         self.stack_channels = []
@@ -61,53 +60,63 @@ class BrightfieldProjectChannels(Module):
             self.add_stack_channel_cb()
 
     def run(self, workspace):
-        image_list = []
-        for group in self.stack_channels:
+        bright_max = None
+        bright_min = None
+        norm0 = None
+        reference_image = None
+        final_mask = None
+
+        for i, group in enumerate(self.stack_channels):
             img_name = group.image_name.value
-            data = workspace.image_set.get_image(img_name).pixel_data
-            image_list.append(data)
+            if img_name == "None":
+                continue
+                
+            image_obj = workspace.image_set.get_image(img_name)
+            pixels = image_obj.pixel_data.copy()
+            mask = image_obj.mask if image_obj.has_mask else numpy.ones(pixels.shape[:2], bool)
 
-        if not image_list:
-            return
+            if bright_max is None:
+                # Initialization (replicates set_image)
+                reference_image = image_obj
+                bright_max = pixels.copy()
+                bright_min = pixels.copy()
+                norm0 = numpy.mean(pixels)
+                final_mask = mask.copy()
+            else:
+                # Accumulation (replicates accumulate_image for P_BRIGHTFIELD)
+                norm = numpy.mean(pixels)
+                # Normalize pixels relative to the first image
+                rescaled_pixels = pixels * (norm0 / norm) if norm != 0 else pixels
+                
+                # Identify where new pixels are higher/lower
+                max_mask = (bright_max < rescaled_pixels) & mask
+                min_mask = (bright_min > rescaled_pixels) & mask
+                
+                bright_min[min_mask] = rescaled_pixels[min_mask]
+                bright_max[max_mask] = rescaled_pixels[max_mask]
+                
+                # This specific line from your source ensures min follows max if max is updated
+                bright_min[max_mask] = bright_max[max_mask]
+                
+                # Combine masks (replicates P_MASK or standard mask handling)
+                final_mask = final_mask & mask
 
-        stack = numpy.array(image_list)
+        if bright_max is not None:
+            # Replicates provide_image: result = max - min
+            output_pixels = bright_max - bright_min
+            
+            # CRITICAL: Setting parent_image ensures SaveImages/FlagImages works
+            new_image = Image(output_pixels, mask=final_mask, parent_image=reference_image)
+            workspace.image_set.add(self.output_image_name.value, new_image)
 
-        # 1. Local Variance (3x3)
-        def get_cp_variance(img):
-            mean = scipy.ndimage.uniform_filter(img, size=3)
-            sq_mean = scipy.ndimage.uniform_filter(img**2, size=3)
-            return sq_mean - mean**2
-
-        variances = numpy.array([get_cp_variance(img) for img in stack])
-
-        # 2. Gaussian Smoothing (Sigma=1.0)
-        smoothed_variances = numpy.array([
-            scipy.ndimage.gaussian_filter(v, sigma=1.0) for v in variances
-        ])
-
-        # 3. Find best focus indices
-        best_indices = numpy.argmax(smoothed_variances, axis=0)
-
-        # 4. Extract winning pixels
-        height, width = best_indices.shape
-        ii, jj = numpy.ogrid[:height, :width]
-        output_pixels = stack[best_indices, ii, jj]
-
-        # Save to workspace
-        new_image = Image(output_pixels)
-        workspace.image_set.add(self.output_image_name.value, new_image)
-
-        # Store for display
-        if self.show_window:
-            workspace.display_data.output_pixels = output_pixels
+            if self.show_window:
+                workspace.display_data.output_pixels = output_pixels
 
     def display(self, workspace, figure):
-        """Displays the resulting projection in a CellProfiler window."""
-        pixels = workspace.display_data.output_pixels
-        
-        figure.set_subplots((1, 1))
-        # Use sharexy=True so zooming/panning works smoothly
-        figure.subplot_imshow(0, 0, pixels, title=self.output_image_name.value, colormap="gray") #viridis is the default colormap, or fire
+        if hasattr(workspace.display_data, 'output_pixels'):
+            pixels = workspace.display_data.output_pixels
+            figure.set_subplots((1, 1))
+            figure.subplot_imshow(0, 0, pixels, title=self.output_image_name.value, colormap="gray")
 
     def upgrade_settings(self, setting_values, variable_revision_number, module_name):
         return setting_values, variable_revision_number
