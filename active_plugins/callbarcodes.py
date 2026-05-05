@@ -910,5 +910,5 @@ No other channel formats are available at this time, though you are free to open
             setting_values += ["T", "AreaShape_Area", True] #T
             variable_revision_number = 2
         if variable_revision_number == 2:
-            setting_values = setting_values[:14]+["True"]+setting_values[14:]
+            setting_values = setting_values[:14]+["Yes"]+setting_values[14:]
         return setting_values, variable_revision_number
