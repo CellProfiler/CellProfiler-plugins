@@ -99,13 +99,13 @@ BASE_BOOLEAN_LONG_DESCRIPTION = "Select *Yes* if this measurement is *inclusive*
 # The number of settings per metric
 METRIC_SETTING_COUNT = 3
 
-FIXED_SETTING_COUNT = 14
+FIXED_SETTING_COUNT = 15
 
 class CallBarcodes(cellprofiler_core.module.Module):
 
     module_name = "CallBarcodes"
     category = "Data Tools"
-    variable_revision_number = 2
+    variable_revision_number = 3
 
     def create_settings(self):
         self.csv_directory = cellprofiler_core.setting.text.Directory(
@@ -212,6 +212,16 @@ module).""".format(
 *(Used only if the barcode score image is to be retained for later use in the pipeline)*
 
 Enter the name to be given to the barcode score image.""",
+        )
+
+        self.do_library_match = cellprofiler_core.setting.Binary(
+            "Do you want to match to an external library of barcodes?",
+            True,
+            doc="""\
+Select "*{YES}*" to match the result read by CellProfiler to a provided barcode list.
+Select "*{NO}*") to simply call bases, and do the matching downstream.""".format(
+                **{"YES": "Yes", "NO":"No"}
+            ),
         )
 
         self.has_empty_vector_barcode = cellprofiler_core.setting.Binary(
@@ -344,6 +354,7 @@ No other channel formats are available at this time, though you are free to open
             self.has_empty_vector_barcode,
             self.empty_vector_barcode_sequence,
             self.n_colors,
+            self.do_library_match,
         ]
 
         for eachbase in self.base_measurements.values():
@@ -376,24 +387,30 @@ No other channel formats are available at this time, though you are free to open
                     if base_meas.removable:
                         result += [base_meas.remover]
                 result += add_buttons[base]
+       
+        if self.do_library_match:
+            result += [
+                self.csv_directory,
+                self.csv_file_name,
+                self.metadata_field_barcode,
+                self.metadata_field_tag,
+                self.has_empty_vector_barcode
+            ]
+            
+            if self.has_empty_vector_barcode:
+                result += [self.empty_vector_barcode_sequence]
 
-        result += [
-            self.csv_directory,
-            self.csv_file_name,
-            self.metadata_field_barcode,
-            self.metadata_field_tag,
-            self.wants_call_image,
-            self.wants_score_image,
-        ]
 
-        if self.wants_call_image:
-            result += [self.outimage_calls_name]
+            result += [
+                self.wants_call_image,
+                self.wants_score_image,
+            ]
 
-        if self.wants_score_image:
-            result += [self.outimage_score_name]
+            if self.wants_call_image:
+                result += [self.outimage_calls_name]
 
-        if self.has_empty_vector_barcode:
-            result += [self.empty_vector_barcode_sequence]
+            if self.wants_score_image:
+                result += [self.outimage_score_name]
 
         return result
 
@@ -554,89 +571,97 @@ No other channel formats are available at this time, though you are free to open
             "_".join([C_CALL_BARCODES, "BarcodeCalled"]),
             calledbarcodes,
         )
+        if self.do_library_match.value:
+            barcodes = self.barcodeset(
+                self.metadata_field_barcode.value, self.metadata_field_tag.value
+            )
 
-        barcodes = self.barcodeset(
-            self.metadata_field_barcode.value, self.metadata_field_tag.value
-        )
+            cropped_barcode_dict = {
+                y[: self.ncycles.value]: y for y in list(barcodes.keys())
+            }
 
-        cropped_barcode_dict = {
-            y[: self.ncycles.value]: y for y in list(barcodes.keys())
-        }
+            scorelist = []
+            matchedbarcode = []
+            matchedbarcodecode = []
+            matchedbarcodeid = []
+            if self.wants_call_image or self.wants_score_image:
+                objects = workspace.object_set.get_objects(self.input_object_name.value)
+                labels = objects.segmented
+                pixel_data_call = objects.segmented
+                pixel_data_score = objects.segmented
+            count = 1
+            for eachbarcode in calledbarcodes:
+                eachscore, eachmatch = self.queryall(cropped_barcode_dict, eachbarcode)
+                scorelist.append(eachscore)
+                matchedbarcode.append(eachmatch)
+                m_id, m_code = barcodes[eachmatch]
+                matchedbarcodeid.append(m_id)
+                matchedbarcodecode.append(m_code)
+                if self.wants_call_image:
+                    pixel_data_call = numpy.where(
+                        labels == count, barcodes[eachmatch][0], pixel_data_call
+                    )
+                if self.wants_score_image:
+                    pixel_data_score = numpy.where(
+                        labels == count, 65535 * eachscore, pixel_data_score
+                    )
+                count += 1
 
-        scorelist = []
-        matchedbarcode = []
-        matchedbarcodecode = []
-        matchedbarcodeid = []
-        if self.wants_call_image or self.wants_score_image:
-            objects = workspace.object_set.get_objects(self.input_object_name.value)
-            labels = objects.segmented
-            pixel_data_call = objects.segmented
-            pixel_data_score = objects.segmented
-        count = 1
-        for eachbarcode in calledbarcodes:
-            eachscore, eachmatch = self.queryall(cropped_barcode_dict, eachbarcode)
-            scorelist.append(eachscore)
-            matchedbarcode.append(eachmatch)
-            m_id, m_code = barcodes[eachmatch]
-            matchedbarcodeid.append(m_id)
-            matchedbarcodecode.append(m_code)
+            imagemeanscore = numpy.mean(scorelist)
+
+            workspace.measurements.add_measurement(
+                "Image", "_".join([C_CALL_BARCODES, "MeanBarcodeScore"]), imagemeanscore
+            )
+
+            workspace.measurements.add_measurement(
+                self.input_object_name.value,
+                "_".join([C_CALL_BARCODES, "MatchedTo_Barcode"]),
+                matchedbarcode,
+            )
+            workspace.measurements.add_measurement(
+                self.input_object_name.value,
+                "_".join([C_CALL_BARCODES, "MatchedTo_ID"]),
+                matchedbarcodeid,
+            )
+            workspace.measurements.add_measurement(
+                self.input_object_name.value,
+                "_".join([C_CALL_BARCODES, "MatchedTo_GeneCode"]),
+                matchedbarcodecode,
+            )
+            workspace.measurements.add_measurement(
+                self.input_object_name.value,
+                "_".join([C_CALL_BARCODES, "MatchedTo_Score"]),
+                scorelist,
+            )
             if self.wants_call_image:
-                pixel_data_call = numpy.where(
-                    labels == count, barcodes[eachmatch][0], pixel_data_call
+                workspace.image_set.add(
+                    self.outimage_calls_name.value,
+                    cellprofiler_core.image.Image(
+                        pixel_data_call.astype("uint16"), convert=False
+                    ),
                 )
             if self.wants_score_image:
-                pixel_data_score = numpy.where(
-                    labels == count, 65535 * eachscore, pixel_data_score
+                workspace.image_set.add(
+                    self.outimage_score_name.value,
+                    cellprofiler_core.image.Image(
+                        pixel_data_score.astype("uint16"), convert=False
+                    ),
                 )
-            count += 1
 
-        imagemeanscore = numpy.mean(scorelist)
-
-        workspace.measurements.add_measurement(
-            "Image", "_".join([C_CALL_BARCODES, "MeanBarcodeScore"]), imagemeanscore
-        )
-
-        workspace.measurements.add_measurement(
-            self.input_object_name.value,
-            "_".join([C_CALL_BARCODES, "MatchedTo_Barcode"]),
-            matchedbarcode,
-        )
-        workspace.measurements.add_measurement(
-            self.input_object_name.value,
-            "_".join([C_CALL_BARCODES, "MatchedTo_ID"]),
-            matchedbarcodeid,
-        )
-        workspace.measurements.add_measurement(
-            self.input_object_name.value,
-            "_".join([C_CALL_BARCODES, "MatchedTo_GeneCode"]),
-            matchedbarcodecode,
-        )
-        workspace.measurements.add_measurement(
-            self.input_object_name.value,
-            "_".join([C_CALL_BARCODES, "MatchedTo_Score"]),
-            scorelist,
-        )
-        if self.wants_call_image:
-            workspace.image_set.add(
-                self.outimage_calls_name.value,
-                cellprofiler_core.image.Image(
-                    pixel_data_call.astype("uint16"), convert=False
-                ),
-            )
-        if self.wants_score_image:
-            workspace.image_set.add(
-                self.outimage_score_name.value,
-                cellprofiler_core.image.Image(
-                    pixel_data_score.astype("uint16"), convert=False
-                ),
-            )
-
-        if self.show_window:
-            workspace.display_data.col_labels = (
-                "Image Mean Score",
-                "Image Mean Quality Score",
-            )
-            workspace.display_data.statistics = [imagemeanscore, imagemeanquality]
+            if self.show_window:
+                workspace.display_data.col_labels = (
+                    "Image Mean Score",
+                    "Image Mean Quality Score",
+                )
+                workspace.display_data.statistics = [imagemeanscore, imagemeanquality]
+        
+        else:
+            if self.show_window:
+                workspace.display_data.col_labels = (
+                    "Number barcodes",
+                    "Number of unique calls",
+                )
+                workspace.display_data.statistics = [len(calledbarcodes), len(list(set([calledbarcodes])))]
 
     def display(self, workspace, figure):
         statistics = workspace.display_data.statistics
@@ -787,46 +812,52 @@ No other channel formats are available at this time, though you are free to open
 
         input_object_name = self.input_object_name.value
 
-        result = [
-            (
-                "Image",
-                "_".join([C_CALL_BARCODES, "MeanBarcodeScore"]),
-                cellprofiler_core.constants.measurement.COLTYPE_FLOAT,
-            ),
-            (
-                "Image",
-                "_".join([C_CALL_BARCODES, "MeanQualityScore"]),
-                cellprofiler_core.constants.measurement.COLTYPE_FLOAT,
-            ),
-        ]
+        
 
-        result += [
+        result = [
             (
                 input_object_name,
                 "_".join([C_CALL_BARCODES, "BarcodeCalled"]),
                 cellprofiler_core.constants.measurement.COLTYPE_VARCHAR,
             ),
-            (
-                input_object_name,
-                "_".join([C_CALL_BARCODES, "MatchedTo_Barcode"]),
-                cellprofiler_core.constants.measurement.COLTYPE_VARCHAR,
-            ),
-            (
-                input_object_name,
-                "_".join([C_CALL_BARCODES, "MatchedTo_ID"]),
-                cellprofiler_core.constants.measurement.COLTYPE_INTEGER,
-            ),
-            (
-                input_object_name,
-                "_".join([C_CALL_BARCODES, "MatchedTo_GeneCode"]),
-                cellprofiler_core.constants.measurement.COLTYPE_VARCHAR,
-            ),
-            (
-                input_object_name,
-                "_".join([C_CALL_BARCODES, "MatchedTo_Score"]),
-                cellprofiler_core.constants.measurement.COLTYPE_FLOAT,
-            ),
         ]
+        if self.do_library_match.value:
+            result += [
+                (
+                    "Image",
+                    "_".join([C_CALL_BARCODES, "MeanBarcodeScore"]),
+                    cellprofiler_core.constants.measurement.COLTYPE_FLOAT,
+                ),
+                (
+                    "Image",
+                    "_".join([C_CALL_BARCODES, "MeanQualityScore"]),
+                    cellprofiler_core.constants.measurement.COLTYPE_FLOAT,
+                ),
+            ]
+
+            result += [
+                (
+                    input_object_name,
+                    "_".join([C_CALL_BARCODES, "MatchedTo_Barcode"]),
+                    cellprofiler_core.constants.measurement.COLTYPE_VARCHAR,
+                ),
+                (
+                    input_object_name,
+                    "_".join([C_CALL_BARCODES, "MatchedTo_ID"]),
+                    cellprofiler_core.constants.measurement.COLTYPE_INTEGER,
+                ),
+                (
+                    input_object_name,
+                    "_".join([C_CALL_BARCODES, "MatchedTo_GeneCode"]),
+                    cellprofiler_core.constants.measurement.COLTYPE_VARCHAR,
+                ),
+                (
+                    input_object_name,
+                    "_".join([C_CALL_BARCODES, "MatchedTo_Score"]),
+                    cellprofiler_core.constants.measurement.COLTYPE_FLOAT,
+                ),
+            ]
+
         if self.n_colors.value == ENCODING_TYPES[0]:
             result += [
                 (
@@ -848,21 +879,25 @@ No other channel formats are available at this time, though you are free to open
         if object_name == self.input_object_name and category == C_CALL_BARCODES:
             result = [
                 "BarcodeCalled",
-                "MatchedTo_Barcode",
-                "MatchedTo_ID",
-                "MatchedTo_GeneCode",
-                "MatchedTo_Score",
             ]
+            if self.do_library_match.value:
+                result += [
+                    "MatchedTo_Barcode",
+                    "MatchedTo_ID",
+                    "MatchedTo_GeneCode",
+                    "MatchedTo_Score",
+                ]
             if self.n_colors.value == ENCODING_TYPES[0]:
                 result.append("MeanQualityScore")
 
             return result
 
         elif object_name == object_name == "Image":
-            return [
-                "MeanBarcodeScore",
-                "MeanQualityScore",
-            ]
+            if self.do_library_match.value:
+                return [
+                    "MeanBarcodeScore",
+                    "MeanQualityScore",
+                ]
 
         return []
 
@@ -874,4 +909,6 @@ No other channel formats are available at this time, though you are free to open
             setting_values += ["G", "AreaShape_Area", True] #G
             setting_values += ["T", "AreaShape_Area", True] #T
             variable_revision_number = 2
+        if variable_revision_number == 2:
+            setting_values = setting_values[:14]+["True"]+setting_values[14:]
         return setting_values, variable_revision_number
