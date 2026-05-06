@@ -173,7 +173,7 @@ This measurement should be an intensity measure that is measured for every cycle
         )
 
         self.wants_call_image = cellprofiler_core.setting.Binary(
-            "Retain an image of the barcodes color coded by call?",
+            "Retain an image of the barcodes color coded by match?",
             False,
             doc="""\
 Select "*{YES}*" to retain the image of the objects color-coded
@@ -387,7 +387,7 @@ No other channel formats are available at this time, though you are free to open
                     if base_meas.removable:
                         result += [base_meas.remover]
                 result += add_buttons[base]
-       
+        result += [self.do_library_match]
         if self.do_library_match:
             result += [
                 self.csv_directory,
@@ -911,4 +911,5 @@ No other channel formats are available at this time, though you are free to open
             variable_revision_number = 2
         if variable_revision_number == 2:
             setting_values = setting_values[:14]+["Yes"]+setting_values[14:]
+            variable_revision_number = 3
         return setting_values, variable_revision_number
