@@ -14,7 +14,7 @@ Please report any installation issues or bugs related to plugins in the [CellPro
 If the plugin you would like to use does not have any additional dependencies outside of those required for running CellProfiler (this is most plugins), using plugins is very simple.
 See [Installing plugins without dependencies](#installing-plugins-without-dependencies).
 
-If the plugin you would like to use has dependencies, you have three separate options for installation.
+If the plugin you would like to use has dependencies, you have four separate options for installation.
 
 - The first option requires building CellProfiler from source, but plugin installation is simpler.
 See [Installing plugins with dependencies, using CellProfiler from source](#installing-plugins-with-dependencies-using-cellprofiler-from-source).
@@ -22,8 +22,11 @@ See [Installing plugins with dependencies, using CellProfiler from source](#inst
 See [Installing plugins with dependencies, using pre-built CellProfiler](#installing-plugins-with-dependencies-using-pre-built-cellprofiler).
 - The third option uses Docker to bypass installation requirements.
 It is the simplest option that only requires download of Docker Desktop; the module that has dependencies will automatically download a Docker that has all of the dependencies upon run and access that Docker while running the plugin.
-It is currently supported for the RunCellpose and Runilastik plugins. Please have a look at this [table](https://github.com/CellProfiler/CellProfiler-plugins/blob/master/documentation/CP-plugins-documentation/supported_plugins.md) to know about the availability of docker versions for plugins.  
+It is not supported for all plugins with external dependencies. Please have a look at this [table](https://github.com/CellProfiler/CellProfiler-plugins/blob/master/documentation/CP-plugins-documentation/supported_plugins.md) to see the availability of docker versions for plugins.  
 See [Using Docker to Bypass Installation Requirements](#using-docker-to-bypass-installation-requirements).
+- The fourth option uses a pixi environment to simplify installation from source.
+It is not supported for all plugins with external dependencies. Please have a look at this [table](https://github.com/CellProfiler/CellProfiler-plugins/blob/master/documentation/CP-plugins-documentation/supported_plugins.md) to see the availability of pixi environments
+See [Using a pixi environment](#using-a-pixi-environment) for use.
 
 ### Installing plugins without dependencies
 
@@ -92,7 +95,7 @@ See [Using Docker to Bypass Installation Requirements](#using-docker-to-bypass-i
 5. **Open and use CellProfiler.**
 
     Please note that plugins that have separate install flags may have conflicting dependencies so we recommend making a separate Python environment in which to run separate installations.
-    (e.g. while having CellPose and StarDist in the same Python environment is technically possible, it has been reported to be quite troublesome to install, so we recommend choosing either CellPose or StarDist.)
+    (e.g. while having CellPose and StarDist in the same Python environment is technically possible, it has been reported to be quite troublesome to install, so we recommend choosing either Cellpose or StarDist.)
 
 ### Installing plugins with dependencies, using pre-built CellProfiler
 
@@ -243,3 +246,14 @@ Docker Desktop will need to be open every time you use a plugin with Docker. Ple
     In your plugin, select `Docker` for "Run module in docker or local Python environment" setting.
 
     On the first run of the plugin, the Docker container will be downloaded, however, this slow downloading process will only have to happen once.
+
+### Using a pixi environment
+
+[Pixi](https://pixi.prefix.dev/latest/) is a modern, reproducible package manager.
+
+First, install Pixi using [Pixi's installation instructions](https://pixi.prefix.dev/latest/installation/).
+
+Then, open your terminal and navigate into the folder where you have cloned the CellProfiler-plugins GitHub repository.
+Navigate into the subfolder `pixi_envs` and then into the subfolder that has the environment for the plugin you want to use (e.g. `pixi_envs/cellprofiler428_cellpose3`).
+Run `pixi shell --frozen` to initialize the environment (this may take a couple of minutes the first time you run it, since things will need to download).
+Run `python -m cellprofiler` to start CellProfiler (again, this may take a minute on the first time).
