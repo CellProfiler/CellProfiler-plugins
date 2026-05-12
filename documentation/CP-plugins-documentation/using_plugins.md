@@ -143,18 +143,18 @@ See [Using a pixi environment](#using-a-pixi-environment) for use.
     For the subsequent steps, make sure to use the same version of Python that CellProfiler uses. For instance, CellProfiler 4 uses Python 3.8, (which you can see in CellProfiler's [setup.py](https://github.com/CellProfiler/CellProfiler/blob/4.2.x/setup.py)). You can check what version of Python you're using in the terminal:
 
     ```bash
-    Python --version
+    python --version
     ```
 
     If necessary, you can create a conda environment with a specific version of Python.
 
     ```bash
-    conda create --name py38 Python=3.8
+    conda create --name py38 python=3.8
     conda activate py38
     ```
 
     You may replace the value after `--name` with whatever name you'd like to give to the environment.
-    If you don't have `conda`/`miniconda`/`mamba` or similar, you can either [manually install Python directly](https://www.Python.org/downloads/), or use a tool like `pyenv` to manage different versions of Python:
+    If you don't have `conda`/`miniconda`/`mamba` or similar, you can either [manually install Python directly](https://www.python.org/downloads/), or use a tool like `pyenv` to manage different versions of Python:
     - [pyenv Mac](https://github.com/pyenv/pyenv)
     - [pyenv Windows](https://github.com/pyenv-win/pyenv-win)
 
@@ -174,7 +174,7 @@ See [Using a pixi environment](#using-a-pixi-environment) for use.
     ```
 
     ```{admonition} e.g. using RunImageJ script
-    conda create –name cp-ij Python=3.8
+    conda create –name cp-ij python=3.8
     
     conda activate cp-ij
     
@@ -196,7 +196,7 @@ See [Using a pixi environment](#using-a-pixi-environment) for use.
     ```
 
     ```{admonition} e.g. using RunImageJ script
-    conda create –name cp-ij Python=3.8
+    conda create –name cp-ij python=3.8
 
     conda activate cp-ij
 
@@ -204,7 +204,7 @@ See [Using a pixi environment](#using-a-pixi-environment) for use.
     ```
 
     Then you may find the default folder that `pip` installs packages into by entering `pip show REQUIREMENT` into your terminal e.g. `pip show pyimagej`.
-    In the information it returns, under `Location` you will find a path that will look something like (Mac) `/Users/username/mambaforge/envs/cp-ij/lib/Python3.8/site-packages` or (Windows) `c:\users\username\miniforge3\envs\cp\lib\site-packages`.
+    In the information it returns, under `Location` you will find a path that will look something like (Mac) `/Users/username/mambaforge/envs/cp-ij/lib/python3.8/site-packages` or (Windows) `c:\users\username\miniforge3\envs\cp\lib\site-packages`.
 
     Finally you may manually copy the folders and their corresponding `.dist-info` folders (e.g. `pytz` and `pytz-2023.3.dist-info`) for any dependencies that were installed with the installation of e.g. `pyimagej` that are not already in the CellProfiler folder.
 
@@ -219,7 +219,7 @@ See [Using a pixi environment](#using-a-pixi-environment) for use.
     `jgo`
     `jgo-1.0.5.dist-info`
     `jpype`
-    `_jpype.cPython-38-darwin.so`
+    `_jpype.cpython-38-darwin.so`
     `imagej`
     `pyimagej-1.4.1.dist-info`
     ```
