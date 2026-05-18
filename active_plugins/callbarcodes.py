@@ -713,12 +713,11 @@ No other channel formats are available at this time, though you are free to open
         cycle_string = re.search("Cycle.*[0-9]{1,2}",examplemeas).group()
         for cycle in range(1,ncycles+1):
             if cycle <10:
-                updated_cycle_string_with_pad = re.sub("[0-9]{1,2}",f"{cycle:02d}",cycle_string)
+                updated_cycle_string_with_pad = re.sub("Cycle[0-9]{1,2}",f"Cycle{cycle:02d}",cycle_string)
                 updated_full_measurement = examplemeas.replace(cycle_string,updated_cycle_string_with_pad)
-                if updated_full_measurement in obj_measurement_columns:
-                    measurementdict[cycle] = updated_full_measurement
-            updated_cycle_string_no_pad = re.sub("[0-9]{1,2}",f"{cycle}",cycle_string)
-            updated_full_measurement = examplemeas.replace(cycle_string,updated_cycle_string_no_pad)
+            else:
+                updated_cycle_string_no_pad = re.sub("Cycle[0-9]{1,2}",f"Cycle{cycle}",cycle_string)
+                updated_full_measurement = examplemeas.replace(cycle_string,updated_cycle_string_no_pad)
             if updated_full_measurement in obj_measurement_columns:
                 measurementdict[cycle] = updated_full_measurement
 
