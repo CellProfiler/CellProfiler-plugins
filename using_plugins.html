@@ -395,6 +395,7 @@ document.write(`
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#installing-plugins-with-dependencies-using-cellprofiler-from-source">Installing plugins with dependencies, using CellProfiler from source</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#installing-plugins-with-dependencies-using-pre-built-cellprofiler">Installing plugins with dependencies, using pre-built CellProfiler</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#using-docker-to-bypass-installation-requirements">Using Docker to bypass installation requirements</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#using-a-pixi-environment">Using a pixi environment</a></li>
 </ul>
 </li>
 </ul>
@@ -421,7 +422,7 @@ Please report any installation issues or bugs related to plugins in the <a class
 <h2>Installation<a class="headerlink" href="#installation" title="Permalink to this heading">#</a></h2>
 <p>If the plugin you would like to use does not have any additional dependencies outside of those required for running CellProfiler (this is most plugins), using plugins is very simple.
 See <span class="xref myst">Installing plugins without dependencies</span>.</p>
-<p>If the plugin you would like to use has dependencies, you have three separate options for installation.</p>
+<p>If the plugin you would like to use has dependencies, you have four separate options for installation.</p>
 <ul class="simple">
 <li><p>The first option requires building CellProfiler from source, but plugin installation is simpler.
 See <span class="xref myst">Installing plugins with dependencies, using CellProfiler from source</span>.</p></li>
@@ -429,8 +430,11 @@ See <span class="xref myst">Installing plugins with dependencies, using CellProf
 See <span class="xref myst">Installing plugins with dependencies, using pre-built CellProfiler</span>.</p></li>
 <li><p>The third option uses Docker to bypass installation requirements.
 It is the simplest option that only requires download of Docker Desktop; the module that has dependencies will automatically download a Docker that has all of the dependencies upon run and access that Docker while running the plugin.
-It is currently supported for the RunCellpose and Runilastik plugins. Please have a look at this <a class="reference external" href="https://github.com/CellProfiler/CellProfiler-plugins/blob/master/documentation/CP-plugins-documentation/supported_plugins.md">table</a> to know about the availability of docker versions for plugins.<br />
+It is not supported for all plugins with external dependencies. Please have a look at this <a class="reference external" href="https://github.com/CellProfiler/CellProfiler-plugins/blob/master/documentation/CP-plugins-documentation/supported_plugins.md">table</a> to see the availability of docker versions for plugins.<br />
 See <span class="xref myst">Using Docker to Bypass Installation Requirements</span>.</p></li>
+<li><p>The fourth option uses a pixi environment to simplify installation from source.
+It is not supported for all plugins with external dependencies. Please have a look at this <a class="reference external" href="https://github.com/CellProfiler/CellProfiler-plugins/blob/master/documentation/CP-plugins-documentation/supported_plugins.md">table</a> to see the availability of pixi environments
+See <span class="xref myst">Using a pixi environment</span> for use.</p></li>
 </ul>
 <section id="installing-plugins-without-dependencies">
 <h3>Installing plugins without dependencies<a class="headerlink" href="#installing-plugins-without-dependencies" title="Permalink to this heading">#</a></h3>
@@ -489,8 +493,8 @@ pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </s
 <p>If using Mac and getting an error saying <code class="docutils literal notranslate"><span class="pre">zsh:</span> <span class="pre">no</span> <span class="pre">matches</span> <span class="pre">found:</span> <span class="pre">.[somepackage]</span></code>, put the dot and square brackets in single quotes, ie <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">-e</span> <span class="pre">'.[cellpose]'</span></code></p>
 </li>
 <li><p><strong>Open and use CellProfiler.</strong></p>
-<p>Please note that plugins that have separate install flags may have conflicting dependencies so we recommend making a separate python environment in which to run separate installations.
-(e.g. while having CellPose and StarDist in the same python environment is technically possible, it has been reported to be quite troublesome to install, so we recommend choosing either CellPose or StarDist.)</p>
+<p>Please note that plugins that have separate install flags may have conflicting dependencies so we recommend making a separate Python environment in which to run separate installations.
+(e.g. while having CellPose and StarDist in the same Python environment is technically possible, it has been reported to be quite troublesome to install, so we recommend choosing either Cellpose or StarDist.)</p>
 </li>
 </ol>
 </section>
@@ -531,25 +535,25 @@ A comparison with CellProfiler dependencies will show you that <code class="docu
 What remains is <code class="docutils literal notranslate"><span class="pre">pyimagej</span></code></p>
 </div>
 </li>
-<li><p><strong>Initialize the proper version of python</strong></p>
-<p>For the subsequent steps, make sure to use the same version of python that CellProfiler uses. For instance, CellProfiler 4 uses python 3.8, (which you can see in CellProfiler’s <a class="reference external" href="https://github.com/CellProfiler/CellProfiler/blob/4.2.x/setup.py">setup.py</a>). You can check what version of python you’re using in the terminal:</p>
+<li><p><strong>Initialize the proper version of Python</strong></p>
+<p>For the subsequent steps, make sure to use the same version of Python that CellProfiler uses. For instance, CellProfiler 4 uses Python 3.8, (which you can see in CellProfiler’s <a class="reference external" href="https://github.com/CellProfiler/CellProfiler/blob/4.2.x/setup.py">setup.py</a>). You can check what version of Python you’re using in the terminal:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>--version
 </pre></div>
 </div>
-<p>If necessary, you can create a conda environment with a specific version of python.</p>
+<p>If necessary, you can create a conda environment with a specific version of Python.</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>conda<span class="w"> </span>create<span class="w"> </span>--name<span class="w"> </span>py38<span class="w"> </span><span class="nv">python</span><span class="o">=</span><span class="m">3</span>.8
 conda<span class="w"> </span>activate<span class="w"> </span>py38
 </pre></div>
 </div>
 <p>You may replace the value after <code class="docutils literal notranslate"><span class="pre">--name</span></code> with whatever name you’d like to give to the environment.
-If you don’t have <code class="docutils literal notranslate"><span class="pre">conda</span></code>/<code class="docutils literal notranslate"><span class="pre">miniconda</span></code>/<code class="docutils literal notranslate"><span class="pre">mamba</span></code> or similar, you can either <a class="reference external" href="https://www.python.org/downloads/">manually install python directly</a>, or use a tool like <code class="docutils literal notranslate"><span class="pre">pyenv</span></code> to manage different versions of python:</p>
+If you don’t have <code class="docutils literal notranslate"><span class="pre">conda</span></code>/<code class="docutils literal notranslate"><span class="pre">miniconda</span></code>/<code class="docutils literal notranslate"><span class="pre">mamba</span></code> or similar, you can either <a class="reference external" href="https://www.python.org/downloads/">manually install Python directly</a>, or use a tool like <code class="docutils literal notranslate"><span class="pre">pyenv</span></code> to manage different versions of Python:</p>
 <ul class="simple">
 <li><p><a class="reference external" href="https://github.com/pyenv/pyenv">pyenv Mac</a></p></li>
 <li><p><a class="reference external" href="https://github.com/pyenv-win/pyenv-win">pyenv Windows</a></p></li>
 </ul>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>If you have multiple versions of python (e.g. you have python 3.8 and python 3.9 both installed with homebrew on Mac), it is sometimes the case that you may need to specify an exact <code class="docutils literal notranslate"><span class="pre">pip</span></code> version in the below steps, e.g. <code class="docutils literal notranslate"><span class="pre">pip3.8</span></code> instead of just <code class="docutils literal notranslate"><span class="pre">pip</span></code>. You can always double check you’re using the correct pip with <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">--version</span></code>.</p>
+<p>If you have multiple versions of Python (e.g. you have Python 3.8 and Python 3.9 both installed with homebrew on Mac), it is sometimes the case that you may need to specify an exact <code class="docutils literal notranslate"><span class="pre">pip</span></code> version in the below steps, e.g. <code class="docutils literal notranslate"><span class="pre">pip3.8</span></code> instead of just <code class="docutils literal notranslate"><span class="pre">pip</span></code>. You can always double check you’re using the correct pip with <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">--version</span></code>.</p>
 </div>
 </li>
 <li><p><strong>Install or copy requirements into CellProfiler installation.</strong></p>
@@ -567,7 +571,7 @@ If you’re curious, you can run <code class="docutils literal notranslate"><spa
 </div>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>Do not run the <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span></code> from <em>within</em> the CellProfiler directory. If you run <code class="docutils literal notranslate"><span class="pre">pip</span></code> with your terminal’s current working directory inside the CellProfiler directory, you will confuse <code class="docutils literal notranslate"><span class="pre">pip</span></code>, since there is a version of python bundled with CellProfiler and your <code class="docutils literal notranslate"><span class="pre">PATH</span></code> and/or <code class="docutils literal notranslate"><span class="pre">PYTHONPATH</span></code> may include your current working directory.</p>
+<p>Do not run the <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span></code> from <em>within</em> the CellProfiler directory. If you run <code class="docutils literal notranslate"><span class="pre">pip</span></code> with your terminal’s current working directory inside the CellProfiler directory, you will confuse <code class="docutils literal notranslate"><span class="pre">pip</span></code>, since there is a version of Python bundled with CellProfiler and your <code class="docutils literal notranslate"><span class="pre">PATH</span></code> and/or <code class="docutils literal notranslate"><span class="pre">PYTHONPATH</span></code> may include your current working directory.</p>
 </div>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
@@ -619,12 +623,21 @@ In the information it returns, under <code class="docutils literal notranslate">
 Open Docker Desktop.</p></li>
 </ol>
 <p>Docker Desktop will need to be open every time you use a plugin with Docker. Please have a look at this <a class="reference external" href="https://github.com/CellProfiler/CellProfiler-plugins/blob/master/documentation/CP-plugins-documentation/supported_plugins.md">table</a> to know if a docker version is available for a plugin.</p>
-<ol class="arabic" start="3">
+<ol class="arabic">
 <li><p><strong>Select “Run with Docker”</strong></p>
-<p>In your plugin, select <code class="docutils literal notranslate"><span class="pre">Docker</span></code> for “Run module in docker or local python environment” setting.</p>
+<p>In your plugin, select <code class="docutils literal notranslate"><span class="pre">Docker</span></code> for “Run module in docker or local Python environment” setting.</p>
 <p>On the first run of the plugin, the Docker container will be downloaded, however, this slow downloading process will only have to happen once.</p>
 </li>
 </ol>
+</section>
+<section id="using-a-pixi-environment">
+<h3>Using a pixi environment<a class="headerlink" href="#using-a-pixi-environment" title="Permalink to this heading">#</a></h3>
+<p><a class="reference external" href="https://pixi.prefix.dev/latest/">Pixi</a> is a modern, reproducible package manager.</p>
+<p>First, install Pixi using <a class="reference external" href="https://pixi.prefix.dev/latest/installation/">Pixi’s installation instructions</a>.</p>
+<p>Then, open your terminal and navigate into the folder where you have cloned the CellProfiler-plugins GitHub repository.
+Navigate into the subfolder <code class="docutils literal notranslate"><span class="pre">pixi_envs</span></code> and then into the subfolder that has the environment for the plugin you want to use (e.g. <code class="docutils literal notranslate"><span class="pre">pixi_envs/cellprofiler428_cellpose3</span></code>).
+Run <code class="docutils literal notranslate"><span class="pre">pixi</span> <span class="pre">shell</span> <span class="pre">--frozen</span></code> to initialize the environment (this may take a couple of minutes the first time you run it, since things will need to download).
+Run <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">-m</span> <span class="pre">cellprofiler</span></code> to start CellProfiler (again, this may take a minute on the first time).</p>
 </section>
 </section>
 </section>
@@ -697,6 +710,7 @@ Open Docker Desktop.</p></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#installing-plugins-with-dependencies-using-cellprofiler-from-source">Installing plugins with dependencies, using CellProfiler from source</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#installing-plugins-with-dependencies-using-pre-built-cellprofiler">Installing plugins with dependencies, using pre-built CellProfiler</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#using-docker-to-bypass-installation-requirements">Using Docker to bypass installation requirements</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#using-a-pixi-environment">Using a pixi environment</a></li>
 </ul>
 </li>
 </ul>
