@@ -528,15 +528,17 @@ No other channel formats are available at this time, though you are free to open
             self.input_object_name.value
         )
 
-        objectcount = len(
-            measurements.get_current_measurement(
-                self.input_object_name.value, listofmeasurements[0]
-            )
-        )
-
         if self.n_colors.value == ENCODING_TYPES[0]:
             measurements_for_calls = self.getallonehotbarcodemeasurements(
                 listofmeasurements, self.ncycles.value, self.cycle1measure.value
+            )
+            first_cycle_measures = list(measurements_for_calls[1].keys())
+
+            # Use a known barcode intensity measurement to determine object count
+            objectcount = len(
+                measurements.get_current_measurement(
+                    self.input_object_name.value, first_cycle_measures[0]
+                )
             )
             calledbarcodes, quality_scores = self.callonehotbarcode(
                 measurements_for_calls,
@@ -558,13 +560,11 @@ No other channel formats are available at this time, though you are free to open
                 "Image", "_".join([C_CALL_BARCODES, "MeanQualityScore"]), imagemeanquality
             )
         else:
-
             calledbarcodes = self.calloneexpISSbarcode(
                 self.base_measurements,
                 measurements,
                 self.input_object_name.value,
-                self.ncycles.value,
-                objectcount)
+                self.ncycles.value)
 
         workspace.measurements.add_measurement(
             self.input_object_name.value,
@@ -671,7 +671,7 @@ No other channel formats are available at this time, though you are free to open
         figure.subplot_table(0, 0, statistics)
 
     def calloneexpISSbarcode(self, calling_setting_dict, measurements, 
-                             object_name, ncycles,objectcount):
+                             object_name, ncycles):
         def call_by_column(base_array):
             base_order = ['A','C','G','T']
             if sum(base_array) != 1:
@@ -690,6 +690,11 @@ No other channel formats are available at this time, though you are free to open
                     call_bool_dict[base][eachmeas.base_boolean.value] = [all_cycle_measurements]
                 else:
                     call_bool_dict[base][eachmeas.base_boolean.value] += [all_cycle_measurements]
+        actual_measure_col = next(iter(call_bool_dict[base].values()))[0][1]
+        objectcount = len(
+            measurements.get_current_measurement(
+                self.input_object_name.value, actual_measure_col)
+        )
         full_base_array = numpy.zeros(objectcount,dtype="str")
         base_list = ["A", "C", "G", "T"]
         for cycle in range(1,ncycles+1):
