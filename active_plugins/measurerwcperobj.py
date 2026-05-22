@@ -36,23 +36,30 @@ __doc__ = """\
 MeasureRWCperObj
 ===================
 
+Measure Rank Weighed Colocalization (RWC) where both the pixel ranking and threshold are calculated per-object. 
+
+**Rank Weighted Colocalization coefficient**: The RWC coefficient for a pair of images R and G is measured as **RWC1** = sum(Ri_coloc*Wi)/sum(Ri) and **RWC2** = sum(Gi_coloc*Wi)/sum(Gi), where Wi is Weight defined as Wi = (Rmax - Di)/Rmax where Rmax is the maximum of Ranks among R and G based on the max intensity, and Di = abs(Rank(Ri) - Rank(Gi)) (absolute difference in ranks between R and G) and Ri_coloc = Ri when Gi > 0, 0 otherwise and Gi_coloc = Gi when Ri >0, 0 otherwise. *(Singan et al. 2011, BMC Bioinformatics 12:407).*
+
+Like regular RWC (measured using the MeasureColocalization module) RWCperObj calculates colocalization only in the intersection of the foreground (above-threshold pixels) of both images:
+
+- For pixel intensity ranking: each of the object's pixels are assigned a rank according to their relative value within the object, with rank 1 being assigned to the dimmest pixel, and rank [n] (where [n] is the object's area in pixels) to the highest intensity pixel of the object.
+
+- For threshold: threshold is calculated as a percentage of the highest pixel intensity within each object in each image.
+
+Measurements made by this module
+=================================
+For each object:
+  - RWCperObj_img1_img2: RWC1 with per-object pixel ranking and threshold calculation
+  - RWCperObj_img2_img1: RWC2 with per-object pixel ranking and threshold calculation
+  - RWCperObj_img1_img2_aboveThreshPixels_abs: the absolute area (in pixel units) of the intersection of the foreground (above-threshold pixels) of both images.
+  - RWCperObj_img1_img2_aboveThreshPixels_rel: the relative area (compared to the total area of the object) of the intersection of the foreground (above-threshold pixels) of both images.
 
 """
 
-#
-# Constants
-#
-# It's good programming practice to replace things like strings with
-# constants if they will appear more than once in your program. That way,
-# if someone wants to change the text, that text will change everywhere.
-# Also, you can't misspell it by accident.
-#
-
 """This is the measurement template category"""
-C_MEASUREMENT_TEMPLATE = "MT"
 M_PER_OBJECT = "Within each object individually"
 
-"""Feature name format for the RWC Coefficient measurement"""
+"""Feature name format for the RWCperObj measurement"""
 F_RWCperObj_FORMAT = "Correlation_RWCperObj_%s_%s"
 
 
@@ -83,25 +90,24 @@ Select the object to be measured.""",
         )
 
         self.thr = Float(
-            "Set threshold as percentage of maximum intensity for the images",
+            "Set threshold as percentage of maximum intensity for each object",
             15,
             minval=0,
             maxval=99,
             doc="""\
 You may choose to measure colocalization metrics only for those pixels above 
 a certain threshold. Select the threshold as a percentage of the maximum intensity 
-of the above image [0-99].
+of each object [0-99].
+If you want to measure in the whole object, set the threshold to 0.
 
-This value is used by the Overlap, Manders, and Rank Weighted Colocalization 
-measurements.
 """,
         )
 
         self.do_rwc = Binary(
-            "Calculate the Rank Weighted Colocalization coefficients?",
+            "Calculate the Rank Weighted Colocalization coefficients per object?",
             True,
             doc="""\
-Select *{YES}* to run the Rank Weighted Colocalization coefficients.
+Select *{YES}* to run the Rank Weighted Colocalization coefficients per object.
 """.format(
                 **{"YES": "Yes"}
             ),
@@ -114,15 +120,8 @@ Select *{YES}* to run the Rank Weighted Colocalization coefficients.
         result = [
             self.images_list,
             self.thr,
-            # self.images_or_objects,
             self.objects_list,
-            # self.do_all,
-            # self.do_corr_and_slope,
-            # self.do_manders,
             self.do_rwc,
-            # self.do_overlap,
-            # self.do_costes,
-            # self.fast_costes,
         ]
         return result
     
@@ -132,25 +131,20 @@ Select *{YES}* to run the Rank Weighted Colocalization coefficients.
             self.objects_list,
             self.spacer,
             self.thr,
-            # self.do_rwc,
-            # self.images_or_objects,
         ]
         return result
 
     def help_settings(self):
         """Return the settings to be displayed in the help menu"""
         help_settings = [
-            # self.images_or_objects,
             self.thr,
             self.images_list,
             self.objects_list,
-            # self.do_all,
-            # self.fast_costes,
         ]
         return help_settings
     
     def get_image_pairs(self):
-        """Yield all permutations of pairs of images to correlate
+        """Yield all permutations of pairs of images to measure on.
 
         Yields the pairs of images in a canonical order.
         """
@@ -188,7 +182,7 @@ Select *{YES}* to run the Rank Weighted Colocalization coefficients.
     def run_image_pair_objects(
         self, workspace, first_image_name, second_image_name, object_name
     ):
-        """Calculate per-object correlations between intensities in two images"""
+        """Calculate per-object RWC between two images"""
         first_image = workspace.image_set.get_image(
             first_image_name, must_be_grayscale=True
         )
@@ -252,32 +246,18 @@ Select *{YES}* to run the Rank Weighted Colocalization coefficients.
         thr_fi = self.thr.value * numpy.max(fi) / 100
         thr_si = self.thr.value * numpy.max(si) / 100
 
-        #fi_thresh = fi[combined_thresh] #array including ONLY the pixels from fi that are above threshold in both images
-        #si_thresh = si[combined_thresh] #array including ONLY the pixels from si that are above threshold in both images
-        #tot_fi_thr = fi[(fi > thr_fi)].sum() #single value of the integrated intensity of above-threshold pixels for fi (?)
-        #tot_si_thr = si[(si > thr_si)].sum() #single value of the integrated intensity of above-threshold pixels for si (?)
-       
+        # Handle cases where there are no objects
         if n_objects == 0:
-            # corr = numpy.zeros((0,))
-            # overlap = numpy.zeros((0,))
-            # K1 = numpy.zeros((0,))
-            # K2 = numpy.zeros((0,))
-            # M1 = numpy.zeros((0,))
-            # M2 = numpy.zeros((0,))
             RWC1_perObj = numpy.zeros((0,))
             RWC2_perObj = numpy.zeros((0,))
-            # C1 = numpy.zeros((0,))
-            # C2 = numpy.zeros((0,))
         elif numpy.where(mask)[0].__len__() == 0:
             corr = numpy.zeros((n_objects,))
             corr[:] = numpy.NaN
-            # overlap = K1 = K2 = M1 = M2 = RWC1_perObj = RWC2_perObj = C1 = C2 = corr
             RWC1_perObj = RWC2_perObj = corr
 
         else:
             lrange = numpy.arange(n_objects, dtype=numpy.int32) + 1  # +1 bc Objects start at index 0
 
-            # RWC Coefficient
             RWC1_perObj = numpy.zeros(len(lrange))
             RWC2_perObj = numpy.zeros(len(lrange))
             above_thresh_pixels_perObj = numpy.zeros(len(lrange))
@@ -298,13 +278,12 @@ Select *{YES}* to run the Rank Weighted Colocalization coefficients.
                 first_pixels_perObj = first_pixels[labels==label]
                 second_pixels_perObj = second_pixels[labels==label]
 
-                #combined_thresh_perObj is an boolean array representing all the pixels in a single object
+                # combined_thresh_perObj is a boolean array representing all the pixels in a single object
                 # It is True in any pixel where BOTH first_pixels_perObj and second_pixels_perObj are above their respective threshold
-                # I needed to add 'above or equal' bc otherwise, 0 value pixels automatically get excluded no matter the threshold
                 combined_thresh_perObj = (first_pixels_perObj > tff_perObj[label-1]) & (second_pixels_perObj > tss_perObj[label-1])
                 
-                # Count the number of above-threshold pixels remaining in the object, and get relative value vs the size of the object
-                #store values in arrays (remember label starts at 1 and array index at 0)
+                # Count the number of above-threshold pixels remaining in the object, and get relative value to the size of the object
+                # Store values in arrays (remember label starts at 1 and array index at 0)
                 above_thresh_pixels_perObj[label-1] = numpy.count_nonzero(combined_thresh_perObj)
                 relative_above_thresh_pixels_perObj[label-1] = above_thresh_pixels_perObj[label-1] / len(first_pixels_perObj)
 
@@ -316,15 +295,15 @@ Select *{YES}* to run the Rank Weighted Colocalization coefficients.
                     second_pixels_perObj[second_pixels_perObj > tss_perObj[label - 1]]
                 )
 
-                #array of pixel values above threshold for the object
+                # Array of pixel values above threshold for the object
                 fi_thresh_obj = first_pixels_perObj[combined_thresh_perObj] 
                 si_thresh_obj = second_pixels_perObj[combined_thresh_perObj] 
                 
-                #array with a value assigned to each position according to ascending rank (0 is the rank of the lowest value)
+                # Array with a value assigned to each position according to ascending rank (0 is the rank of the lowest value)
                 Rank1_perObj = numpy.lexsort([first_pixels_perObj]) 
                 Rank2_perObj = numpy.lexsort([second_pixels_perObj])
 
-                #ASK BETH! this is a boolean array that has False every time pixel i from first_pixels (the list of pixel values from all objects in order) is equal to pixel i+1
+                # This is a boolean array that has False every time pixel i from first_pixels (the list of pixel values from all objects in order) is equal to pixel i+1
                 Rank1_U_perObj = numpy.hstack(
                     [[False], first_pixels_perObj[Rank1_perObj[:-1]] != first_pixels_perObj[Rank1_perObj[1:]]]
                 ) 
@@ -332,7 +311,6 @@ Select *{YES}* to run the Rank Weighted Colocalization coefficients.
                     [[False], second_pixels_perObj[Rank2_perObj[:-1]] != second_pixels_perObj[Rank2_perObj[1:]]]
                 )
 
-                #ask BETH, array with cumulative number of 'True' 
                 Rank1_S_perObj = numpy.cumsum(Rank1_U_perObj) 
                 Rank2_S_perObj = numpy.cumsum(Rank2_U_perObj)
 
@@ -342,17 +320,15 @@ Select *{YES}* to run the Rank Weighted Colocalization coefficients.
                 Rank_im1_perObj[Rank1_perObj] = Rank1_S_perObj
                 Rank_im2_perObj[Rank2_perObj] = Rank2_S_perObj
 
-                R_perObj = max(Rank_im1_perObj.max(), Rank_im2_perObj.max()) + 1 #max rank among all ranks in both ch (+1 to avoid division by 0)
-                Di_perObj = abs(Rank_im1_perObj - Rank_im2_perObj) #absolute difference of rank between ch in each pixel
+                R_perObj = max(Rank_im1_perObj.max(), Rank_im2_perObj.max()) + 1 #max rank among all ranks in both images (+1 to avoid division by 0)
+                Di_perObj = abs(Rank_im1_perObj - Rank_im2_perObj) #absolute difference of rank between images in each pixel
                 
                 weight_perObj = (R_perObj - Di_perObj) * 1.0 / R_perObj
                 weight_thresh_perObj = weight_perObj[combined_thresh_perObj]
 
-                # Calculate RWC only if any of the object pixels are above threshold
-                # ...which will always be the case since the thr is calculated as a % of the max intensity pixel in each object
-                # ...unless the above-threshold pixels on one channel don't match the ones on the other, so I guess it makes sense...
+                # Calculate RWCperObj only if any of the object pixels are above threshold
                 if numpy.any(combined_thresh_perObj):
-                    # RWC1_perObj and 2 are arrays with the RWC value for each object in the set
+                    # RWC1_perObj and RWC2_perObj are arrays with the RWC value for each object in the set
                     RWC1_perObj[label-1] = numpy.array(
                         scipy.ndimage.sum(
                             fi_thresh_obj * weight_thresh_perObj
@@ -551,9 +527,7 @@ Select *{YES}* to run the Rank Weighted Colocalization coefficients.
         if measurement in self.get_measurements(pipeline, object_name, category):
             for i1, i2 in self.get_image_pairs():
                 result.append("%s_%s" % (i1, i2))
-                # For asymmetric, return both orderings
-                if measurement in ("K", "Manders", "RWC", "Costes"):
-                    result.append("%s_%s" % (i2, i1))
+                result.append("%s_%s" % (i2, i1))
         return result
 
     def validate_module(self, pipeline):
