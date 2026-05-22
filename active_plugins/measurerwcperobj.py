@@ -6,8 +6,6 @@
 
 import numpy
 import scipy.ndimage
-import scipy.stats
-from scipy.linalg import lstsq
 import logging
 
 #################################
@@ -18,7 +16,6 @@ import logging
 from cellprofiler_core.constants.measurement import COLTYPE_FLOAT
 from cellprofiler_core.module import Module
 from cellprofiler_core.setting import Divider, Binary, ValidationError
-from cellprofiler_core.setting.choice import Choice
 from cellprofiler_core.setting.subscriber import (
     LabelSubscriber,
     LabelListSubscriber,
@@ -27,8 +24,6 @@ from cellprofiler_core.setting.subscriber import (
 from cellprofiler_core.setting.text import Float
 from cellprofiler_core.utilities.core.object import size_similarly
 from centrosome.cpmorphology import fixup_scipy_ndimage_result as fix
-from cellprofiler_core.utilities.core.object import crop_labels_and_image #NOT USED!
-import cellprofiler_core.measurement
 
 LOGGER = logging.getLogger(__name__)
 
