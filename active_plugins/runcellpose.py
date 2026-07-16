@@ -495,7 +495,7 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
             text="Rescale for anisotropy?",
             value=True,
             doc="""\
-Allow XYZ resampling to make the volme isotropic. Only used in 3D mode.
+Allow XYZ resampling to make the volume isotropic. Only used in 3D mode.
 """,)
 
     def settings(self):
