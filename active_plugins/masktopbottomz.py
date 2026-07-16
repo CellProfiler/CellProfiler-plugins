@@ -54,14 +54,6 @@ class MaskTopBottomZ(ImageProcessing):
 
         super(MaskTopBottomZ, self).create_settings()
 
-        #
-        # reST help that gets displayed when the user presses the
-        # help button to the right of the edit box.
-        #
-        # The superclass defines some generic help test. You can add
-        # module-specific help text by modifying the setting's "doc"
-        # string.
-        #
         self.x_name.doc = """\
 This is the image that the module operates on. You can choose any image
 that is made available by a prior module.
