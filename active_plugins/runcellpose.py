@@ -14,7 +14,6 @@ import shutil
 import logging
 import sys
 import math
-import scipy.ndimage
 
 #################################
 #
@@ -120,7 +119,7 @@ class RunCellpose(ImageSegmentation):
 
     module_name = "RunCellpose"
 
-    variable_revision_number = 7
+    variable_revision_number = 8
 
     doi = {
         "Please also cite Cellpose when using RunCellpose:": "https://doi.org/10.1038/s41592-020-01018-x",
@@ -492,6 +491,13 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
         particularly if using a GPU with limited memory. You likely want this off while testing your pipeline.
         """)
 
+        self.pass_anisotropy = Binary(
+            text="Rescale for anisotropy?",
+            value=True,
+            doc="""\
+Allow XYZ resampling to make the volume isotropic. Only used in 3D mode.
+""",)
+
     def settings(self):
         return [
             self.x_name,
@@ -531,7 +537,8 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
             self.denoise_type,
             self.denoise_image,
             self.denoise_name,
-            self.cache_model
+            self.cache_model,
+            self.pass_anisotropy
         ]
 
     def visible_settings(self):
@@ -605,6 +612,7 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
 
         if self.do_3D.value:
             vis_settings.remove(self.stitch_threshold)
+            vis_settings += [self.pass_anisotropy]
 
         vis_settings += [self.use_averaging, self.use_gpu]
 
@@ -676,9 +684,10 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
             x99 = numpy.percentile(rescale_x, 99)
             x_data = numpy.clip((rescale_x - x01) / (x99 - x01), a_min=0, a_max=1)
 
-        anisotropy = 0.0
+        anisotropy = None
         if self.do_3D.value:
-            anisotropy = x.spacing[0] / x.spacing[1]
+            if self.pass_anisotropy.value:
+                anisotropy = x.spacing[0] / x.spacing[1]
 
         if self.cellpose_version.value == 'v4':
             if self.specify_diameter.value:
@@ -1211,7 +1220,7 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
             setting_values = setting_values + ["0.4", "0.0"]
             variable_revision_number = 2
         if variable_revision_number == 2:
-            setting_values = setting_values + ["0.0", False, "15", "1.0", False, False]
+            setting_values = setting_values + ["0.0", 'No', "15", "1.0", 'No', 'No']
             variable_revision_number = 3
         if variable_revision_number == 3:
             setting_values = [setting_values[0]] + ["Python",CELLPOSE_DOCKERS['v2'][0]] + setting_values[1:]
@@ -1220,15 +1229,18 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
             setting_values = [setting_values[0]] + ['No'] + setting_values[1:]
             variable_revision_number = 5
         if variable_revision_number == 5:
-            setting_values = setting_values + [False]
+            setting_values = setting_values + ['No']
             variable_revision_number = 6
         if variable_revision_number == 6:
             new_setting_values = setting_values[0:3]
             new_setting_values += ['v2', CELLPOSE_DOCKERS['omnipose'][0], setting_values[3], CELLPOSE_DOCKERS['v3'][0], CELLPOSE_DOCKERS['v4'][0]]
-            new_setting_values += [False, setting_values[4], MODEL_NAMES['omnipose'][0], setting_values[5], MODEL_NAMES['v3'][0], MODEL_NAMES['v4'][0]]
-            new_setting_values += setting_values[6:]+ [False, DENOISER_NAMES[0], False, "Preprocessed", False]
+            new_setting_values += ['No', setting_values[4], MODEL_NAMES['omnipose'][0], setting_values[5], MODEL_NAMES['v3'][0], MODEL_NAMES['v4'][0]]
+            new_setting_values += setting_values[6:]+ ['No', DENOISER_NAMES[0], 'No', "Preprocessed", 'No']
             setting_values = new_setting_values
             variable_revision_number = 7
+        if variable_revision_number ==7:
+            setting_values = setting_values + ['Yes']
+            variable_revision_number = 8
         return setting_values, variable_revision_number
     
 
