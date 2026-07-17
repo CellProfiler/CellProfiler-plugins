@@ -99,13 +99,15 @@ BASE_BOOLEAN_LONG_DESCRIPTION = "Select *Yes* if this measurement is *inclusive*
 # The number of settings per metric
 METRIC_SETTING_COUNT = 3
 
-FIXED_SETTING_COUNT = 15
+FIXED_SETTING_COUNT = 16
+
+FIXED_SETTING_COUNT_BEFORE_NON_1HOT = 15
 
 class CallBarcodes(cellprofiler_core.module.Module):
 
     module_name = "CallBarcodes"
     category = "Data Tools"
-    variable_revision_number = 3
+    variable_revision_number = 4
 
     def create_settings(self):
         self.csv_directory = cellprofiler_core.setting.text.Directory(
@@ -148,6 +150,16 @@ Enter the number of cycles present in the data.
             text="Number of cycles",
             value=8,
         )
+
+        self.min_value = cellprofiler_core.setting.text.Float(
+            doc="""\
+Set the minimum measurement value required to be considered positive for a channel. Foci 
+with values >= this value for the chosen measurement will be called positive.
+""",
+            text="Minimum value to be considered positive in a channel",
+            value=1,
+        )
+
         self.cycle1measure = cellprofiler_core.setting.Measurement(
             "Select one of the measures from Cycle 1 to use for calling",
             self.input_object_name.get_value,
@@ -331,7 +343,7 @@ No other channel formats are available at this time, though you are free to open
         value_count = len(setting_values)
         assert (value_count - FIXED_SETTING_COUNT) % METRIC_SETTING_COUNT == 0
         bases_encountered = []
-        for x in range(FIXED_SETTING_COUNT,value_count,METRIC_SETTING_COUNT):
+        for x in range(FIXED_SETTING_COUNT_BEFORE_NON_1HOT,value_count,METRIC_SETTING_COUNT):
             if setting_values[x] not in bases_encountered:
                 #don't add an "extra" setting for the first one of each base, added in create_settings
                 bases_encountered.append(setting_values[x])
@@ -364,6 +376,9 @@ No other channel formats are available at this time, though you are free to open
                     measurement.measurement_name,
                     measurement.base_boolean,
                 ]
+        
+        result += [self.min_value]
+
         return result
 
     def visible_settings(self):
@@ -376,6 +391,7 @@ No other channel formats are available at this time, though you are free to open
             self.cycle1measure
             ]
         else:
+            result += [self.min_value]
             add_buttons = {"A":[self.add_button_a, self.divider_1], "C":[self.add_button_c, self.divider_2],
                            "G":[self.add_button_g, self.divider_3], "T":[self.add_button_t]}
             for base in self.base_measurements.keys():
@@ -569,7 +585,8 @@ No other channel formats are available at this time, though you are free to open
                     self.base_measurements,
                     measurements,
                     self.input_object_name.value,
-                    self.ncycles.value)
+                    self.ncycles.value,
+                    self.min_value.value)
                 
         if objectcount >= 1:
             workspace.measurements.add_measurement(
@@ -709,7 +726,7 @@ No other channel formats are available at this time, though you are free to open
         figure.subplot_table(0, 0, statistics)
 
     def calloneexpISSbarcode(self, calling_setting_dict, measurements, 
-                             object_name, ncycles):
+                             object_name, ncycles, min_value):
         def call_by_column(base_array):
             base_order = ['A','C','G','T']
             if sum(base_array) != 1:
@@ -742,10 +759,10 @@ No other channel formats are available at this time, though you are free to open
                 base = call_bool_dict[base_list[base_order]]
                 if True in base.keys():
                     for eachmeas in base[True]:
-                        this_base_array = this_base_array * (measurements.get_current_measurement(object_name,eachmeas[cycle]) > 0)
+                        this_base_array = this_base_array * (measurements.get_current_measurement(object_name,eachmeas[cycle]) >= min_value)
                 if False in base.keys():
                     for eachmeas in base[False]:
-                        this_base_array = this_base_array * ~(measurements.get_current_measurement(object_name,eachmeas[cycle]) > 0)
+                        this_base_array = this_base_array * ~(measurements.get_current_measurement(object_name,eachmeas[cycle]) >= min_value)
                 which_base_array[:,base_order] = this_base_array
             full_base_array = numpy.char.add(full_base_array,numpy.apply_along_axis(call_by_column,1,which_base_array)) 
         return list(full_base_array)
@@ -954,4 +971,7 @@ No other channel formats are available at this time, though you are free to open
         if variable_revision_number == 2:
             setting_values = setting_values[:14]+["Yes"]+setting_values[14:]
             variable_revision_number = 3
+        if variable_revision_number == 3:
+            setting_values = setting_values+[1]
+            variable_revision_number = 4
         return setting_values, variable_revision_number
