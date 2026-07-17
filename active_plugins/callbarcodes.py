@@ -568,7 +568,7 @@ No other channel formats are available at this time, though you are free to open
                     quality_scores,
                 )
 
-                imagemeanquality = numpy.mean(quality_scores)
+                imagemeanquality = float(numpy.mean(quality_scores))
 
                 workspace.measurements.add_measurement(
                     "Image", "_".join([C_CALL_BARCODES, "MeanQualityScore"]), imagemeanquality
@@ -631,7 +631,7 @@ No other channel formats are available at this time, though you are free to open
                         )
                     count += 1
 
-                imagemeanscore = numpy.mean(scorelist)
+                imagemeanscore = float(numpy.mean(scorelist))
 
                 workspace.measurements.add_measurement(
                     "Image", "_".join([C_CALL_BARCODES, "MeanBarcodeScore"]), imagemeanscore
@@ -672,26 +672,17 @@ No other channel formats are available at this time, though you are free to open
                         ),
                     )
 
-                if self.show_window:
+            if self.show_window:
+                workspace.display_data.statistics = [
+                        ("Number barcodes", len(calledbarcodes)), 
+                        ("Number of unique calls",len(list(set(calledbarcodes))))
+                ]
+                if self.do_library_match:
+                    workspace.display_data.statistics += [("Image Mean Score",imagemeanscore)]
+                    
                     if self.n_colors.value == ENCODING_TYPES[0]:
-                        workspace.display_data.col_labels = (
-                            "Image Mean Score",
-                            "Image Mean Quality Score",
-                        )
-                        workspace.display_data.statistics = [imagemeanscore, imagemeanquality]
-                    else:
-                        workspace.display_data.col_labels = (
-                            "Image Mean Score"
-                        )
-                        workspace.display_data.statistics = [imagemeanscore]
-            
-            else:
-                if self.show_window:
-                    workspace.display_data.col_labels = (
-                        "Number barcodes",
-                        "Number of unique calls",
-                    )
-                    workspace.display_data.statistics = [len(calledbarcodes), len(list(set([calledbarcodes])))]
+                        workspace.display_data.statistics += [ ("Image Mean Quality Score",imagemeanquality)]
+
         
         else:
             if self.do_library_match.value:
@@ -717,11 +708,11 @@ No other channel formats are available at this time, though you are free to open
                             ),
                         )
 
-            workspace.display_data.col_labels = (
-                "Number barcodes",
-                "Number of unique calls",
-            )
-            workspace.display_data.statistics = [0, 0]
+            if self.show_window:
+                workspace.display_data.statistics = [
+                        ("Number barcodes", 0), 
+                        ("Number of unique calls",0)
+                ]
 
 
     def display(self, workspace, figure):
