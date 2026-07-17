@@ -673,11 +673,17 @@ No other channel formats are available at this time, though you are free to open
                     )
 
                 if self.show_window:
-                    workspace.display_data.col_labels = (
-                        "Image Mean Score",
-                        "Image Mean Quality Score",
-                    )
-                    workspace.display_data.statistics = [imagemeanscore, imagemeanquality]
+                    if self.n_colors.value == ENCODING_TYPES[0]:
+                        workspace.display_data.col_labels = (
+                            "Image Mean Score",
+                            "Image Mean Quality Score",
+                        )
+                        workspace.display_data.statistics = [imagemeanscore, imagemeanquality]
+                    else:
+                        workspace.display_data.col_labels = (
+                            "Image Mean Score"
+                        )
+                        workspace.display_data.statistics = [imagemeanscore]
             
             else:
                 if self.show_window:
