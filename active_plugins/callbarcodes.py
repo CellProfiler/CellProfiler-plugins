@@ -528,140 +528,178 @@ No other channel formats are available at this time, though you are free to open
             self.input_object_name.value
         )
 
+        objectcount = measurements.get_current_measurement('Image',f'Count_{self.input_object_name.value}')
+
         if self.n_colors.value == ENCODING_TYPES[0]:
             measurements_for_calls = self.getallonehotbarcodemeasurements(
                 listofmeasurements, self.ncycles.value, self.cycle1measure.value
             )
             first_cycle_measures = list(measurements_for_calls[1].keys())
 
-            # Use a known barcode intensity measurement to determine object count
-            objectcount = len(
-                measurements.get_current_measurement(
-                    self.input_object_name.value, first_cycle_measures[0]
-                )
-            )
-            calledbarcodes, quality_scores = self.callonehotbarcode(
-                measurements_for_calls,
-                measurements,
-                self.input_object_name.value,
-                self.ncycles.value,
-                objectcount,
-            )
+            if objectcount >=1:
 
-            workspace.measurements.add_measurement(
-                self.input_object_name.value,
-                "_".join([C_CALL_BARCODES, "MeanQualityScore"]),
-                quality_scores,
-            )
-
-            imagemeanquality = numpy.mean(quality_scores)
-
-            workspace.measurements.add_measurement(
-                "Image", "_".join([C_CALL_BARCODES, "MeanQualityScore"]), imagemeanquality
-            )
-        else:
-            calledbarcodes = self.calloneexpISSbarcode(
-                self.base_measurements,
-                measurements,
-                self.input_object_name.value,
-                self.ncycles.value)
-
-        workspace.measurements.add_measurement(
-            self.input_object_name.value,
-            "_".join([C_CALL_BARCODES, "BarcodeCalled"]),
-            calledbarcodes,
-        )
-        if self.do_library_match.value:
-            barcodes = self.barcodeset(
-                self.metadata_field_barcode.value, self.metadata_field_tag.value
-            )
-
-            cropped_barcode_dict = {
-                y[: self.ncycles.value]: y for y in list(barcodes.keys())
-            }
-
-            scorelist = []
-            matchedbarcode = []
-            matchedbarcodecode = []
-            matchedbarcodeid = []
-            if self.wants_call_image or self.wants_score_image:
-                objects = workspace.object_set.get_objects(self.input_object_name.value)
-                labels = objects.segmented
-                pixel_data_call = objects.segmented
-                pixel_data_score = objects.segmented
-            count = 1
-            for eachbarcode in calledbarcodes:
-                eachscore, eachmatch = self.queryall(cropped_barcode_dict, eachbarcode)
-                scorelist.append(eachscore)
-                matchedbarcode.append(eachmatch)
-                m_id, m_code = barcodes[eachmatch]
-                matchedbarcodeid.append(m_id)
-                matchedbarcodecode.append(m_code)
-                if self.wants_call_image:
-                    pixel_data_call = numpy.where(
-                        labels == count, barcodes[eachmatch][0], pixel_data_call
-                    )
-                if self.wants_score_image:
-                    pixel_data_score = numpy.where(
-                        labels == count, 65535 * eachscore, pixel_data_score
-                    )
-                count += 1
-
-            imagemeanscore = numpy.mean(scorelist)
-
-            workspace.measurements.add_measurement(
-                "Image", "_".join([C_CALL_BARCODES, "MeanBarcodeScore"]), imagemeanscore
-            )
-
-            workspace.measurements.add_measurement(
-                self.input_object_name.value,
-                "_".join([C_CALL_BARCODES, "MatchedTo_Barcode"]),
-                matchedbarcode,
-            )
-            workspace.measurements.add_measurement(
-                self.input_object_name.value,
-                "_".join([C_CALL_BARCODES, "MatchedTo_ID"]),
-                matchedbarcodeid,
-            )
-            workspace.measurements.add_measurement(
-                self.input_object_name.value,
-                "_".join([C_CALL_BARCODES, "MatchedTo_GeneCode"]),
-                matchedbarcodecode,
-            )
-            workspace.measurements.add_measurement(
-                self.input_object_name.value,
-                "_".join([C_CALL_BARCODES, "MatchedTo_Score"]),
-                scorelist,
-            )
-            if self.wants_call_image:
-                workspace.image_set.add(
-                    self.outimage_calls_name.value,
-                    cellprofiler_core.image.Image(
-                        pixel_data_call.astype("uint16"), convert=False
-                    ),
-                )
-            if self.wants_score_image:
-                workspace.image_set.add(
-                    self.outimage_score_name.value,
-                    cellprofiler_core.image.Image(
-                        pixel_data_score.astype("uint16"), convert=False
-                    ),
+                calledbarcodes, quality_scores = self.callonehotbarcode(
+                    measurements_for_calls,
+                    measurements,
+                    self.input_object_name.value,
+                    self.ncycles.value,
+                    objectcount,
                 )
 
-            if self.show_window:
-                workspace.display_data.col_labels = (
-                    "Image Mean Score",
-                    "Image Mean Quality Score",
+                workspace.measurements.add_measurement(
+                    self.input_object_name.value,
+                    "_".join([C_CALL_BARCODES, "MeanQualityScore"]),
+                    quality_scores,
                 )
-                workspace.display_data.statistics = [imagemeanscore, imagemeanquality]
+
+                imagemeanquality = numpy.mean(quality_scores)
+
+                workspace.measurements.add_measurement(
+                    "Image", "_".join([C_CALL_BARCODES, "MeanQualityScore"]), imagemeanquality
+                )
+            
+            else:
+                workspace.measurements.add_measurement(
+                    "Image", "_".join([C_CALL_BARCODES, "MeanQualityScore"]), 0
+                )
         
         else:
-            if self.show_window:
-                workspace.display_data.col_labels = (
-                    "Number barcodes",
-                    "Number of unique calls",
+            if objectcount >= 1:
+                calledbarcodes = self.calloneexpISSbarcode(
+                    self.base_measurements,
+                    measurements,
+                    self.input_object_name.value,
+                    self.ncycles.value)
+                
+        if objectcount >= 1:
+            workspace.measurements.add_measurement(
+                self.input_object_name.value,
+                "_".join([C_CALL_BARCODES, "BarcodeCalled"]),
+                calledbarcodes,
+            )
+
+            if self.do_library_match.value:
+                barcodes = self.barcodeset(
+                    self.metadata_field_barcode.value, self.metadata_field_tag.value
                 )
-                workspace.display_data.statistics = [len(calledbarcodes), len(list(set([calledbarcodes])))]
+
+                cropped_barcode_dict = {
+                    y[: self.ncycles.value]: y for y in list(barcodes.keys())
+                }
+
+                scorelist = []
+                matchedbarcode = []
+                matchedbarcodecode = []
+                matchedbarcodeid = []
+                if self.wants_call_image or self.wants_score_image:
+                    objects = workspace.object_set.get_objects(self.input_object_name.value)
+                    labels = objects.segmented
+                    pixel_data_call = objects.segmented
+                    pixel_data_score = objects.segmented
+                count = 1
+                for eachbarcode in calledbarcodes:
+                    eachscore, eachmatch = self.queryall(cropped_barcode_dict, eachbarcode)
+                    scorelist.append(eachscore)
+                    matchedbarcode.append(eachmatch)
+                    m_id, m_code = barcodes[eachmatch]
+                    matchedbarcodeid.append(m_id)
+                    matchedbarcodecode.append(m_code)
+                    if self.wants_call_image:
+                        pixel_data_call = numpy.where(
+                            labels == count, barcodes[eachmatch][0], pixel_data_call
+                        )
+                    if self.wants_score_image:
+                        pixel_data_score = numpy.where(
+                            labels == count, 65535 * eachscore, pixel_data_score
+                        )
+                    count += 1
+
+                imagemeanscore = numpy.mean(scorelist)
+
+                workspace.measurements.add_measurement(
+                    "Image", "_".join([C_CALL_BARCODES, "MeanBarcodeScore"]), imagemeanscore
+                )
+
+                workspace.measurements.add_measurement(
+                    self.input_object_name.value,
+                    "_".join([C_CALL_BARCODES, "MatchedTo_Barcode"]),
+                    matchedbarcode,
+                )
+                workspace.measurements.add_measurement(
+                    self.input_object_name.value,
+                    "_".join([C_CALL_BARCODES, "MatchedTo_ID"]),
+                    matchedbarcodeid,
+                )
+                workspace.measurements.add_measurement(
+                    self.input_object_name.value,
+                    "_".join([C_CALL_BARCODES, "MatchedTo_GeneCode"]),
+                    matchedbarcodecode,
+                )
+                workspace.measurements.add_measurement(
+                    self.input_object_name.value,
+                    "_".join([C_CALL_BARCODES, "MatchedTo_Score"]),
+                    scorelist,
+                )
+                if self.wants_call_image:
+                    workspace.image_set.add(
+                        self.outimage_calls_name.value,
+                        cellprofiler_core.image.Image(
+                            pixel_data_call.astype("uint16"), convert=False
+                        ),
+                    )
+                if self.wants_score_image:
+                    workspace.image_set.add(
+                        self.outimage_score_name.value,
+                        cellprofiler_core.image.Image(
+                            pixel_data_score.astype("uint16"), convert=False
+                        ),
+                    )
+
+                if self.show_window:
+                    workspace.display_data.col_labels = (
+                        "Image Mean Score",
+                        "Image Mean Quality Score",
+                    )
+                    workspace.display_data.statistics = [imagemeanscore, imagemeanquality]
+            
+            else:
+                if self.show_window:
+                    workspace.display_data.col_labels = (
+                        "Number barcodes",
+                        "Number of unique calls",
+                    )
+                    workspace.display_data.statistics = [len(calledbarcodes), len(list(set([calledbarcodes])))]
+        
+        else:
+            if self.do_library_match.value:
+                workspace.measurements.add_measurement(
+                    "Image", "_".join([C_CALL_BARCODES, "MeanBarcodeScore"]), 0
+                )
+                if self.wants_call_image or self.wants_score_image:
+                    objects = workspace.object_set.get_objects(self.input_object_name.value)
+                    labels = objects.segmented
+                    zeros = numpy.zeros_like(labels)
+                    if self.wants_call_image:
+                        workspace.image_set.add(
+                                self.outimage_calls_name.value,
+                                cellprofiler_core.image.Image(
+                                    zeros, convert=False
+                                ),
+                            )
+                    if self.wants_score_image:
+                        workspace.image_set.add(
+                            self.outimage_score_name.value,
+                            cellprofiler_core.image.Image(
+                                zeros, convert=False
+                            ),
+                        )
+
+            workspace.display_data.col_labels = (
+                "Number barcodes",
+                "Number of unique calls",
+            )
+            workspace.display_data.statistics = [0, 0]
+
 
     def display(self, workspace, figure):
         statistics = workspace.display_data.statistics
