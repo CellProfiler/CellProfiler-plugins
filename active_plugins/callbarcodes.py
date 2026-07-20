@@ -707,6 +707,8 @@ No other channel formats are available at this time, though you are free to open
                                 zeros, convert=False
                             ),
                         )
+                
+                self.measurements_without_objects(workspace, self.input_object_name.value)
 
             if self.show_window:
                 workspace.display_data.statistics = [
@@ -863,6 +865,16 @@ No other channel formats are available at this time, though you are free to open
             scores = list(scoredict.keys())
             scores.sort(reverse=True)
             return scores[0], cropped_barcode_dict[scoredict[scores[0]]]
+        
+    def measurements_without_objects(self, workspace, object_name):
+        # Create column headers even if there were no objects in a set.
+        features_to_record = self.get_measurements(workspace.pipeline, object_name, C_CALL_BARCODES)
+        empty_measure = numpy.zeros((0,))
+        for feature_name in features_to_record:
+            workspace.add_measurement(
+            object_name, "%s_%s" % (C_CALL_BARCODES, feature_name), empty_measure
+        )
+           
 
     def get_measurement_columns(self, pipeline):
 
