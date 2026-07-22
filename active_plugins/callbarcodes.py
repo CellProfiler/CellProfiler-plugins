@@ -544,11 +544,18 @@ No other channel formats are available at this time, though you are free to open
             self.input_object_name.value
         )
 
-        objectcount = measurements.get_current_measurement('Image',f'Count_{self.input_object_name.value}')
+        # Image measurements store count values as NumPy scalars, so normalize
+        # dimensions before using them in array allocations and ranges.
+        ncycles = int(self.ncycles.value)
+        objectcount = int(
+            measurements.get_current_measurement(
+                "Image", f"Count_{self.input_object_name.value}"
+            )
+        )
 
         if self.n_colors.value == ENCODING_TYPES[0]:
             measurements_for_calls = self.getallonehotbarcodemeasurements(
-                listofmeasurements, self.ncycles.value, self.cycle1measure.value
+                listofmeasurements, ncycles, self.cycle1measure.value
             )
             first_cycle_measures = list(measurements_for_calls[1].keys())
 
@@ -558,7 +565,7 @@ No other channel formats are available at this time, though you are free to open
                     measurements_for_calls,
                     measurements,
                     self.input_object_name.value,
-                    self.ncycles.value,
+                    ncycles,
                     objectcount,
                 )
 
@@ -585,7 +592,7 @@ No other channel formats are available at this time, though you are free to open
                     self.base_measurements,
                     measurements,
                     self.input_object_name.value,
-                    self.ncycles.value,
+                    ncycles,
                     self.min_value.value)
                 
         if objectcount >= 1:
@@ -601,7 +608,7 @@ No other channel formats are available at this time, though you are free to open
                 )
 
                 cropped_barcode_dict = {
-                    y[: self.ncycles.value]: y for y in list(barcodes.keys())
+                    y[: ncycles]: y for y in list(barcodes.keys())
                 }
 
                 scorelist = []
@@ -726,6 +733,7 @@ No other channel formats are available at this time, though you are free to open
 
     def calloneexpISSbarcode(self, calling_setting_dict, measurements, 
                              object_name, ncycles, min_value):
+        ncycles = int(ncycles)
         def call_by_column(base_array):
             base_order = ['A','C','G','T']
             if sum(base_array) != 1:
@@ -767,6 +775,7 @@ No other channel formats are available at this time, though you are free to open
         return list(full_base_array)
 
     def getallcyclebarcodemeasurements(self, measurements, ncycles, examplemeas, object_name):
+        ncycles = int(ncycles)
         measurementdict = {}
         obj_measurement_columns = [x[1] for x in measurements.get_measurement_columns() if x[0]=='Foci']
         cycle_string = re.search("Cycle.*[0-9]{1,2}",examplemeas).group()
@@ -783,6 +792,7 @@ No other channel formats are available at this time, though you are free to open
         return measurementdict
 
     def getallonehotbarcodemeasurements(self, measurements, ncycles, examplemeas):
+        ncycles = int(ncycles)
         stem = re.split("Cycle", examplemeas)[0]
         measurementdict = {}
         for eachmeas in measurements:
@@ -804,7 +814,9 @@ No other channel formats are available at this time, though you are free to open
     ):
 
         master_cycles = []
-        score_array = numpy.zeros([ncycles, objectcount])
+        ncycles = int(ncycles)
+        objectcount = int(objectcount)
+        score_array = numpy.zeros((ncycles, objectcount))
 
         for eachcycle in range(1, ncycles + 1):
             cycles_measures_perobj = []
