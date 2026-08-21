@@ -684,7 +684,7 @@ Allow XYZ resampling to make the volume isotropic. Only used in 3D mode.
             x99 = numpy.percentile(rescale_x, 99)
             x_data = numpy.clip((rescale_x - x01) / (x99 - x01), a_min=0, a_max=1)
 
-        anisotropy = None
+        anisotropy = 0
         if self.do_3D.value:
             if self.pass_anisotropy.value:
                 anisotropy = x.spacing[0] / x.spacing[1]
