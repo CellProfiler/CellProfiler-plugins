@@ -1008,10 +1008,10 @@ Allow XYZ resampling to make the volume isotropic. Only used in 3D mode.
             if self.use_averaging.value:
                 cmd += ['--net_avg']
             if self.do_3D.value:
-                cmd += ['--do_3D']
+                cmd += ['--do_3D', '--anisotropy', str(anisotropy),]
             if self.cellpose_version.value != 'omnipose':
                 cmd += ['--cellprob_threshold', str(self.cellprob_threshold.value), '--min_size', str(self.min_size.value)]
-            cmd += ['--anisotropy', str(anisotropy), '--flow_threshold', str(self.flow_threshold.value),  '--stitch_threshold', str(self.stitch_threshold.value)]
+            cmd += ['--flow_threshold', str(self.flow_threshold.value),  '--stitch_threshold', str(self.stitch_threshold.value)]
             if self.cellpose_version.value in ['omnipose','v2','v3']:
                 if self.invert.value:
                     cmd += ['--invert']
