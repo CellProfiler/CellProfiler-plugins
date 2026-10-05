@@ -14,7 +14,6 @@ import shutil
 import logging
 import sys
 import math
-import scipy.ndimage
 
 #################################
 #
@@ -120,7 +119,7 @@ class RunCellpose(ImageSegmentation):
 
     module_name = "RunCellpose"
 
-    variable_revision_number = 7
+    variable_revision_number = 8
 
     doi = {
         "Please also cite Cellpose when using RunCellpose:": "https://doi.org/10.1038/s41592-020-01018-x",
@@ -492,6 +491,13 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
         particularly if using a GPU with limited memory. You likely want this off while testing your pipeline.
         """)
 
+        self.pass_anisotropy = Binary(
+            text="Rescale for anisotropy?",
+            value=True,
+            doc="""\
+Allow XYZ resampling to make the volume isotropic. Only used in 3D mode.
+""",)
+
     def settings(self):
         return [
             self.x_name,
@@ -531,7 +537,8 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
             self.denoise_type,
             self.denoise_image,
             self.denoise_name,
-            self.cache_model
+            self.cache_model,
+            self.pass_anisotropy
         ]
 
     def visible_settings(self):
@@ -605,6 +612,7 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
 
         if self.do_3D.value:
             vis_settings.remove(self.stitch_threshold)
+            vis_settings += [self.pass_anisotropy]
 
         vis_settings += [self.use_averaging, self.use_gpu]
 
@@ -676,9 +684,10 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
             x99 = numpy.percentile(rescale_x, 99)
             x_data = numpy.clip((rescale_x - x01) / (x99 - x01), a_min=0, a_max=1)
 
-        anisotropy = 0.0
+        anisotropy = 0
         if self.do_3D.value:
-            anisotropy = x.spacing[0] / x.spacing[1]
+            if self.pass_anisotropy.value:
+                anisotropy = x.spacing[0] / x.spacing[1]
 
         if self.cellpose_version.value == 'v4':
             if self.specify_diameter.value:
@@ -873,6 +882,12 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
             elif self.cellpose_version.value == 'v4':
                 assert int(self.cellpose_ver[0])==4, "Cellpose version selected in RunCellpose module doesn't match version in Python"
                 LOGGER.info(f"Loading new model: {self.mode.value}")
+                # For processing 3D data, model requires to specify which axis defines z dimension
+                if x.volumetric:
+                    z_axis=0
+                else:
+                    z_axis=None
+
                 if self.mode.value == 'custom':
                     model_file, model_directory, model_path  = get_custom_model_vars(self)
                     self.current_model = models.CellposeModel(
@@ -893,6 +908,7 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
                     try:
                         y_data, flows, *_ = self.current_model.eval(
                             x_data,
+                            z_axis=z_axis,                            
                             diameter=diam,
                             do_3D=self.do_3D.value,
                             anisotropy=anisotropy,
@@ -916,6 +932,9 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
                     try:
                         y_data, flows, *_ = self.current_model.eval(
                             x_data,
+                            # channel_axis=None,
+                            # channels=channels,
+                            z_axis=z_axis,
                             do_3D=self.do_3D.value,
                             anisotropy=anisotropy,
                             flow_threshold=self.flow_threshold.value,
@@ -935,8 +954,8 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
                             self.current_model = None
                             self.current_model_params = None
 
-            if self.remove_edge_masks:
-                y_data = utils.remove_edge_masks(y_data)
+                if self.remove_edge_masks:
+                    y_data = utils.remove_edge_masks(y_data)
 
         else:
             if self.docker_or_python.value == "Docker":
@@ -967,10 +986,13 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
             # Save the image to the Docker mounted directory
             skimage.io.imsave(temp_img_path, x_data)
 
-            cmd = [docker_path, 'run', '--rm', '-v', f'{temp_dir}:/data', self.docker_image.value]
+            cmd = [docker_path, 'run', '--rm', '-v', f'{temp_dir}:/data',]
             if self.use_gpu.value:
                 cmd += ['--gpus', 'all']
-            cmd += ['cellpose', '--verbose', '--dir', '/data/img', '--pretrained_model']
+            cmd += [self.docker_image.value, 'cellpose']
+            if self.use_gpu.value:
+                cmd += ['--use_gpu']
+            cmd += ['--verbose', '--dir', '/data/img', '--pretrained_model']
             if self.mode.value !='custom':
                 cmd += [self.mode.value]
             else:
@@ -986,10 +1008,10 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
             if self.use_averaging.value:
                 cmd += ['--net_avg']
             if self.do_3D.value:
-                cmd += ['--do_3D']
+                cmd += ['--do_3D', '--anisotropy', str(anisotropy),]
             if self.cellpose_version.value != 'omnipose':
                 cmd += ['--cellprob_threshold', str(self.cellprob_threshold.value), '--min_size', str(self.min_size.value)]
-            cmd += ['--anisotropy', str(anisotropy), '--flow_threshold', str(self.flow_threshold.value),  '--stitch_threshold', str(self.stitch_threshold.value)]
+            cmd += ['--flow_threshold', str(self.flow_threshold.value),  '--stitch_threshold', str(self.stitch_threshold.value)]
             if self.cellpose_version.value in ['omnipose','v2','v3']:
                 if self.invert.value:
                     cmd += ['--invert']
@@ -1039,10 +1061,11 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
                 prob_map = numpy.clip((rescale_prob_map - prob_map01) / (prob_map99 - prob_map01), a_min=0, a_max=1)
             # Flows come out sized relative to CellPose's inbuilt model size.
             # We need to slightly resize to match the original image.
-            size_corrected = skimage.transform.resize(prob_map, y_data.shape)
+            size_corrected = skimage.transform.resize(prob_map, x_data.shape)
             prob_image = Image(
                 size_corrected,
                 parent_image=x.parent_image,
+                mask=x.mask,
                 convert=False,
                 dimensions=len(size_corrected.shape),
             )
@@ -1103,7 +1126,9 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
         else:
             layout = (2, 2)
 
-        figure.set_subplots(subplots=layout)
+        dimensions = workspace.display_data.dimensions
+
+        figure.set_subplots(subplots=layout, dimensions=dimensions)
         
         title = "Input image, cycle #%d" % (workspace.measurements.image_number,)
         figure.subplot_imshow(
@@ -1122,13 +1147,26 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
             y=0,
         )
         
-        cplabels = [
-                dict(name=self.y_name.value, labels=[workspace.display_data.primary_labels]),
-            ]
+        # Only display labels when processing 2D data
+        x_name = self.x_name.value
+        images = getattr(workspace, "image_set", None)
+        x = images.get_image(x_name) if images is not None else None
+
+        if x is not None and getattr(x, "volumetric", False):
+            cplabels=None
+        else:
+            cplabels = [
+                    dict(name=self.y_name.value, labels=[workspace.display_data.primary_labels]),
+                ]
 
         title = "%s outlines" % self.y_name.value
         figure.subplot_imshow_grayscale(
-            0, 1, workspace.display_data.x_data, title, cplabels=cplabels, sharexy=figure.subplot(0, 0),
+            x=0, 
+            y=1, 
+            image=workspace.display_data.x_data, 
+            title=title, 
+            cplabels=cplabels, 
+            sharexy=figure.subplot(0, 0),
         )
 
         figure.subplot_table(
@@ -1182,7 +1220,7 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
             setting_values = setting_values + ["0.4", "0.0"]
             variable_revision_number = 2
         if variable_revision_number == 2:
-            setting_values = setting_values + ["0.0", False, "15", "1.0", False, False]
+            setting_values = setting_values + ["0.0", 'No', "15", "1.0", 'No', 'No']
             variable_revision_number = 3
         if variable_revision_number == 3:
             setting_values = [setting_values[0]] + ["Python",CELLPOSE_DOCKERS['v2'][0]] + setting_values[1:]
@@ -1191,16 +1229,20 @@ Activate to rescale probability map to 0-255 (which matches the scale used when 
             setting_values = [setting_values[0]] + ['No'] + setting_values[1:]
             variable_revision_number = 5
         if variable_revision_number == 5:
-            setting_values = setting_values + [False]
+            setting_values = setting_values + ['No']
             variable_revision_number = 6
         if variable_revision_number == 6:
             new_setting_values = setting_values[0:3]
             new_setting_values += ['v2', CELLPOSE_DOCKERS['omnipose'][0], setting_values[3], CELLPOSE_DOCKERS['v3'][0], CELLPOSE_DOCKERS['v4'][0]]
-            new_setting_values += [False, setting_values[4], MODEL_NAMES['omnipose'][0], setting_values[5], MODEL_NAMES['v3'][0], MODEL_NAMES['v4'][0]]
-            new_setting_values += setting_values[6:]+ [False, DENOISER_NAMES[0], False, "Preprocessed", False]
+            new_setting_values += ['No', setting_values[4], MODEL_NAMES['omnipose'][0], setting_values[5], MODEL_NAMES['v3'][0], MODEL_NAMES['v4'][0]]
+            new_setting_values += setting_values[6:]+ ['No', DENOISER_NAMES[0], 'No', "Preprocessed", 'No']
             setting_values = new_setting_values
             variable_revision_number = 7
+        if variable_revision_number ==7:
+            setting_values = setting_values + ['Yes']
+            variable_revision_number = 8
         return setting_values, variable_revision_number
     
+
 
 

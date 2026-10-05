@@ -88,12 +88,26 @@ YES          YES           YES
 
 C_CALL_BARCODES = "Barcode"
 
+ENCODING_TYPES = ["One Hot Exponentially Multiplexed (ie 4-color SBS/ISS)", "Exponentially Multiplexed (SBS/ISS only)"]
+
+BASE_MEASUREMENT_DESCRIPTION = "Select the {YYY} measurement indicating that {ZZZ} is encoded"
+
+BASE_BOOLEAN_DESCRIPTION = "Does a positive value here mean the base SHOULD be called {ZZZ}?"
+
+BASE_BOOLEAN_LONG_DESCRIPTION = "Select *Yes* if this measurement is *inclusive* (ie if this measurement is above zero, this is all or part of the information that indicates the base SHOULD be called); Select *No* if this measurement is *exclusive* (if this measurement is above zero, this is all or part of the information that indicates the base SHOULD NOT be called)"
+
+# The number of settings per metric
+METRIC_SETTING_COUNT = 3
+
+FIXED_SETTING_COUNT = 16
+
+FIXED_SETTING_COUNT_BEFORE_NON_1HOT = 15
 
 class CallBarcodes(cellprofiler_core.module.Module):
 
     module_name = "CallBarcodes"
     category = "Data Tools"
-    variable_revision_number = 1
+    variable_revision_number = 4
 
     def create_settings(self):
         self.csv_directory = cellprofiler_core.setting.text.Directory(
@@ -136,6 +150,16 @@ Enter the number of cycles present in the data.
             text="Number of cycles",
             value=8,
         )
+
+        self.min_value = cellprofiler_core.setting.text.Float(
+            doc="""\
+Set the minimum measurement value required to be considered positive for a channel. Foci 
+with values >= this value for the chosen measurement will be called positive.
+""",
+            text="Minimum value to be considered positive in a channel",
+            value=1,
+        )
+
         self.cycle1measure = cellprofiler_core.setting.Measurement(
             "Select one of the measures from Cycle 1 to use for calling",
             self.input_object_name.get_value,
@@ -161,7 +185,7 @@ This measurement should be an intensity measure that is measured for every cycle
         )
 
         self.wants_call_image = cellprofiler_core.setting.Binary(
-            "Retain an image of the barcodes color coded by call?",
+            "Retain an image of the barcodes color coded by match?",
             False,
             doc="""\
 Select "*{YES}*" to retain the image of the objects color-coded
@@ -202,6 +226,16 @@ module).""".format(
 Enter the name to be given to the barcode score image.""",
         )
 
+        self.do_library_match = cellprofiler_core.setting.Binary(
+            "Do you want to match to an external library of barcodes?",
+            True,
+            doc="""\
+Select "*{YES}*" to match the result read by CellProfiler to a provided barcode list.
+Select "*{NO}*") to simply call bases, and do the matching downstream.""".format(
+                **{"YES": "Yes", "NO":"No"}
+            ),
+        )
+
         self.has_empty_vector_barcode = cellprofiler_core.setting.Binary(
             "Do you have an empty vector barcode you would like to add to the barcode list?",
             False,
@@ -220,8 +254,104 @@ backbone sequence to look out for in every barcoding set).""".format(
 Enter the sequence that represents barcoding reads of an empty vector""",
         )
 
+        self.n_colors = cellprofiler_core.setting.choice.Choice(
+            "What kind of encoding is used here?",
+            value=ENCODING_TYPES[0],
+            choices=ENCODING_TYPES,
+            doc="""\
+Select "*{4COLOR}*" if using a a code where each thing has its own single-letter code 
+and its own channel (such as in SBS 4 color chemistry kit where each channel has its own image). 
+For 2- or 3- color kits SBS/ISS kits, select "*{SBS_OTHER}*" and you will be directed to explain your channel mapping. 
+No other channel formats are available at this time, though you are free to open a GitHub issue or pull request.""".format(
+                **{"4COLOR": ENCODING_TYPES[0],"SBS_OTHER":ENCODING_TYPES[1]}
+            ),
+        )
+
+        self.base_measurements = {"A":[], "C":[], "G":[], "T":[]}
+
+        self.add_measurement(base="A", removable=False)
+
+        self.add_button_a = cellprofiler_core.setting.do_something.DoSomething("", "Add another measurement for calling A", self.add_measurement,"A")
+
+        self.divider_1 = cellprofiler_core.setting.Divider(line=True)
+
+        self.add_measurement(base="C", removable=False)
+
+        self.add_button_c = cellprofiler_core.setting.do_something.DoSomething("", "Add another measurement for calling C", self.add_measurement,"C")
+
+        self.divider_2 = cellprofiler_core.setting.Divider(line=True)
+
+        self.add_measurement(base="G", removable=False)
+
+        self.add_button_g = cellprofiler_core.setting.do_something.DoSomething("", "Add another measurement for calling G", self.add_measurement,"G")
+
+        self.divider_3 = cellprofiler_core.setting.Divider(line=True)
+    
+        self.add_measurement(base="T", removable=False)
+
+        self.add_button_t = cellprofiler_core.setting.do_something.DoSomething("", "Add another measurement for calling T", self.add_measurement,"T")
+
+
+    def add_measurement(self, base, removable=True):
+        group = cellprofiler_core.setting.SettingsGroup()
+        group.removable = removable
+        group.append("base",
+                     cellprofiler_core.setting.choice.Choice(
+                         'Base we are currently calling',
+                         value = base,
+                         choices= [base],
+                         doc="Base we are currently calling"
+                     )
+        )
+        if removable:
+            YYY="next"
+        else:
+            YYY="first"
+        group.append(
+            "measurement_name",
+            cellprofiler_core.setting.Measurement(
+            BASE_MEASUREMENT_DESCRIPTION.format(
+                **{"YYY":YYY,"ZZZ": base}
+            ),
+            self.input_object_name.get_value,
+            "AreaShape_Area",
+            doc=BASE_MEASUREMENT_DESCRIPTION.format(
+                **{"YYY":YYY,"ZZZ": base}
+            ),
+            )
+        )
+
+        group.append(
+            "base_boolean",
+            cellprofiler_core.setting.Binary(
+                BASE_BOOLEAN_DESCRIPTION.format(**{"ZZZ":base}),
+                True,
+                doc = BASE_BOOLEAN_LONG_DESCRIPTION
+            )
+        )
+
+        if removable:
+            group.append(
+                "remover",
+                cellprofiler_core.setting.do_something.RemoveSettingButton("", "Remove this image", self.base_measurements[base], group),
+            )
+
+        self.base_measurements[base].append(group)
+
+
+    def prepare_settings(self, setting_values):
+        value_count = len(setting_values)
+        assert (value_count - FIXED_SETTING_COUNT) % METRIC_SETTING_COUNT == 0
+        bases_encountered = []
+        for x in range(FIXED_SETTING_COUNT_BEFORE_NON_1HOT,value_count,METRIC_SETTING_COUNT):
+            if setting_values[x] not in bases_encountered:
+                #don't add an "extra" setting for the first one of each base, added in create_settings
+                bases_encountered.append(setting_values[x])
+            else:
+                self.add_measurement(base=setting_values[x])
+
     def settings(self):
-        return [
+        result = [
             self.ncycles,
             self.input_object_name,
             self.cycle1measure,
@@ -235,29 +365,68 @@ Enter the sequence that represents barcoding reads of an empty vector""",
             self.outimage_score_name,
             self.has_empty_vector_barcode,
             self.empty_vector_barcode_sequence,
+            self.n_colors,
+            self.do_library_match,
         ]
+
+        for eachbase in self.base_measurements.values():
+            for measurement in eachbase:
+                result += [
+                    measurement.base,
+                    measurement.measurement_name,
+                    measurement.base_boolean,
+                ]
+        
+        result += [self.min_value]
+
+        return result
 
     def visible_settings(self):
         result = [
+            self.n_colors,
             self.ncycles,
-            self.input_object_name,
-            self.cycle1measure,
-            self.csv_directory,
-            self.csv_file_name,
-            self.metadata_field_barcode,
-            self.metadata_field_tag,
-            self.wants_call_image,
-            self.wants_score_image,
-        ]
+            self.input_object_name]
+        if self.n_colors.value == ENCODING_TYPES[0]:
+            result += [
+            self.cycle1measure
+            ]
+        else:
+            result += [self.min_value]
+            add_buttons = {"A":[self.add_button_a, self.divider_1], "C":[self.add_button_c, self.divider_2],
+                           "G":[self.add_button_g, self.divider_3], "T":[self.add_button_t]}
+            for base in self.base_measurements.keys():
+                for base_meas in self.base_measurements[base]:
+                    result += [
+                        base_meas.measurement_name,
+                        base_meas.base_boolean
+                    ]
+                    if base_meas.removable:
+                        result += [base_meas.remover]
+                result += add_buttons[base]
+        result += [self.do_library_match]
+        if self.do_library_match:
+            result += [
+                self.csv_directory,
+                self.csv_file_name,
+                self.metadata_field_barcode,
+                self.metadata_field_tag,
+                self.has_empty_vector_barcode
+            ]
+            
+            if self.has_empty_vector_barcode:
+                result += [self.empty_vector_barcode_sequence]
 
-        if self.wants_call_image:
-            result += [self.outimage_calls_name]
 
-        if self.wants_score_image:
-            result += [self.outimage_score_name]
+            result += [
+                self.wants_call_image,
+                self.wants_score_image,
+            ]
 
-        if self.has_empty_vector_barcode:
-            result += [self.empty_vector_barcode_sequence]
+            if self.wants_call_image:
+                result += [self.outimage_calls_name]
+
+            if self.wants_score_image:
+                result += [self.outimage_score_name]
 
         return result
 
@@ -295,6 +464,7 @@ Enter the sequence that represents barcoding reads of an empty vector""",
                 % (self.csv_path, e),
                 self.csv_file_name,
             )
+        
 
     @property
     def csv_path(self):
@@ -304,8 +474,6 @@ Enter the sequence that represents barcoding reads of an empty vector""",
 
     def open_csv(self, do_not_cache=False):
         """Open the csv file or URL, returning a file descriptor"""
-
-        print(f"self.csv_path: {self.csv_path}")
 
         if cellprofiler_core.preferences.is_url_path(self.csv_path):
             if self.csv_path not in self.header_cache:
@@ -376,124 +544,185 @@ Enter the sequence that represents barcoding reads of an empty vector""",
             self.input_object_name.value
         )
 
-        measurements_for_calls = self.getallbarcodemeasurements(
-            listofmeasurements, self.ncycles.value, self.cycle1measure.value
-        )
-
-        objectcount = len(
+        # Image measurements store count values as NumPy scalars, so normalize
+        # dimensions before using them in array allocations and ranges.
+        ncycles = int(self.ncycles.value)
+        objectcount = int(
             measurements.get_current_measurement(
-                self.input_object_name.value, listofmeasurements[0]
+                "Image", f"Count_{self.input_object_name.value}"
             )
         )
 
-        calledbarcodes, quality_scores = self.callonebarcode(
-            measurements_for_calls,
-            measurements,
-            self.input_object_name.value,
-            self.ncycles.value,
-            objectcount,
-        )
+        if self.n_colors.value == ENCODING_TYPES[0]:
+            measurements_for_calls = self.getallonehotbarcodemeasurements(
+                listofmeasurements, ncycles, self.cycle1measure.value
+            )
+            first_cycle_measures = list(measurements_for_calls[1].keys())
 
-        workspace.measurements.add_measurement(
-            self.input_object_name.value,
-            "_".join([C_CALL_BARCODES, "BarcodeCalled"]),
-            calledbarcodes,
-        )
+            if objectcount >=1:
 
-        workspace.measurements.add_measurement(
-            self.input_object_name.value,
-            "_".join([C_CALL_BARCODES, "MeanQualityScore"]),
-            quality_scores,
-        )
-
-        barcodes = self.barcodeset(
-            self.metadata_field_barcode.value, self.metadata_field_tag.value
-        )
-
-        cropped_barcode_dict = {
-            y[: self.ncycles.value]: y for y in list(barcodes.keys())
-        }
-
-        scorelist = []
-        matchedbarcode = []
-        matchedbarcodecode = []
-        matchedbarcodeid = []
-        if self.wants_call_image or self.wants_score_image:
-            objects = workspace.object_set.get_objects(self.input_object_name.value)
-            labels = objects.segmented
-            pixel_data_call = objects.segmented
-            pixel_data_score = objects.segmented
-        count = 1
-        for eachbarcode in calledbarcodes:
-            eachscore, eachmatch = self.queryall(cropped_barcode_dict, eachbarcode)
-            scorelist.append(eachscore)
-            matchedbarcode.append(eachmatch)
-            m_id, m_code = barcodes[eachmatch]
-            matchedbarcodeid.append(m_id)
-            matchedbarcodecode.append(m_code)
-            if self.wants_call_image:
-                pixel_data_call = numpy.where(
-                    labels == count, barcodes[eachmatch][0], pixel_data_call
+                calledbarcodes, quality_scores = self.callonehotbarcode(
+                    measurements_for_calls,
+                    measurements,
+                    self.input_object_name.value,
+                    ncycles,
+                    objectcount,
                 )
-            if self.wants_score_image:
-                pixel_data_score = numpy.where(
-                    labels == count, 65535 * eachscore, pixel_data_score
+
+                workspace.measurements.add_measurement(
+                    self.input_object_name.value,
+                    "_".join([C_CALL_BARCODES, "MeanQualityScore"]),
+                    quality_scores,
                 )
-            count += 1
 
-        imagemeanscore = numpy.mean(scorelist)
+                imagemeanquality = float(numpy.mean(quality_scores))
 
-        workspace.measurements.add_measurement(
-            "Image", "_".join([C_CALL_BARCODES, "MeanBarcodeScore"]), imagemeanscore
-        )
-
-        imagemeanquality = numpy.mean(quality_scores)
-
-        workspace.measurements.add_measurement(
-            "Image", "_".join([C_CALL_BARCODES, "MeanQualityScore"]), imagemeanquality
-        )
-
-        workspace.measurements.add_measurement(
-            self.input_object_name.value,
-            "_".join([C_CALL_BARCODES, "MatchedTo_Barcode"]),
-            matchedbarcode,
-        )
-        workspace.measurements.add_measurement(
-            self.input_object_name.value,
-            "_".join([C_CALL_BARCODES, "MatchedTo_ID"]),
-            matchedbarcodeid,
-        )
-        workspace.measurements.add_measurement(
-            self.input_object_name.value,
-            "_".join([C_CALL_BARCODES, "MatchedTo_GeneCode"]),
-            matchedbarcodecode,
-        )
-        workspace.measurements.add_measurement(
-            self.input_object_name.value,
-            "_".join([C_CALL_BARCODES, "MatchedTo_Score"]),
-            scorelist,
-        )
-        if self.wants_call_image:
-            workspace.image_set.add(
-                self.outimage_calls_name.value,
-                cellprofiler_core.image.Image(
-                    pixel_data_call.astype("uint16"), convert=False
-                ),
-            )
-        if self.wants_score_image:
-            workspace.image_set.add(
-                self.outimage_score_name.value,
-                cellprofiler_core.image.Image(
-                    pixel_data_score.astype("uint16"), convert=False
-                ),
+                workspace.measurements.add_measurement(
+                    "Image", "_".join([C_CALL_BARCODES, "MeanQualityScore"]), imagemeanquality
+                )
+            
+            else:
+                workspace.measurements.add_measurement(
+                    "Image", "_".join([C_CALL_BARCODES, "MeanQualityScore"]), 0
+                )
+        
+        else:
+            if objectcount >= 1:
+                calledbarcodes = self.calloneexpISSbarcode(
+                    self.base_measurements,
+                    measurements,
+                    self.input_object_name.value,
+                    ncycles,
+                    self.min_value.value)
+                
+        if objectcount >= 1:
+            workspace.measurements.add_measurement(
+                self.input_object_name.value,
+                "_".join([C_CALL_BARCODES, "BarcodeCalled"]),
+                calledbarcodes,
             )
 
-        if self.show_window:
-            workspace.display_data.col_labels = (
-                "Image Mean Score",
-                "Image Mean Quality Score",
-            )
-            workspace.display_data.statistics = [imagemeanscore, imagemeanquality]
+            if self.do_library_match.value:
+                barcodes = self.barcodeset(
+                    self.metadata_field_barcode.value, self.metadata_field_tag.value
+                )
+
+                cropped_barcode_dict = {
+                    y[: ncycles]: y for y in list(barcodes.keys())
+                }
+
+                scorelist = []
+                matchedbarcode = []
+                matchedbarcodecode = []
+                matchedbarcodeid = []
+                if self.wants_call_image or self.wants_score_image:
+                    objects = workspace.object_set.get_objects(self.input_object_name.value)
+                    labels = objects.segmented
+                    pixel_data_call = objects.segmented
+                    pixel_data_score = objects.segmented
+                count = 1
+                for eachbarcode in calledbarcodes:
+                    eachscore, eachmatch = self.queryall(cropped_barcode_dict, eachbarcode)
+                    scorelist.append(eachscore)
+                    matchedbarcode.append(eachmatch)
+                    m_id, m_code = barcodes[eachmatch]
+                    matchedbarcodeid.append(m_id)
+                    matchedbarcodecode.append(m_code)
+                    if self.wants_call_image:
+                        pixel_data_call = numpy.where(
+                            labels == count, barcodes[eachmatch][0], pixel_data_call
+                        )
+                    if self.wants_score_image:
+                        pixel_data_score = numpy.where(
+                            labels == count, 65535 * eachscore, pixel_data_score
+                        )
+                    count += 1
+
+                imagemeanscore = float(numpy.mean(scorelist))
+
+                workspace.measurements.add_measurement(
+                    "Image", "_".join([C_CALL_BARCODES, "MeanBarcodeScore"]), imagemeanscore
+                )
+
+                workspace.measurements.add_measurement(
+                    self.input_object_name.value,
+                    "_".join([C_CALL_BARCODES, "MatchedTo_Barcode"]),
+                    matchedbarcode,
+                )
+                workspace.measurements.add_measurement(
+                    self.input_object_name.value,
+                    "_".join([C_CALL_BARCODES, "MatchedTo_ID"]),
+                    matchedbarcodeid,
+                )
+                workspace.measurements.add_measurement(
+                    self.input_object_name.value,
+                    "_".join([C_CALL_BARCODES, "MatchedTo_GeneCode"]),
+                    matchedbarcodecode,
+                )
+                workspace.measurements.add_measurement(
+                    self.input_object_name.value,
+                    "_".join([C_CALL_BARCODES, "MatchedTo_Score"]),
+                    scorelist,
+                )
+                if self.wants_call_image:
+                    workspace.image_set.add(
+                        self.outimage_calls_name.value,
+                        cellprofiler_core.image.Image(
+                            pixel_data_call.astype("uint16"), convert=False
+                        ),
+                    )
+                if self.wants_score_image:
+                    workspace.image_set.add(
+                        self.outimage_score_name.value,
+                        cellprofiler_core.image.Image(
+                            pixel_data_score.astype("uint16"), convert=False
+                        ),
+                    )
+
+            if self.show_window:
+                workspace.display_data.statistics = [
+                        ("Number barcodes", len(calledbarcodes)), 
+                        ("Number of unique calls",len(list(set(calledbarcodes))))
+                ]
+                if self.do_library_match:
+                    workspace.display_data.statistics += [("Image Mean Score",imagemeanscore)]
+                    
+                    if self.n_colors.value == ENCODING_TYPES[0]:
+                        workspace.display_data.statistics += [ ("Image Mean Quality Score",imagemeanquality)]
+
+        
+        else:
+            if self.do_library_match.value:
+                workspace.measurements.add_measurement(
+                    "Image", "_".join([C_CALL_BARCODES, "MeanBarcodeScore"]), 0
+                )
+                if self.wants_call_image or self.wants_score_image:
+                    objects = workspace.object_set.get_objects(self.input_object_name.value)
+                    labels = objects.segmented
+                    zeros = numpy.zeros_like(labels)
+                    if self.wants_call_image:
+                        workspace.image_set.add(
+                                self.outimage_calls_name.value,
+                                cellprofiler_core.image.Image(
+                                    zeros, convert=False
+                                ),
+                            )
+                    if self.wants_score_image:
+                        workspace.image_set.add(
+                            self.outimage_score_name.value,
+                            cellprofiler_core.image.Image(
+                                zeros, convert=False
+                            ),
+                        )
+                
+                self.measurements_without_objects(workspace, self.input_object_name.value)
+
+            if self.show_window:
+                workspace.display_data.statistics = [
+                        ("Number barcodes", 0), 
+                        ("Number of unique calls",0)
+                ]
+
 
     def display(self, workspace, figure):
         statistics = workspace.display_data.statistics
@@ -502,7 +731,68 @@ Enter the sequence that represents barcoding reads of an empty vector""",
 
         figure.subplot_table(0, 0, statistics)
 
-    def getallbarcodemeasurements(self, measurements, ncycles, examplemeas):
+    def calloneexpISSbarcode(self, calling_setting_dict, measurements, 
+                             object_name, ncycles, min_value):
+        ncycles = int(ncycles)
+        def call_by_column(base_array):
+            base_order = ['A','C','G','T']
+            if sum(base_array) != 1:
+                return 'X'
+            else:
+                return base_order[base_array.argmax()]
+        call_bool_dict = {}
+        for base in calling_setting_dict.keys():
+            base_list = calling_setting_dict[base]
+            call_bool_dict[base]={}
+            for eachmeas in base_list:
+                all_cycle_measurements = self.getallcyclebarcodemeasurements(measurements,ncycles,eachmeas.measurement_name.value, object_name)
+                if list(all_cycle_measurements.keys()) != list(range(1,ncycles+1)):
+                    raise RuntimeError(f"CellProfiler could not find all the cycle measurements required which should match {eachmeas.measurement_name}. Please check that these measurements exist and are named properly.")
+                if eachmeas.base_boolean.value not in call_bool_dict[base].keys():
+                    call_bool_dict[base][eachmeas.base_boolean.value] = [all_cycle_measurements]
+                else:
+                    call_bool_dict[base][eachmeas.base_boolean.value] += [all_cycle_measurements]
+        actual_measure_col = next(iter(call_bool_dict[base].values()))[0][1]
+        objectcount = len(
+            measurements.get_current_measurement(
+                self.input_object_name.value, actual_measure_col)
+        )
+        full_base_array = numpy.zeros(objectcount,dtype="str")
+        base_list = ["A", "C", "G", "T"]
+        for cycle in range(1,ncycles+1):
+            which_base_array = numpy.zeros([objectcount,4])
+            for base_order in range (4):
+                this_base_array = numpy.ones(objectcount)
+                base = call_bool_dict[base_list[base_order]]
+                if True in base.keys():
+                    for eachmeas in base[True]:
+                        this_base_array = this_base_array * (measurements.get_current_measurement(object_name,eachmeas[cycle]) >= min_value)
+                if False in base.keys():
+                    for eachmeas in base[False]:
+                        this_base_array = this_base_array * ~(measurements.get_current_measurement(object_name,eachmeas[cycle]) >= min_value)
+                which_base_array[:,base_order] = this_base_array
+            full_base_array = numpy.char.add(full_base_array,numpy.apply_along_axis(call_by_column,1,which_base_array)) 
+        return list(full_base_array)
+
+    def getallcyclebarcodemeasurements(self, measurements, ncycles, examplemeas, object_name):
+        ncycles = int(ncycles)
+        measurementdict = {}
+        obj_measurement_columns = [x[1] for x in measurements.get_measurement_columns() if x[0]=='Foci']
+        cycle_string = re.search("Cycle.*[0-9]{1,2}",examplemeas).group()
+        for cycle in range(1,ncycles+1):
+            if cycle <10:
+                updated_cycle_string_with_pad = re.sub("Cycle[0-9]{1,2}",f"Cycle{cycle:02d}",cycle_string)
+                updated_full_measurement = examplemeas.replace(cycle_string,updated_cycle_string_with_pad)
+            else:
+                updated_cycle_string_no_pad = re.sub("Cycle[0-9]{1,2}",f"Cycle{cycle}",cycle_string)
+                updated_full_measurement = examplemeas.replace(cycle_string,updated_cycle_string_no_pad)
+            if updated_full_measurement in obj_measurement_columns:
+                measurementdict[cycle] = updated_full_measurement
+
+        return measurementdict
+
+    def getallonehotbarcodemeasurements(self, measurements, ncycles, examplemeas):
+        ncycles = int(ncycles)
         stem = re.split("Cycle", examplemeas)[0]
         measurementdict = {}
         for eachmeas in measurements:
@@ -519,12 +809,14 @@ Enter the sequence that represents barcoding reads of an empty vector""",
                         measurementdict[parsed_cycle].update({eachmeas: parsed_base})
         return measurementdict
 
-    def callonebarcode(
+    def callonehotbarcode(
         self, measurementdict, measurements, object_name, ncycles, objectcount
     ):
 
         master_cycles = []
-        score_array = numpy.zeros([ncycles, objectcount])
+        ncycles = int(ncycles)
+        objectcount = int(objectcount)
+        score_array = numpy.zeros((ncycles, objectcount))
 
         for eachcycle in range(1, ncycles + 1):
             cycles_measures_perobj = []
@@ -585,56 +877,75 @@ Enter the sequence that represents barcoding reads of an empty vector""",
             scores = list(scoredict.keys())
             scores.sort(reverse=True)
             return scores[0], cropped_barcode_dict[scoredict[scores[0]]]
+        
+    def measurements_without_objects(self, workspace, object_name):
+        # Create column headers even if there were no objects in a set.
+        features_to_record = self.get_measurements(workspace.pipeline, object_name, C_CALL_BARCODES)
+        empty_measure = numpy.zeros((0,))
+        for feature_name in features_to_record:
+            workspace.add_measurement(
+            object_name, "%s_%s" % (C_CALL_BARCODES, feature_name), empty_measure
+        )
+           
 
     def get_measurement_columns(self, pipeline):
 
         input_object_name = self.input_object_name.value
 
-        result = [
-            (
-                "Image",
-                "_".join([C_CALL_BARCODES, "MeanBarcodeScore"]),
-                cellprofiler_core.constants.measurement.COLTYPE_FLOAT,
-            ),
-            (
-                "Image",
-                "_".join([C_CALL_BARCODES, "MeanQualityScore"]),
-                cellprofiler_core.constants.measurement.COLTYPE_FLOAT,
-            ),
-        ]
+        
 
-        result += [
+        result = [
             (
                 input_object_name,
                 "_".join([C_CALL_BARCODES, "BarcodeCalled"]),
                 cellprofiler_core.constants.measurement.COLTYPE_VARCHAR,
             ),
-            (
-                input_object_name,
-                "_".join([C_CALL_BARCODES, "MatchedTo_Barcode"]),
-                cellprofiler_core.constants.measurement.COLTYPE_VARCHAR,
-            ),
-            (
-                input_object_name,
-                "_".join([C_CALL_BARCODES, "MatchedTo_ID"]),
-                cellprofiler_core.constants.measurement.COLTYPE_INTEGER,
-            ),
-            (
-                input_object_name,
-                "_".join([C_CALL_BARCODES, "MatchedTo_GeneCode"]),
-                cellprofiler_core.constants.measurement.COLTYPE_VARCHAR,
-            ),
-            (
-                input_object_name,
-                "_".join([C_CALL_BARCODES, "MatchedTo_Score"]),
-                cellprofiler_core.constants.measurement.COLTYPE_FLOAT,
-            ),
-            (
-                input_object_name,
-                "_".join([C_CALL_BARCODES, "MeanQualityScore"]),
-                cellprofiler_core.constants.measurement.COLTYPE_FLOAT,
-            ),
         ]
+        if self.do_library_match.value:
+            result += [
+                (
+                    "Image",
+                    "_".join([C_CALL_BARCODES, "MeanBarcodeScore"]),
+                    cellprofiler_core.constants.measurement.COLTYPE_FLOAT,
+                ),
+                (
+                    "Image",
+                    "_".join([C_CALL_BARCODES, "MeanQualityScore"]),
+                    cellprofiler_core.constants.measurement.COLTYPE_FLOAT,
+                ),
+            ]
+
+            result += [
+                (
+                    input_object_name,
+                    "_".join([C_CALL_BARCODES, "MatchedTo_Barcode"]),
+                    cellprofiler_core.constants.measurement.COLTYPE_VARCHAR,
+                ),
+                (
+                    input_object_name,
+                    "_".join([C_CALL_BARCODES, "MatchedTo_ID"]),
+                    cellprofiler_core.constants.measurement.COLTYPE_INTEGER,
+                ),
+                (
+                    input_object_name,
+                    "_".join([C_CALL_BARCODES, "MatchedTo_GeneCode"]),
+                    cellprofiler_core.constants.measurement.COLTYPE_VARCHAR,
+                ),
+                (
+                    input_object_name,
+                    "_".join([C_CALL_BARCODES, "MatchedTo_Score"]),
+                    cellprofiler_core.constants.measurement.COLTYPE_FLOAT,
+                ),
+            ]
+
+        if self.n_colors.value == ENCODING_TYPES[0]:
+            result += [
+                (
+                    input_object_name,
+                    "_".join([C_CALL_BARCODES, "MeanQualityScore"]),
+                    cellprofiler_core.constants.measurement.COLTYPE_FLOAT,
+                ),
+            ]
 
         return result
 
@@ -646,19 +957,42 @@ Enter the sequence that represents barcoding reads of an empty vector""",
 
     def get_measurements(self, pipeline, object_name, category):
         if object_name == self.input_object_name and category == C_CALL_BARCODES:
-            return [
+            result = [
                 "BarcodeCalled",
-                "MatchedTo_Barcode",
-                "MatchedTo_ID",
-                "MatchedTo_GeneCode",
-                "MatchedTo_Score",
-                "MeanQualityScore",
             ]
+            if self.do_library_match.value:
+                result += [
+                    "MatchedTo_Barcode",
+                    "MatchedTo_ID",
+                    "MatchedTo_GeneCode",
+                    "MatchedTo_Score",
+                ]
+            if self.n_colors.value == ENCODING_TYPES[0]:
+                result.append("MeanQualityScore")
+
+            return result
 
         elif object_name == object_name == "Image":
-            return [
-                "MeanBarcodeScore",
-                "MeanQualityScore",
-            ]
+            if self.do_library_match.value:
+                return [
+                    "MeanBarcodeScore",
+                    "MeanQualityScore",
+                ]
 
         return []
+
+    def upgrade_settings(self, setting_values, variable_revision_number, module_name):
+        if variable_revision_number == 1:
+            setting_values += [ENCODING_TYPES[0]]  
+            setting_values += ["A", "AreaShape_Area", True] #A
+            setting_values += ["C", "AreaShape_Area", True] #C
+            setting_values += ["G", "AreaShape_Area", True] #G
+            setting_values += ["T", "AreaShape_Area", True] #T
+            variable_revision_number = 2
+        if variable_revision_number == 2:
+            setting_values = setting_values[:14]+["Yes"]+setting_values[14:]
+            variable_revision_number = 3
+        if variable_revision_number == 3:
+            setting_values = setting_values+[1]
+            variable_revision_number = 4
+        return setting_values, variable_revision_number
