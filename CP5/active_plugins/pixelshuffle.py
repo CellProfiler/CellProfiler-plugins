@@ -4,7 +4,10 @@
 #
 #################################
 
-import pathlib
+import logging
+import scipy.ndimage
+import numpy
+import random
 
 #################################
 #
@@ -15,19 +18,12 @@ import pathlib
 import cellprofiler_core.image
 import cellprofiler_core.module
 import cellprofiler_core.setting
-from cellprofiler_core.utilities.appose import get_environment, run_python_task
 
 __doc__ = """\
 PixelShuffle
 ============
 
 **PixelShuffle** takes the intensity of each pixel in an image and it randomly shuffles its position.
-
-The shuffle itself runs out-of-process, in an Appose-managed environment built
-from the ``pixelshuffle/pixi.toml`` file shipped alongside this module - a
-proof of concept for routing plugin logic through `Appose
-<https://docs.apposed.org/en/latest/index.html>`__ instead of requiring the
-plugin's dependencies to be importable in the main CellProfiler environment.
 
 |
 
@@ -38,17 +34,6 @@ YES          NO            NO
 ============ ============ ===============
 
 """
-
-_PLUGIN_DIR = pathlib.Path(__file__).parent / "pixelshuffle"
-_ENV_SPEC = _PLUGIN_DIR / "pixi.toml"
-_WORKER_SCRIPT = (_PLUGIN_DIR / "_worker.py").read_text() + (
-    "import appose\n"
-    "import numpy\n"
-    "_result = pixel_shuffle(numpy.array(x_data.ndarray()))\n"
-    "_result_ndarray = appose.NDArray(dtype=_result.dtype.name, shape=list(_result.shape))\n"
-    "_result_ndarray.ndarray()[:] = _result\n"
-    'task.outputs["pixel_data"] = _result_ndarray\n'
-)
 
 
 class PixelShuffle(cellprofiler_core.module.ImageProcessing):
@@ -78,13 +63,22 @@ class PixelShuffle(cellprofiler_core.module.ImageProcessing):
 
         x_data = x.pixel_data
 
-        environment = get_environment(_ENV_SPEC)
+        shape = numpy.array(x_data.shape).astype(int)
 
-        outputs = run_python_task(
-            environment, _WORKER_SCRIPT, inputs={"x_data": x_data}
-        )
+        pxs = []
+        width, height = shape[:2]
+        for w in range(width):
+            for h in range(height):
+                pxs.append(x_data[w, h])
+        idx = list(range(len(pxs)))
+        random.shuffle(idx)
+        seq = []
+        for i in idx:
+            seq.append(pxs[i])
+        out = numpy.asarray(seq)
+        out = out.reshape(width, height)
 
-        y_data = outputs["pixel_data"]
+        y_data = out
 
         y = cellprofiler_core.image.Image(
             dimensions=dimensions, image=y_data, parent_image=x
