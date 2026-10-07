@@ -1,12 +1,17 @@
 import os
 import pathlib
+from textwrap import dedent
 
 from cellprofiler_core.module.image_segmentation import ImageSegmentation
 from cellprofiler_core.object import Objects
 from cellprofiler_core.setting import Binary
 from cellprofiler_core.setting.choice import Choice
 from cellprofiler_core.setting.text import Directory, Filename, Float
-from cellprofiler_core.utilities.appose import get_environment, run_python_task
+from cellprofiler_core.utilities.appose import (
+    close_service,
+    get_service,
+    run_python_task,
+)
 
 __doc__ = """\
 RunCellcast
@@ -36,21 +41,36 @@ YES          YES          NO
 
 _PLUGIN_DIR = pathlib.Path(__file__).parent / "cellcast"
 _ENV_SPEC = _PLUGIN_DIR / "pixi.toml"
-_WORKER_SCRIPT = (_PLUGIN_DIR / "_worker.py").read_text() + (
-    "import appose\n"
-    "import numpy\n"
-    "_data = numpy.array(x_data.ndarray())\n"
-    "if model == 'stardist2d_fluo':\n"
-    "    _labels = run_stardist2d_fluo(_data, weights_path, gpu, prob_threshold, nms_threshold)\n"
-    "elif model == 'stardist2d_he':\n"
-    "    _labels = run_stardist2d_he(_data, weights_path, gpu, prob_threshold, nms_threshold)\n"
-    "elif model == 'stardist3d_fluo':\n"
-    "    _labels = run_stardist3d_fluo(_data, weights_path, anisotropy, gpu, prob_threshold, nms_threshold)\n"
-    "else:\n"
-    "    raise ValueError(f'Unknown model: {model}')\n"
-    "_labels_ndarray = appose.NDArray(dtype=_labels.dtype.name, shape=list(_labels.shape))\n"
-    "_labels_ndarray.ndarray()[:] = _labels\n"
-    "task.outputs['labels'] = _labels_ndarray\n"
+_WORKER_SCRIPT = (_PLUGIN_DIR / "_worker.py").read_text() + dedent(
+    """
+    import appose
+    import numpy
+
+    def _get_cached_model(cache_key, build_model):
+        # The frontend module runs every image set's task on the same,
+        # long-lived Appose service, so a model built for one call is still
+        # sitting in this worker process's memory on the next one - *if* it
+        # was handed to task.export() to survive the trip. Skip rebuilding
+        # (and re-downloading/re-loading weights) when nothing relevant to
+        # the cached model has changed since last time.
+        if globals().get('_cellcast_cache_key') == cache_key:
+            return _cellcast_model
+        model = build_model()
+        task.export(_cellcast_cache_key=cache_key, _cellcast_model=model)
+        return model
+
+    _data = numpy.array(x_data.ndarray())
+
+    _model_scaffold = get_model_scaffold(model, weights_path, gpu, prob_threshold, nms_threshold, anisotropy)
+
+    _cellcast_model = _get_cached_model(_model_scaffold["cache_key"], _model_scaffold["init"])
+    _labels = _model_scaffold["predict_labels"](_cellcast_model, _data)
+
+    _labels_ndarray = appose.NDArray(dtype=_labels.dtype.name, shape=list(_labels.shape))
+    _labels_ndarray.ndarray()[:] = _labels
+
+    task.outputs['labels'] = _labels_ndarray
+    """
 )
 
 MODEL_FLUO_2D = "2D (fluorescence)"
@@ -253,10 +273,10 @@ The X-axis anisotropy that the model was trained with."""
         else:
             weights_path = None
 
-        environment = get_environment(_ENV_SPEC)
+        service = get_service(_ENV_SPEC)
         outputs = run_python_task(
-            environment,
             _WORKER_SCRIPT,
+            service=service,
             inputs={
                 "x_data": x_data,
                 "model": _MODEL_KEYS[model],
@@ -284,3 +304,14 @@ The X-axis anisotropy that the model was trained with."""
             workspace.display_data.x_data = x_data
             workspace.display_data.y_data = y_data
             workspace.display_data.dimensions = dimensions
+
+    def post_run(self, workspace):
+        # Best-effort: shuts down the persistent worker process/loaded model
+        # promptly at the end of a headless run or a GUI analysis's main
+        # process, instead of leaving it (and e.g. a loaded GPU model)
+        # sitting around until CellProfiler itself exits. This hook isn't
+        # reached in a GUI run's worker subprocesses (where run() above
+        # actually executes, and where the service therefore actually
+        # lives) - there, `close_service()`'s own atexit registration
+        # handles it instead.
+        close_service(_ENV_SPEC)
