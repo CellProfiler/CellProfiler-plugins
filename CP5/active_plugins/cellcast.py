@@ -41,30 +41,15 @@ YES          YES          NO
 
 _PLUGIN_DIR = pathlib.Path(__file__).parent / "cellcast"
 _ENV_SPEC = _PLUGIN_DIR / "pixi.toml"
-_WORKER_SCRIPT = (_PLUGIN_DIR / "_worker.py").read_text() + dedent(
+_WORKER_SCRIPT = dedent(
     """
     import appose
     import numpy
-
-    def _get_cached_model(cache_key, build_model):
-        # The frontend module runs every image set's task on the same,
-        # long-lived Appose service, so a model built for one call is still
-        # sitting in this worker process's memory on the next one - *if* it
-        # was handed to task.export() to survive the trip. Skip rebuilding
-        # (and re-downloading/re-loading weights) when nothing relevant to
-        # the cached model has changed since last time.
-        if globals().get('_cellcast_cache_key') == cache_key:
-            return _cellcast_model
-        model = build_model()
-        task.export(_cellcast_cache_key=cache_key, _cellcast_model=model)
-        return model
+    from cellcast_worker import predict
 
     _data = numpy.array(x_data.ndarray())
 
-    _model_scaffold = get_model_scaffold(model, weights_path, gpu, prob_threshold, nms_threshold, anisotropy)
-
-    _cellcast_model = _get_cached_model(_model_scaffold["cache_key"], _model_scaffold["init"])
-    _labels = _model_scaffold["predict_labels"](_cellcast_model, _data)
+    _labels = predict(_data, model, weights_path, gpu, prob_threshold, nms_threshold, anisotropy)
 
     _labels_ndarray = appose.NDArray(dtype=_labels.dtype.name, shape=list(_labels.shape))
     _labels_ndarray.ndarray()[:] = _labels
@@ -278,7 +263,7 @@ The X-axis anisotropy that the model was trained with."""
         else:
             weights_path = None
 
-        service = get_service(_ENV_SPEC)
+        service = get_service(_ENV_SPEC).import_library("cellcast_worker", path = _PLUGIN_DIR / "_worker.py")
         outputs = run_python_task(
             _WORKER_SCRIPT,
             service=service,
