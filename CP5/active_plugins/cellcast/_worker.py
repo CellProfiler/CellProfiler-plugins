@@ -1,28 +1,26 @@
 from cellcast import models
 
-models_cache = dict()
+__models_cache = {}
 
 def init_model(model_name, weights_path, gpu, anisotropy):
-    global models_cache
-
     if model_name == 'stardist2d_fluo':
         cache_key = (model_name, weights_path, gpu)
-        model = models_cache.get(cache_key)
+        model = __models_cache.get(cache_key)
         if model is None:
             model = models.StarDist2D.init_fluo(weights_path, gpu)
-            models_cache[cache_key] = model
+            __models_cache[cache_key] = model
     elif model_name == 'stardist2d_he':
         cache_key = (model_name, weights_path, gpu)
-        model = models_cache.get(cache_key)
+        model = __models_cache.get(cache_key)
         if model is None:
             model = models.StarDist2D.init_he(weights_path, gpu)
-            models_cache[cache_key] = model
+            __models_cache[cache_key] = model
     elif model_name == 'stardist3d_fluo':
         cache_key = (model_name, weights_path, tuple(anisotropy), gpu)
-        model = models_cache.get(cache_key)
+        model = __models_cache.get(cache_key)
         if model is None:
             model = models.StarDist3D.init_fluo(weights_path, anisotropy, gpu)
-            models_cache[cache_key] = model
+            __models_cache[cache_key] = model
     else:
         raise ValueError(f'Unknown model: {model}')
     return model
