@@ -244,9 +244,9 @@ Select the project type which matches the project file specified by
         else:
             if self.docker_or_local.value == "Docker":
                 # Define how to call docker
-                docker_path = "docker" if sys.platform.lower().startswith("win") else "/usr/local/bin/docker"
+                docker_path = "docker" if sys.platform.lower().startswith("win") else (shutil.which("docker") or "/usr/local/bin/docker")
             else:
-                docker_path = "podman" if sys.platform.lower().startswith("win") else "/opt/podman/bin/podman"
+                docker_path = "podman" if sys.platform.lower().startswith("win") else (shutil.which("podman") or "/opt/podman/bin/podman")
             # The project file is stored in a directory which can be pointed to the docker            
             model_file = self.project_file.value
             model_directory = os.path.dirname(os.path.abspath(model_file)) 
