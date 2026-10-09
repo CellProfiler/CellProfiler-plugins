@@ -91,6 +91,11 @@ class RunCellcast(ImageSegmentation):
 
     variable_revision_number = 1
 
+    # Declares this plugin as Appose-backed: the plugins dialog uses this to
+    # show a distinct icon and offer a "Build Environment" button that
+    # prebuilds/warms this spec via the same cache run() itself hits.
+    appose_env_spec = _ENV_SPEC
+
     doi = {
         "Please cite the following when using RunCellcast's StarDist2D model:": "https://doi.org/10.1007/978-3-030-00934-2_30",
         "If you are using the StarDist3D model also cite the following:": "https://doi.org/10.1109/WACV45572.2020.9093435",
