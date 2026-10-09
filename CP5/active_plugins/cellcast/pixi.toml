@@ -8,7 +8,7 @@ version = "0.1.0"
 [dependencies]
 python = ">=3.9"
 numpy = "*"
-appose = ">=0.12,<0.13"
 
 [pypi-dependencies]
 cellcast = ">=0.3.0,<0.4"
+appose = { git = "https://github.com/apposed/appose-python.git" }
