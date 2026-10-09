@@ -44,6 +44,7 @@ def predict(data, model_name, weights_path, gpu, prob_threshold=None, nms_thresh
         raise ValueError(f'Unknown model: {model}')
     return labels
 
+# For simple debugging
 if __name__ == "__main__":
     import numpy as np
     data = np.zeros((30,30))
