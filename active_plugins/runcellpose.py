@@ -960,9 +960,9 @@ Allow XYZ resampling to make the volume isotropic. Only used in 3D mode.
         else:
             if self.docker_or_python.value == "Docker":
                 # Define how to call docker
-                docker_path = "docker" if sys.platform.lower().startswith("win") else "/usr/local/bin/docker"
+                docker_path = "docker" if sys.platform.lower().startswith("win") else (shutil.which("docker") or "/usr/local/bin/docker")
             else:
-                docker_path = "podman" if sys.platform.lower().startswith("win") else "/opt/podman/bin/podman"
+                docker_path = "podman" if sys.platform.lower().startswith("win") else (shutil.which("podman") or "/opt/podman/bin/podman")
             # Create a UUID for this run
             unique_name = str(uuid.uuid4())
             # Directory that will be used to pass images to the docker container
