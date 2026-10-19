@@ -10,10 +10,23 @@ from cellprofiler_core.constants.measurement import C_COUNT, M_LOCATION_CENTER_X
     COLTYPE_FLOAT, M_NUMBER_OBJECT_NUMBER, FF_COUNT
 
 
-import cellprofiler.modules.identifydeadworms
 import cellprofiler_core.object
 import cellprofiler_core.pipeline
 import cellprofiler_core.workspace
+
+# Importing cellprofiler_core.modules is what builds the module registry, and
+# it clears whatever is already there, so it has to happen before we register
+# the plugin below.
+import cellprofiler_core.modules
+from cellprofiler_core.utilities.core.plugins import add_module
+
+import identifydeadworms
+
+# Pipelines refer to modules by name, so the plugin has to be registered the
+# same way CellProfiler's plugin loader registers it before a pipeline naming
+# IdentifyDeadWorms can be loaded.
+_loaded, _error = add_module(identifydeadworms.IdentifyDeadWorms)
+assert _loaded, _error
 
 IMAGE_NAME = "myimage"
 OBJECTS_NAME = "myobjects"
@@ -39,7 +52,7 @@ Number of angles:180
     pipeline.load(six.moves.StringIO(data))
     assert len(pipeline.modules()) == 1
     module = pipeline.modules()[0]
-    assert isinstance(module, cellprofiler.modules.identifydeadworms.IdentifyDeadWorms)
+    assert isinstance(module, identifydeadworms.IdentifyDeadWorms)
     assert module.image_name == "BinaryWorms"
     assert module.object_name == "DeadWorms"
     assert module.worm_width == 6
@@ -71,7 +84,7 @@ Angular distance:45
     pipeline.load(six.moves.StringIO(data))
     assert len(pipeline.modules()) == 1
     module = pipeline.modules()[0]
-    assert isinstance(module, cellprofiler.modules.identifydeadworms.IdentifyDeadWorms)
+    assert isinstance(module, identifydeadworms.IdentifyDeadWorms)
     assert module.image_name == "BinaryWorms"
     assert module.object_name == "DeadWorms"
     assert module.worm_width == 6
@@ -89,7 +102,7 @@ def make_workspace(pixel_data, mask=None):
     image_set = image_set_list.get_image_set(0)
     image_set.add(IMAGE_NAME, image)
 
-    module = cellprofiler.modules.identifydeadworms.IdentifyDeadWorms()
+    module = identifydeadworms.IdentifyDeadWorms()
     module.set_module_num(1)
     module.image_name.value = IMAGE_NAME
     module.object_name.value = OBJECTS_NAME
@@ -157,7 +170,7 @@ def test_one_worm():
     assert len(y) == 1
     assert round(abs(y[0] - 10.0), 1) == 0
     a = m.get_current_measurement(
-        OBJECTS_NAME, cellprofiler.modules.identifydeadworms.M_ANGLE
+        OBJECTS_NAME, identifydeadworms.M_ANGLE
     )
     assert len(a) == 1
     assert round(abs(a[0] - 135), 0) == 0
@@ -193,7 +206,7 @@ def test_crossing_worms():
     )
     assert count == 2
     a = m.get_current_measurement(
-        OBJECTS_NAME, cellprofiler.modules.identifydeadworms.M_ANGLE
+        OBJECTS_NAME, identifydeadworms.M_ANGLE
     )
     assert len(a) == 2
     if a[0] > 90:
@@ -219,7 +232,7 @@ def test_crossing_worms():
 def test_measurement_columns():
     """Test get_measurement_columns"""
     workspace, module = make_workspace(numpy.zeros((20, 10), bool))
-    assert isinstance(module, cellprofiler.modules.identifydeadworms.IdentifyDeadWorms)
+    assert isinstance(module, identifydeadworms.IdentifyDeadWorms)
     columns = module.get_measurement_columns(workspace.pipeline)
     expected = (
         (
@@ -234,7 +247,7 @@ def test_measurement_columns():
         ),
         (
             OBJECTS_NAME,
-            cellprofiler.modules.identifydeadworms.M_ANGLE,
+            identifydeadworms.M_ANGLE,
             COLTYPE_FLOAT,
         ),
         (
@@ -257,7 +270,7 @@ def test_measurement_columns():
 
 def test_find_adjacent_by_distance_empty():
     workspace, module = make_workspace(numpy.zeros((20, 10), bool))
-    assert isinstance(module, cellprofiler.modules.identifydeadworms.IdentifyDeadWorms)
+    assert isinstance(module, identifydeadworms.IdentifyDeadWorms)
 
     first, second = module.find_adjacent_by_distance(
         numpy.zeros(0), numpy.zeros(0), numpy.zeros(0)
@@ -268,7 +281,7 @@ def test_find_adjacent_by_distance_empty():
 
 def test_find_adjacent_by_distance_one():
     workspace, module = make_workspace(numpy.zeros((20, 10), bool))
-    assert isinstance(module, cellprofiler.modules.identifydeadworms.IdentifyDeadWorms)
+    assert isinstance(module, identifydeadworms.IdentifyDeadWorms)
 
     first, second = module.find_adjacent_by_distance(
         numpy.zeros(1), numpy.zeros(1), numpy.zeros(1)
@@ -285,7 +298,7 @@ def test_find_adjacent_by_distance_easy():
     # within the space_distance
     #
     workspace, module = make_workspace(numpy.zeros((20, 10), bool))
-    assert isinstance(module, cellprofiler.modules.identifydeadworms.IdentifyDeadWorms)
+    assert isinstance(module, identifydeadworms.IdentifyDeadWorms)
     module.space_distance.value = 10
     # Take find_adjacent_by_distance internals into account: consecutive i
     # will create a single cross-product
@@ -314,7 +327,7 @@ def test_find_adjacent_by_distance_hard():
     # within the space_distance
     #
     workspace, module = make_workspace(numpy.zeros((20, 10), bool))
-    assert isinstance(module, cellprofiler.modules.identifydeadworms.IdentifyDeadWorms)
+    assert isinstance(module, identifydeadworms.IdentifyDeadWorms)
     module.space_distance.value = 10
     r = numpy.random.RandomState(44)
     for idx, scramble in enumerate(

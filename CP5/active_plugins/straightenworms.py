@@ -131,12 +131,12 @@ from cellprofiler_core.utilities.core.module.identify import (
 )
 from scipy.interpolate import interp1d
 
-from cellprofiler.modules.untangleworms import C_WORM
-from cellprofiler.modules.untangleworms import F_CONTROL_POINT_X
-from cellprofiler.modules.untangleworms import F_CONTROL_POINT_Y
-from cellprofiler.modules.untangleworms import F_LENGTH
-from cellprofiler.modules.untangleworms import read_params
-from cellprofiler.modules.untangleworms import recalculate_single_worm_control_points
+from untangleworms import C_WORM
+from untangleworms import F_CONTROL_POINT_X
+from untangleworms import F_CONTROL_POINT_Y
+from untangleworms import F_LENGTH
+from untangleworms import read_params
+from untangleworms import recalculate_single_worm_control_points
 
 FTR_MEAN_INTENSITY = "MeanIntensity"
 FTR_STD_INTENSITY = "StdIntensity"
