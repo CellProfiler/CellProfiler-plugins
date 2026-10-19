@@ -1,3 +1,16 @@
+import os
+import sys
+
+# Plugins live side by side in active_plugins and import each other by bare
+# module name, the way CellProfiler's plugin loader imports them. Put that
+# directory on the path before any test module imports a plugin.
+ACTIVE_PLUGINS_DIRECTORY = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "active_plugins"
+)
+
+if ACTIVE_PLUGINS_DIRECTORY not in sys.path:
+    sys.path.insert(0, ACTIVE_PLUGINS_DIRECTORY)
+
 # Something in CellProfiler is importing wx before we can set
 # headless mode. Setting headless here before importing anything
 # else from CellProfiler.

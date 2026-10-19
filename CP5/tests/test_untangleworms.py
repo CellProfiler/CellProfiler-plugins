@@ -12,16 +12,32 @@ import scipy.ndimage
 
 import cellprofiler_core.image
 import cellprofiler_core.measurement
+# Importing cellprofiler_core.modules is what builds the module registry, and
+# it clears whatever is already there, so it has to happen before we register
+# the plugin below.
 import cellprofiler_core.modules
-import cellprofiler.modules.untangleworms
 import cellprofiler_core.object
 import cellprofiler_core.pipeline
 import cellprofiler_core.preferences
 import cellprofiler_core.setting
 import cellprofiler_core.workspace
-import tests.frontend.modules
+from cellprofiler_core.utilities.core.plugins import add_module
 
-cellprofiler.modules.untangleworms.CAROLINAS_HACK = False
+import untangleworms
+
+# Pipelines refer to modules by name, so the plugin has to be registered the
+# same way CellProfiler's plugin loader registers it before a pipeline naming
+# UntangleWorms can be loaded.
+_loaded, _error = add_module(untangleworms.UntangleWorms)
+assert _loaded, _error
+
+untangleworms.CAROLINAS_HACK = False
+
+
+def get_test_resources_directory(file):
+    return os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "resources", file)
+    )
 
 IMAGE_NAME = "myimage"
 OVERLAP_OBJECTS_NAME = "overlapobjects"
@@ -271,7 +287,7 @@ A02_image = imageio.imread(path)[:, :, 0] > 0
 
 
 def test_load_v1():
-    file = tests.frontend.modules.get_test_resources_directory("untangleworms/v1.pipeline")
+    file = get_test_resources_directory("untangleworms/v1.pipeline")
     with open(file, "r") as fd:
         data = fd.read()
 
@@ -284,30 +300,30 @@ def test_load_v1():
     pipeline.load(io.StringIO(data))
     assert len(pipeline.modules()) == 3
     module = pipeline.modules()[0]
-    assert isinstance(module, cellprofiler.modules.untangleworms.UntangleWorms)
+    assert isinstance(module, untangleworms.UntangleWorms)
     assert module.image_name == "BinaryWorms"
-    assert module.overlap == cellprofiler.modules.untangleworms.OO_BOTH
+    assert module.overlap == untangleworms.OO_BOTH
     assert module.overlap_objects == "OverlappingWorms"
     assert module.nonoverlapping_objects == "NonOverlappingWorms"
     assert not module.wants_training_set_weights
     assert module.override_overlap_weight.value == 3
     assert module.override_leftover_weight.value == 5
-    assert module.mode == cellprofiler.modules.untangleworms.MODE_TRAIN
+    assert module.mode == untangleworms.MODE_TRAIN
     module = pipeline.modules()[1]
-    assert isinstance(module, cellprofiler.modules.untangleworms.UntangleWorms)
-    assert module.overlap == cellprofiler.modules.untangleworms.OO_WITH_OVERLAP
+    assert isinstance(module, untangleworms.UntangleWorms)
+    assert module.overlap == untangleworms.OO_WITH_OVERLAP
     assert module.wants_training_set_weights
-    assert module.mode == cellprofiler.modules.untangleworms.MODE_UNTANGLE
+    assert module.mode == untangleworms.MODE_UNTANGLE
     module = pipeline.modules()[2]
-    assert isinstance(module, cellprofiler.modules.untangleworms.UntangleWorms)
-    assert module.overlap == cellprofiler.modules.untangleworms.OO_WITHOUT_OVERLAP
-    assert module.mode == cellprofiler.modules.untangleworms.MODE_UNTANGLE
-    assert module.complexity == cellprofiler.modules.untangleworms.C_ALL
+    assert isinstance(module, untangleworms.UntangleWorms)
+    assert module.overlap == untangleworms.OO_WITHOUT_OVERLAP
+    assert module.mode == untangleworms.MODE_UNTANGLE
+    assert module.complexity == untangleworms.C_ALL
     assert module.custom_complexity == 400
 
 
 def test_load_v2():
-    file = tests.frontend.modules.get_test_resources_directory("untangleworms/v2.pipeline")
+    file = get_test_resources_directory("untangleworms/v2.pipeline")
     with open(file, "r") as fd:
         data = fd.read()
 
@@ -320,9 +336,9 @@ def test_load_v2():
     pipeline.load(io.StringIO(data))
     assert len(pipeline.modules()) == 5
     module = pipeline.modules()[0]
-    assert isinstance(module, cellprofiler.modules.untangleworms.UntangleWorms)
+    assert isinstance(module, untangleworms.UntangleWorms)
     assert module.image_name == "BinaryWorms"
-    assert module.overlap == cellprofiler.modules.untangleworms.OO_BOTH
+    assert module.overlap == untangleworms.OO_BOTH
     assert module.overlap_objects == "OverlappingWorms"
     assert module.nonoverlapping_objects == "NonOverlappingWorms"
     assert not module.wants_training_set_weights
@@ -333,11 +349,11 @@ def test_load_v2():
     for module, complexity in zip(
         pipeline.modules(),
         (
-            cellprofiler.modules.untangleworms.C_ALL,
-            cellprofiler.modules.untangleworms.C_MEDIUM,
-            cellprofiler.modules.untangleworms.C_HIGH,
-            cellprofiler.modules.untangleworms.C_VERY_HIGH,
-            cellprofiler.modules.untangleworms.C_CUSTOM,
+            untangleworms.C_ALL,
+            untangleworms.C_MEDIUM,
+            untangleworms.C_HIGH,
+            untangleworms.C_VERY_HIGH,
+            untangleworms.C_CUSTOM,
         ),
     ):
         assert module.complexity == complexity
@@ -365,7 +381,7 @@ def make_workspace(image, data=None, write_mode="wb"):
         )
 
     pipeline.add_listener(callback)
-    module = cellprofiler.modules.untangleworms.UntangleWorms()
+    module = untangleworms.UntangleWorms()
     module.image_name.value = IMAGE_NAME
     module.nonoverlapping_objects.value = NON_OVERLAPPING_OBJECTS_NAME
     module.overlap_objects.value = OVERLAP_OBJECTS_NAME
@@ -414,7 +430,7 @@ def make_params(d):
 def test_load_params():
     data = zlib.decompress(base64.b64decode(PARAMS))
     workspace, module = make_workspace(numpy.zeros((10, 10), bool), data)
-    assert isinstance(module, cellprofiler.modules.untangleworms.UntangleWorms)
+    assert isinstance(module, untangleworms.UntangleWorms)
     module.prepare_group(workspace, None, None)
     params = module.read_params()
     assert round(abs(params.min_worm_area - 601.2), 0) == 0
@@ -934,14 +950,14 @@ def test_load_params():
 
 
 def test_load_xml_params():
-    file = tests.frontend.modules.get_test_resources_directory("untangleworms/parameters.xml")
+    file = get_test_resources_directory("untangleworms/parameters.xml")
     with open(file, "r") as fd:
         data = fd.read()
     data = data.encode()
     workspace, module = make_workspace(
         numpy.zeros((10, 10), bool), data, write_mode="w"
     )
-    assert isinstance(module, cellprofiler.modules.untangleworms.UntangleWorms)
+    assert isinstance(module, untangleworms.UntangleWorms)
     module.prepare_group(workspace, None, None)
     params = module.read_params()
     assert params.version == 10680
@@ -1457,7 +1473,7 @@ def test_load_xml_params():
 def test_trace_segments_none():
     """Test the trace_segments function on a blank image"""
     image = numpy.zeros((10, 20), bool)
-    module = cellprofiler.modules.untangleworms.UntangleWorms()
+    module = untangleworms.UntangleWorms()
     i, j, label, order, distance, count = module.trace_segments(image)
     assert count == 0
     for x in (i, j, label, order, distance):
@@ -1466,7 +1482,7 @@ def test_trace_segments_none():
 
 def test_trace_one_segment():
     """Trace a single segment"""
-    module = cellprofiler.modules.untangleworms.UntangleWorms()
+    module = untangleworms.UntangleWorms()
     image = numpy.zeros((10, 20), bool)
     image[5, 1:18] = True
     expected_order = numpy.zeros(image.shape, int)
@@ -1485,7 +1501,7 @@ def test_trace_one_segment():
 
 def test_trace_short_segment():
     """Trace a segment of a single point"""
-    module = cellprofiler.modules.untangleworms.UntangleWorms()
+    module = untangleworms.UntangleWorms()
     image = numpy.zeros((10, 20), bool)
     for i in range(1, 3):
         image[5, 10 : (10 + i)] = True
@@ -1505,7 +1521,7 @@ def test_trace_short_segment():
 
 def test_trace_loop():
     """Trace an object that loops on itself"""
-    module = cellprofiler.modules.untangleworms.UntangleWorms()
+    module = untangleworms.UntangleWorms()
     image = numpy.zeros((10, 20), bool)
     image[1:-1, 1:-1] = True
     image[2:-2, 2:-2] = False
@@ -1534,7 +1550,7 @@ def test_trace_loop():
 
 def test_trace_two():
     """Trace two objects"""
-    module = cellprofiler.modules.untangleworms.UntangleWorms()
+    module = untangleworms.UntangleWorms()
     image = numpy.zeros((10, 20), bool)
     image[1:-1, 5] = True
     image[1:-1, 15] = True
@@ -1549,7 +1565,7 @@ def test_trace_two():
 def test_make_incidence_matrix_of_nothing():
     """Make incidence matrix with two empty labels matrices"""
 
-    module = cellprofiler.modules.untangleworms.UntangleWorms()
+    module = untangleworms.UntangleWorms()
     result = module.make_incidence_matrix(
         numpy.zeros((10, 20), int), 0, numpy.zeros((10, 20), int), 0
     )
@@ -1557,7 +1573,7 @@ def test_make_incidence_matrix_of_nothing():
 
 
 def test_make_incidence_matrix_of_things_that_do_not_touch():
-    module = cellprofiler.modules.untangleworms.UntangleWorms()
+    module = untangleworms.UntangleWorms()
     L1 = numpy.zeros((10, 20), int)
     L2 = numpy.zeros((10, 20), int)
     L1[5, 5] = 1
@@ -1568,7 +1584,7 @@ def test_make_incidence_matrix_of_things_that_do_not_touch():
 
 
 def test_make_incidence_matrix_of_things_that_touch():
-    module = cellprofiler.modules.untangleworms.UntangleWorms()
+    module = untangleworms.UntangleWorms()
     L1 = numpy.zeros((10, 20), int)
     L2 = numpy.zeros((10, 20), int)
     L1[5, 5] = 1
@@ -1580,7 +1596,7 @@ def test_make_incidence_matrix_of_things_that_touch():
 
 
 def test_make_incidence_matrix_of_many_things():
-    module = cellprofiler.modules.untangleworms.UntangleWorms()
+    module = untangleworms.UntangleWorms()
     L1 = numpy.zeros((10, 20), int)
     L2 = numpy.zeros((10, 20), int)
     L1[2, 1:5] = 1
@@ -1609,7 +1625,7 @@ def test_make_incidence_matrix_of_many_things():
 
 
 def test_get_all_paths_recur_none():
-    module = cellprofiler.modules.untangleworms.UntangleWorms()
+    module = untangleworms.UntangleWorms()
 
     class Result(object):
         def __init__(self):
@@ -1623,7 +1639,7 @@ def test_get_all_paths_recur_none():
 
 
 def test_get_all_paths_recur_one():
-    module = cellprofiler.modules.untangleworms.UntangleWorms()
+    module = untangleworms.UntangleWorms()
 
     #
     # Branch # 0 connects segment 0 and segment 1
@@ -1645,7 +1661,7 @@ def test_get_all_paths_recur_one():
 
 
 def test_get_all_paths_recur_depth_two():
-    module = cellprofiler.modules.untangleworms.UntangleWorms()
+    module = untangleworms.UntangleWorms()
 
     #
     # Branch # 0 connects segment 0 and segment 1
@@ -1673,7 +1689,7 @@ def test_get_all_paths_recur_depth_two():
 
 
 def test_get_all_paths_recur_many():
-    module = cellprofiler.modules.untangleworms.UntangleWorms()
+    module = untangleworms.UntangleWorms()
 
     #
     # A hopeless tangle where all branches connect to all segments
@@ -1761,7 +1777,7 @@ def test_get_all_paths_recur_many():
 
 
 def test_get_all_paths_none():
-    module = cellprofiler.modules.untangleworms.UntangleWorms()
+    module = untangleworms.UntangleWorms()
 
     class Result(object):
         def __init__(self):
@@ -1774,7 +1790,7 @@ def test_get_all_paths_none():
 
 
 def test_get_all_paths_one():
-    module = cellprofiler.modules.untangleworms.UntangleWorms()
+    module = untangleworms.UntangleWorms()
 
     class Result(object):
         def __init__(self):
@@ -1792,7 +1808,7 @@ def test_get_all_paths_one():
 
 
 def test_get_all_paths_two_segments():
-    module = cellprofiler.modules.untangleworms.UntangleWorms()
+    module = untangleworms.UntangleWorms()
 
     class Result(object):
         def __init__(self):
@@ -1811,7 +1827,7 @@ def test_get_all_paths_two_segments():
 
 
 def test_get_all_paths_many():
-    module = cellprofiler.modules.untangleworms.UntangleWorms()
+    module = untangleworms.UntangleWorms()
     numpy.random.seed(63)
 
     class Result(object):
@@ -1837,7 +1853,7 @@ def test_get_all_paths_many():
 
 
 def test_sample_control_points():
-    module = cellprofiler.modules.untangleworms.UntangleWorms()
+    module = untangleworms.UntangleWorms()
     path_coords = numpy.random.randint(0, 20, size=(11, 2))
     distances = numpy.linspace(0.0, 10.0, 11)
     result = module.sample_control_points(path_coords, distances, 6)
@@ -1849,7 +1865,7 @@ def test_sample_control_points():
 
 
 def test_sample_non_linear_control_points():
-    module = cellprofiler.modules.untangleworms.UntangleWorms()
+    module = untangleworms.UntangleWorms()
     path_coords = numpy.array([numpy.arange(11)] * 2).transpose()
     distances = numpy.sqrt(numpy.arange(11))
     result = module.sample_control_points(path_coords, distances, 6)
@@ -1858,7 +1874,7 @@ def test_sample_non_linear_control_points():
 
 
 def test_only_two_sample_points():
-    module = cellprofiler.modules.untangleworms.UntangleWorms()
+    module = untangleworms.UntangleWorms()
     path_coords = numpy.array([[0, 0], [1, 2]])
     distances = numpy.array([0, 5])
     result = module.sample_control_points(path_coords, distances, 6)
@@ -1867,14 +1883,14 @@ def test_only_two_sample_points():
 
 
 def test_worm_descriptor_building_none():
-    module = cellprofiler.modules.untangleworms.UntangleWorms()
+    module = untangleworms.UntangleWorms()
     params = make_params(dict(worm_radius=5, num_control_points=20))
     result, _, _, _, _ = module.worm_descriptor_building([], params, (0, 0))
     assert len(result) == 0
 
 
 def test_worm_descriptor_building_one():
-    module = cellprofiler.modules.untangleworms.UntangleWorms()
+    module = untangleworms.UntangleWorms()
     params = make_params(
         dict(radii_from_training=numpy.array([5, 5, 5]), num_control_points=3)
     )
@@ -1895,7 +1911,7 @@ def test_worm_descriptor_building_one():
 
 def test_worm_descriptor_building_oob():
     """Test performance if part of the worm is out of bounds"""
-    module = cellprofiler.modules.untangleworms.UntangleWorms()
+    module = untangleworms.UntangleWorms()
     params = make_params(
         dict(radii_from_training=numpy.array([5, 5, 5]), num_control_points=3)
     )
@@ -1917,7 +1933,7 @@ def test_worm_descriptor_building_oob():
 def test_worm_descriptor_building_two():
     """Test rebuilding two worms"""
 
-    module = cellprofiler.modules.untangleworms.UntangleWorms()
+    module = untangleworms.UntangleWorms()
     params = make_params(
         dict(radii_from_training=numpy.array([5, 5, 5]), num_control_points=3)
     )
@@ -1947,7 +1963,7 @@ def test_worm_descriptor_building_two():
 
 
 def test_fast_selection_two():
-    module = cellprofiler.modules.untangleworms.UntangleWorms()
+    module = untangleworms.UntangleWorms()
     costs = numpy.array([1, 1])
     path_segment_matrix = numpy.array([[True, False], [False, True]])
     segment_lengths = numpy.array([5, 5])
@@ -1959,7 +1975,7 @@ def test_fast_selection_two():
 
 
 def test_fast_selection_overlap():
-    module = cellprofiler.modules.untangleworms.UntangleWorms()
+    module = untangleworms.UntangleWorms()
     costs = numpy.array([1, 1, 10])
     path_segment_matrix = numpy.array(
         [[True, False, True], [True, True, True], [False, True, True]]
@@ -1973,7 +1989,7 @@ def test_fast_selection_overlap():
 
 
 def test_fast_selection_gap():
-    module = cellprofiler.modules.untangleworms.UntangleWorms()
+    module = untangleworms.UntangleWorms()
     costs = numpy.array([1, 1, 10])
     path_segment_matrix = numpy.array(
         [[True, False, True], [False, False, True], [False, True, True]]
@@ -1987,7 +2003,7 @@ def test_fast_selection_gap():
 
 
 def test_fast_selection_no_overlap():
-    module = cellprofiler.modules.untangleworms.UntangleWorms()
+    module = untangleworms.UntangleWorms()
     costs = numpy.array([1, 1, 7])
     path_segment_matrix = numpy.array(
         [[True, False, True], [True, True, True], [False, True, True]]
@@ -2001,7 +2017,7 @@ def test_fast_selection_no_overlap():
 
 
 def test_fast_selection_no_gap():
-    module = cellprofiler.modules.untangleworms.UntangleWorms()
+    module = untangleworms.UntangleWorms()
     costs = numpy.array([1, 1, 7])
     path_segment_matrix = numpy.array(
         [[True, False, True], [False, False, True], [False, True, True]]
@@ -2017,7 +2033,7 @@ def test_fast_selection_no_gap():
 def test_A02():
     params = zlib.decompress(base64.b64decode(PARAMS))
     workspace, module = make_workspace(A02_image, params)
-    assert isinstance(module, cellprofiler.modules.untangleworms.UntangleWorms)
+    assert isinstance(module, untangleworms.UntangleWorms)
     module.prepare_group(workspace, None, None)
     module.wants_training_set_weights.value = False
     module.override_leftover_weight.value = 6
@@ -2044,7 +2060,7 @@ def test_A02():
 def test_nonoverlapping_outlines():
     params = zlib.decompress(base64.b64decode(PARAMS))
     workspace, module = make_workspace(A02_image, params)
-    assert isinstance(module, cellprofiler.modules.untangleworms.UntangleWorms)
+    assert isinstance(module, untangleworms.UntangleWorms)
     module.prepare_group(workspace, None, None)
     module.wants_training_set_weights.value = False
     module.override_leftover_weight.value = 6
@@ -2063,7 +2079,7 @@ def test_nonoverlapping_outlines():
 def test_overlapping_outlines():
     params = zlib.decompress(base64.b64decode(PARAMS))
     workspace, module = make_workspace(A02_image, params)
-    assert isinstance(module, cellprofiler.modules.untangleworms.UntangleWorms)
+    assert isinstance(module, untangleworms.UntangleWorms)
     module.prepare_group(workspace, None, None)
     module.wants_training_set_weights.value = False
     module.override_leftover_weight.value = 6
@@ -2090,8 +2106,8 @@ def test_train_dot():
     image = numpy.zeros((10, 20), bool)
     image[5, 10] = True
     workspace, module = make_workspace(image)
-    assert isinstance(module, cellprofiler.modules.untangleworms.UntangleWorms)
-    module.mode.value = cellprofiler.modules.untangleworms.MODE_TRAIN
+    assert isinstance(module, untangleworms.UntangleWorms)
+    module.mode.value = untangleworms.MODE_TRAIN
     module.prepare_group(workspace, None, None)
     module.run(workspace)
 
@@ -2101,7 +2117,7 @@ def test_trace_segments():
     # Regression test of img-1541, branch_areas_binary is not zero
     # but segments_binary is
     #
-    module = cellprofiler.modules.untangleworms.UntangleWorms()
+    module = untangleworms.UntangleWorms()
     i, j, labels, segment_order, distances, num_segments = module.trace_segments(
         numpy.zeros((10, 13), bool)
     )
@@ -2118,7 +2134,7 @@ def test_get_graph_from_branching_areas_and_segments():
     # Regression test of img-1541, branch_areas_binary is not zero
     # but segments_binary is
     #
-    module = cellprofiler.modules.untangleworms.UntangleWorms()
+    module = untangleworms.UntangleWorms()
     branch_areas = numpy.zeros((31, 15), bool)
     branch_areas[7:25, 7:10] = True
     result = module.get_graph_from_branching_areas_and_segments(
@@ -2151,7 +2167,7 @@ def test_recalculate_single_worm_control_points():
     (
         result,
         lengths,
-    ) = cellprofiler.modules.untangleworms.recalculate_single_worm_control_points(
+    ) = untangleworms.recalculate_single_worm_control_points(
         [l0, l1], 3
     )
     assert tuple(result.shape) == (4, 3, 2)
@@ -2170,7 +2186,7 @@ def test_recalculate_single_worm_control_points_no_objects():
     (
         result,
         lengths,
-    ) = cellprofiler.modules.untangleworms.recalculate_single_worm_control_points(
+    ) = untangleworms.recalculate_single_worm_control_points(
         [numpy.zeros((10, 15), int)], 3
     )
     assert tuple(result.shape) == (0, 3, 2)
