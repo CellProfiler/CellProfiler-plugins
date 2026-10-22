@@ -904,57 +904,90 @@ Allow XYZ resampling to make the volume isotropic. Only used in 3D mode.
                             "Failed to set GPU memory share. Please check your PyTorch installation. Not setting per-process memory share."
                         )
 
-                if self.specify_diameter.value:
+                MAX_RETRIES = 3
+                y_data = None
+                flows = None
+                last_exception = None
+
+                for attempt in range(MAX_RETRIES):
                     try:
-                        y_data, flows, *_ = self.current_model.eval(
-                            x_data,
-                            z_axis=z_axis,                            
-                            diameter=diam,
-                            do_3D=self.do_3D.value,
-                            anisotropy=anisotropy,
-                            flow_threshold=self.flow_threshold.value,
-                            cellprob_threshold=self.cellprob_threshold.value,
-                            stitch_threshold=self.stitch_threshold.value, # is ignored if do_3D=True
-                            min_size=self.min_size.value,
-                            invert=self.invert.value,
+                        LOGGER.info(
+                            f"Cellpose Python v4 attempt {attempt + 1}/{MAX_RETRIES}"
                         )
 
+                        if self.specify_diameter.value:
+                            y_data, flows, *_ = self.current_model.eval(
+                                x_data,
+                                z_axis=z_axis,
+                                diameter=diam,
+                                do_3D=self.do_3D.value,
+                                anisotropy=anisotropy,
+                                flow_threshold=self.flow_threshold.value,
+                                cellprob_threshold=self.cellprob_threshold.value,
+                                stitch_threshold=self.stitch_threshold.value, # is ignored if do_3D=True
+                                min_size=self.min_size.value,
+                                invert=self.invert.value,
+                            )
+                        else:
+                            y_data, flows, *_ = self.current_model.eval(
+                                x_data,
+                                # channel_axis=None,
+                                # channels=channels,
+                                z_axis=z_axis,
+                                do_3D=self.do_3D.value,
+                                anisotropy=anisotropy,
+                                flow_threshold=self.flow_threshold.value,
+                                cellprob_threshold=self.cellprob_threshold.value,
+                                stitch_threshold=self.stitch_threshold.value, # is ignored if do_3D=True
+                                min_size=self.min_size.value,
+                                invert=self.invert.value,
+                            )
+
+                        LOGGER.info(
+                            f"Cellpose Python v4 succeeded on attempt {attempt + 1}"
+                        )
+                        break
+
                     except Exception as a:
-                                print(f"Unable to create masks. Check your module settings. {a}")
-                    finally:
-                        if self.use_gpu.value and model.torch:
-                            cleanup(self)
-                        if not self.cache_model.value:
-                            # Release the model's memory
-                            self.current_model = None
-                            self.current_model_params = None
-                else:
-                    try:
-                        y_data, flows, *_ = self.current_model.eval(
-                            x_data,
-                            # channel_axis=None,
-                            # channels=channels,
-                            z_axis=z_axis,
-                            do_3D=self.do_3D.value,
-                            anisotropy=anisotropy,
-                            flow_threshold=self.flow_threshold.value,
-                            cellprob_threshold=self.cellprob_threshold.value,
-                            stitch_threshold=self.stitch_threshold.value, # is ignored if do_3D=True
-                            min_size=self.min_size.value,
-                            invert=self.invert.value,
+                        last_exception = a
+                        LOGGER.error(
+                            f"Unable to create masks on Cellpose Python v4 attempt "
+                            f"{attempt + 1}/{MAX_RETRIES}. Check your module settings. {a}"
                         )
 
-                    except Exception as a:
-                                print(f"Unable to create masks. Check your module settings. {a}")
-                    finally:
-                        if self.use_gpu.value:
-                            cleanup(self)
-                        if not self.cache_model.value:
-                            # Release the model's memory
-                            self.current_model = None
-                            self.current_model_params = None
+                        # Reset model between immediate retry attempts. This avoids reusing
+                        # a partially failed Cellpose/MPS model state when multiple
+                        # CellProfiler workers are loading cpsam concurrently.
+                        if attempt < MAX_RETRIES - 1:
+                            try:
+                                if self.use_gpu.value:
+                                    cleanup(self)
+                            except Exception:
+                                pass
 
-                if self.remove_edge_masks:
+                            if self.mode.value == 'custom':
+                                model_file, model_directory, model_path  = get_custom_model_vars(self)
+                                self.current_model = models.CellposeModel(
+                                    pretrained_model=model_path, gpu=self.use_gpu.value)
+                            else:
+                                self.current_model = models.CellposeModel(gpu=self.use_gpu.value)
+
+                    finally:
+                        if attempt == MAX_RETRIES - 1 or y_data is not None:
+                            if self.use_gpu.value:
+                                cleanup(self)
+                            if not self.cache_model.value:
+                                # Release the model's memory
+                                self.current_model = None
+                                self.current_model_params = None
+
+                if y_data is None:
+                    raise RuntimeError(
+                        f"Cellpose Python v4 failed after {MAX_RETRIES} attempts"
+                    ) from last_exception
+
+                # Empty masks are valid. Only remove edge masks after y_data exists.
+                if self.remove_edge_masks.value:
                     y_data = utils.remove_edge_masks(y_data)
 
         else:
