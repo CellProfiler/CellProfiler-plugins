@@ -175,7 +175,7 @@ class HistogramEqualization(cellprofiler_core.module.ImageProcessing):
             clip_limit = self.clip_limit.value
 
             if self.do_3D.value:
-                y_data = numpy.zeros_like(x_data, dtype=numpy.float)
+                y_data = numpy.zeros_like(x_data, dtype=float)
                 if self.do_framewise.value:
                     for index, plane in enumerate(x_data):
                         y_data[index] = skimage.exposure.equalize_adapthist(
@@ -202,7 +202,7 @@ class HistogramEqualization(cellprofiler_core.module.ImageProcessing):
                 )
         else:
             if self.do_3D.value:
-                y_data = numpy.zeros_like(x_data, dtype=numpy.float)
+                y_data = numpy.zeros_like(x_data, dtype=float)
                 if self.do_framewise.value:
                     for index, plane in enumerate(x_data):
                         y_data[index] = skimage.exposure.equalize_hist(

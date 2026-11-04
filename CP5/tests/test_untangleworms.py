@@ -4,9 +4,9 @@ import os
 import tempfile
 import zlib
 
-import imageio
+import imageio.v2 as imageio
 
-import centrosome.outline
+import centriole.outline
 import numpy
 import scipy.ndimage
 
@@ -2072,7 +2072,7 @@ def test_nonoverlapping_outlines():
     assert isinstance(object_set, cellprofiler_core.object.ObjectSet)
     worms = object_set.get_objects(NON_OVERLAPPING_OBJECTS_NAME).segmented
     outlines = workspace.image_set.get_image(NON_OVERLAPPING_OUTLINES_NAME).pixel_data
-    expected = centrosome.outline.outline(worms) > 0
+    expected = centriole.outline.outline(worms) > 0
     assert numpy.all(outlines == expected)
 
 

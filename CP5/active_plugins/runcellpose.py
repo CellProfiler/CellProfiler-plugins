@@ -1112,7 +1112,7 @@ Allow XYZ resampling to make the volume isotropic. Only used in 3D mode.
                     ["90th pctile diameter", "%.1f pixels" % high_diameter]
                 )
                 object_area = numpy.sum(areas)
-                total_area = numpy.product(y_data.shape[:2])
+                total_area = numpy.prod(y_data.shape[:2])
                 statistics.append(
                     [
                         "Area covered by objects",

@@ -68,7 +68,7 @@ class Predict(cellprofiler_core.module.ImageProcessing):
         )
 
         self.project_file = Pathname(
-            "Project file", doc="Path to the project file (\*.ilp)."
+            "Project file", doc="Path to the project file (\\*.ilp)."
         )
 
         self.project_type = Choice(
