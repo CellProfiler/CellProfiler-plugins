@@ -1,4 +1,4 @@
-import centrosome.cpmorphology
+import centriole.cpmorphology
 import numpy
 import scipy.ndimage
 import six.moves
@@ -140,7 +140,7 @@ def test_zeros():
 def test_one_worm():
     """Find a single worm"""
     image = numpy.zeros((20, 20), bool)
-    index, count, i, j = centrosome.cpmorphology.get_line_pts(
+    index, count, i, j = centriole.cpmorphology.get_line_pts(
         numpy.array([1, 6, 19, 14]),
         numpy.array([5, 0, 13, 18]),
         numpy.array([6, 19, 14, 1]),
@@ -179,14 +179,14 @@ def test_one_worm():
 def test_crossing_worms():
     """Find two worms that cross"""
     image = numpy.zeros((20, 20), bool)
-    index, count, i, j = centrosome.cpmorphology.get_line_pts(
+    index, count, i, j = centriole.cpmorphology.get_line_pts(
         numpy.array([1, 4, 19, 16]),
         numpy.array([3, 0, 15, 18]),
         numpy.array([4, 19, 16, 1]),
         numpy.array([0, 15, 18, 3]),
     )
     image[i, j] = True
-    index, count, i, j = centrosome.cpmorphology.get_line_pts(
+    index, count, i, j = centriole.cpmorphology.get_line_pts(
         numpy.array([0, 3, 18, 15]),
         numpy.array([16, 19, 4, 1]),
         numpy.array([3, 18, 15, 0]),

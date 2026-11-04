@@ -1,4 +1,4 @@
-import cellprofiler.image
+import cellprofiler_core.image
 import numpy
 import numpy.testing
 import skimage.exposure
@@ -27,7 +27,7 @@ def test_run(image, image_set, module, workspace):
 
     expected_data = skimage.exposure.equalize_hist(data)
 
-    expected = cellprofiler.image.Image(
+    expected = cellprofiler_core.image.Image(
         image=expected_data,
         parent_image=image,
         dimensions=image.dimensions
@@ -44,6 +44,9 @@ def test_run_local(image, image_set, module, workspace):
     module.nbins.value = 256
 
     module.local.value = True
+    module.tile_size.value = 256
+    module.do_3D.value = image.volumetric
+    module.do_framewise.value = image.volumetric
 
     module.run(workspace)
 
@@ -59,7 +62,7 @@ def test_run_local(image, image_set, module, workspace):
     else:
         expected_data = skimage.exposure.equalize_adapthist(data, kernel_size=256)
 
-    expected = cellprofiler.image.Image(
+    expected = cellprofiler_core.image.Image(
         image=expected_data,
         parent_image=image,
         dimensions=image.dimensions
@@ -87,7 +90,7 @@ def test_run_nbins(image, image_set, module, workspace):
 
     expected_data = skimage.exposure.equalize_hist(data, nbins=128)
 
-    expected = cellprofiler.image.Image(
+    expected = cellprofiler_core.image.Image(
         image=expected_data,
         parent_image=image,
         dimensions=image.dimensions
@@ -108,7 +111,7 @@ def test_run_mask(image, image_set, module, workspace):
     else:
         mask_data[5:-5, 5:-5] = True
 
-    mask = cellprofiler.image.Image(
+    mask = cellprofiler_core.image.Image(
         image=mask_data,
         dimensions=image.dimensions
     )
@@ -131,7 +134,7 @@ def test_run_mask(image, image_set, module, workspace):
 
     expected_data = skimage.exposure.equalize_hist(data, mask=mask_data)
 
-    expected = cellprofiler.image.Image(
+    expected = cellprofiler_core.image.Image(
         image=expected_data,
         parent_image=image,
         dimensions=image.dimensions

@@ -1,4 +1,4 @@
-"""
+r"""
 StraightenWorms
 ===============
 
@@ -88,7 +88,7 @@ import itertools
 import os
 
 import cellprofiler_core.utilities.legacy
-import centrosome.index
+import centriole.index
 import numpy
 import scipy.ndimage
 from cellprofiler_core.constants.measurement import (
@@ -787,13 +787,13 @@ of the straightened worms.""",
                 scales = numpy.array(
                     [self.get_scale_name(None, b) for b in range(nbins_vertical)]
                 )
-                scales.shape = (nbins_vertical, 1)
+                scales = scales.reshape(nbins_vertical, 1)
                 griddings += [(nbins_vertical, 1, scales)]
             if nbins_horizontal > 1:
                 scales = numpy.array(
                     [self.get_scale_name(b, None) for b in range(nbins_horizontal)]
                 )
-                scales.shape = (1, nbins_horizontal)
+                scales = scales.reshape(1, nbins_horizontal)
                 griddings += [(1, nbins_horizontal, scales)]
                 if nbins_vertical > 1:
                     scales = numpy.array(
@@ -974,8 +974,8 @@ of the straightened worms.""",
                     # --- For I and J, calculate the weights for each pixel
                     #     along each axis.
                     #
-                    i_idx = centrosome.index.Indexes([i_count])
-                    j_idx = centrosome.index.Indexes([j_count])
+                    i_idx = centriole.index.Indexes([i_count])
+                    j_idx = centriole.index.Indexes([j_count])
                     i_weights = i_span_frac[i_idx.rev_idx]
                     j_weights = j_span_frac[j_idx.rev_idx]
                     i_weights[i_idx.fwd_idx] = i_low_frac
@@ -991,7 +991,7 @@ of the straightened worms.""",
                     #
                     # Get indexes for the 2-d array, i_count x j_count
                     #
-                    idx = centrosome.index.Indexes([i_count, j_count])
+                    idx = centriole.index.Indexes([i_count, j_count])
                     #
                     # The coordinates in the straightened space
                     #
@@ -1107,11 +1107,11 @@ of the straightened worms.""",
             bin_means = numpy.hstack(
                 (bin_means, [numpy.nan] * (nexpected - len(bin_means)))
             )
-            bin_means.shape = (scales.shape[0], scales.shape[1], nworms)
+            bin_means = bin_means.reshape(scales.shape[0], scales.shape[1], nworms)
             bin_stds = numpy.hstack(
                 (bin_stds, [numpy.nan] * (nexpected - len(bin_stds)))
             )
-            bin_stds.shape = (scales.shape[0], scales.shape[1], nworms)
+            bin_stds = bin_stds.reshape(scales.shape[0], scales.shape[1], nworms)
             for i in range(scales.shape[0]):
                 for j in range(scales.shape[1]):
                     for values, ftr in (

@@ -1,4 +1,4 @@
-"""
+r"""
 UntangleWorms
 =============
 
@@ -98,10 +98,10 @@ import numpy
 import scipy.ndimage
 from scipy.interpolate import interp1d
 from scipy.io import loadmat
-from scipy.sparse import coo
-from centrosome.outline import outline
-from centrosome.propagate import propagate
-import centrosome.cpmorphology
+from scipy.sparse import coo_matrix
+from centriole.outline import outline
+from centriole.propagate import propagate
+import centriole.cpmorphology
 
 from cellprofiler_core.constants.measurement import C_LOCATION
 from cellprofiler_core.constants.measurement import C_NUMBER
@@ -900,9 +900,9 @@ should be processed.
         image = image_set.get_image(image_name, must_be_binary=True)
         num_control_points = self.ncontrol_points()
         labels, count = scipy.ndimage.label(
-            image.pixel_data, centrosome.cpmorphology.eight_connect
+            image.pixel_data, centriole.cpmorphology.eight_connect
         )
-        skeleton = centrosome.cpmorphology.skeletonize(image.pixel_data)
+        skeleton = centriole.cpmorphology.skeletonize(image.pixel_data)
         distances = scipy.ndimage.distance_transform_edt(image.pixel_data)
         worms = self.get_dictionary(workspace.image_set_list)[TRAINING_DATA]
         areas = numpy.bincount(labels.ravel())
@@ -1082,7 +1082,7 @@ should be processed.
         image_set = workspace.image_set
         image = image_set.get_image(image_name, must_be_binary=True)
         labels, count = scipy.ndimage.label(
-            image.pixel_data, centrosome.cpmorphology.eight_connect
+            image.pixel_data, centriole.cpmorphology.eight_connect
         )
         #
         # Skeletonize once, then remove any points in the skeleton
@@ -1094,11 +1094,11 @@ should be processed.
         #      *   *   *
         #    * * * * * * * *
         #
-        skeleton = centrosome.cpmorphology.skeletonize(image.pixel_data)
+        skeleton = centriole.cpmorphology.skeletonize(image.pixel_data)
         eroded = scipy.ndimage.binary_erosion(
-            image.pixel_data, centrosome.cpmorphology.eight_connect
+            image.pixel_data, centriole.cpmorphology.eight_connect
         )
-        skeleton = centrosome.cpmorphology.skeletonize(skeleton & eroded)
+        skeleton = centriole.cpmorphology.skeletonize(skeleton & eroded)
         #
         # The path skeletons
         #
@@ -1202,12 +1202,12 @@ should be processed.
             #
             # Sum up the number of overlaps using a sparse matrix
             #
-            overlap_hits = coo.coo_matrix(
+            overlap_hits = coo_matrix(
                 (numpy.ones(len(ijv)), (ijv[:, 0], ijv[:, 1])), image.pixel_data.shape
             )
             overlap_hits = overlap_hits.toarray()
             mask = overlap_hits == 1
-            labels = coo.coo_matrix((ijv[:, 2], (ijv[:, 0], ijv[:, 1])), mask.shape)
+            labels = coo_matrix((ijv[:, 2], (ijv[:, 0], ijv[:, 1])), mask.shape)
             labels = labels.toarray()
             labels[~mask] = 0
             o = Objects()
@@ -1402,7 +1402,7 @@ should be processed.
            area will be chosen as starting end. (Even though in this case, the
            "positive direction" of the segment cannot be determined from the
            information in graph_struct.segments.)"""
-        branch_areas_binary = centrosome.cpmorphology.branchpoints(skeleton)
+        branch_areas_binary = centriole.cpmorphology.branchpoints(skeleton)
         if max_radius is not None:
             #
             # Add any points that are more than the worm diameter to
@@ -1418,10 +1418,10 @@ should be processed.
             #
             # * * * * * * * * * *
             #
-            strel = centrosome.cpmorphology.strel_disk(max_radius)
+            strel = centriole.cpmorphology.strel_disk(max_radius)
             far = scipy.ndimage.binary_erosion(binary_im, strel)
             far = scipy.ndimage.binary_opening(
-                far, structure=centrosome.cpmorphology.eight_connect
+                far, structure=centriole.cpmorphology.eight_connect
             )
             far_labels, count = scipy.ndimage.label(far)
             far_counts = numpy.bincount(far_labels.ravel(), branch_areas_binary.ravel())
@@ -1430,7 +1430,7 @@ should be processed.
             del far
             del far_labels
         branch_areas_binary = scipy.ndimage.binary_dilation(
-            branch_areas_binary, structure=centrosome.cpmorphology.eight_connect
+            branch_areas_binary, structure=centriole.cpmorphology.eight_connect
         )
         segments_binary = skeleton & ~branch_areas_binary
         if max_skel_length is not None and numpy.sum(segments_binary) > 0:
@@ -1457,7 +1457,7 @@ should be processed.
             new_branch_areas_binary = numpy.zeros(segments_binary.shape, bool)
             new_branch_areas_binary[i[new_bp_mask], j[new_bp_mask]] = True
             new_branch_areas_binary = scipy.ndimage.binary_dilation(
-                new_branch_areas_binary, structure=centrosome.cpmorphology.eight_connect
+                new_branch_areas_binary, structure=centriole.cpmorphology.eight_connect
             )
             branch_areas_binary |= new_branch_areas_binary
             segments_binary &= ~new_branch_areas_binary
@@ -1484,7 +1484,7 @@ should be processed.
         # is max_skel_length.
         #
         segments_labeled, num_segments = scipy.ndimage.label(
-            segments_binary, structure=centrosome.cpmorphology.eight_connect
+            segments_binary, structure=centriole.cpmorphology.eight_connect
         )
         if num_segments == 0:
             return (
@@ -1498,13 +1498,13 @@ should be processed.
         #
         # Get one endpoint per segment
         #
-        endpoints = centrosome.cpmorphology.endpoints(segments_binary)
+        endpoints = centriole.cpmorphology.endpoints(segments_binary)
         #
         # Use a consistent order: pick with lowest i, then j.
         # If a segment loops upon itself, we pick an arbitrary point.
         #
         order = numpy.arange(numpy.prod(segments_binary.shape))
-        order.shape = segments_binary.shape
+        order = order.reshape(segments_binary.shape)
         order[~endpoints] += numpy.prod(segments_binary.shape)
         labelrange = numpy.arange(num_segments + 1).astype(int)
         endpoint_loc = scipy.ndimage.minimum_position(
@@ -1524,7 +1524,7 @@ should be processed.
         if numpy.any(loops):
             # Consider all points around the endpoint, finding the one
             # which is numbered last
-            dilated_ep_labels = centrosome.cpmorphology.grey_dilation(
+            dilated_ep_labels = centriole.cpmorphology.grey_dilation(
                 endpoint_labels, footprint=numpy.ones((3, 3), bool)
             )
             dilated_ep_labels[dilated_ep_labels != segments_labeled] = 0
@@ -1587,7 +1587,7 @@ should be processed.
         get_graph_from_binary
         """
         branch_areas_labeled, num_branch_areas = scipy.ndimage.label(
-            branch_areas_binary, centrosome.cpmorphology.eight_connect
+            branch_areas_binary, centriole.cpmorphology.eight_connect
         )
 
         i, j, labels, order, distance, num_segments = self.trace_segments(
@@ -1736,7 +1736,7 @@ should be processed.
         #
         L = L1.copy()
         L[L2 != 0] = L2[L2 != 0] + N1
-        neighbor_count, neighbor_index, n2 = centrosome.cpmorphology.find_neighbors(L)
+        neighbor_count, neighbor_index, n2 = centriole.cpmorphology.find_neighbors(L)
         if numpy.all(neighbor_count == 0):
             return numpy.zeros((N1, N2), bool)
         #
@@ -1763,7 +1763,7 @@ should be processed.
         n1[0] = label[0]
         n1[neighbor_index[1:]] = label[1:] - label[:-1]
         n1 = numpy.cumsum(n1)
-        incidence = coo.coo_matrix(
+        incidence = coo_matrix(
             (numpy.ones(n1.shape), (n1, n2)), shape=(N1, N2)
         ).toarray()
         return incidence != 0
@@ -1836,10 +1836,10 @@ should be processed.
         direction = graph_struct.incidence_directions[
             path.branch_areas[0], path.segments[0]
         ]
-        result = [graph_struct.segments[path.segments[0]][direction]]
+        result = [graph_struct.segments[path.segments[0]][int(direction)]]
         for branch_area, segment in zip(path.branch_areas, path.segments[1:]):
             direction = not graph_struct.incidence_directions[branch_area, segment]
-            result.append(graph_struct.segments[segment][direction])
+            result.append(graph_struct.segments[segment][int(direction)])
         return numpy.vstack(result)
 
     def calculate_path_length(self, path_coords):
@@ -2758,7 +2758,7 @@ should be processed.
 
         Outputs:
         The coordinates of all pixels in the worm in an N x 2 array"""
-        index, count, i, j = centrosome.cpmorphology.get_line_pts(
+        index, count, i, j = centriole.cpmorphology.get_line_pts(
             control_coords[:-1, 0],
             control_coords[:-1, 1],
             control_coords[1:, 0],
@@ -3259,7 +3259,7 @@ def recalculate_single_worm_control_points(all_labels, ncontrolpoints):
     for object_numbers, labels in zip(all_object_numbers, all_labels):
         for object_number in object_numbers:
             mask = labels == object_number
-            skeleton = centrosome.cpmorphology.skeletonize(mask)
+            skeleton = centriole.cpmorphology.skeletonize(mask)
             graph = module.get_graph_from_binary(mask, skeleton)
             path_coords, path = module.get_longest_path_coords(
                 graph, numpy.iinfo(int).max

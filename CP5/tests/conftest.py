@@ -1,5 +1,6 @@
 import os
 import sys
+from unittest.mock import patch
 
 # Plugins live side by side in active_plugins and import each other by bare
 # module name, the way CellProfiler's plugin loader imports them. Put that
@@ -33,6 +34,11 @@ import pytest
 
 
 def pytest_sessionstart(session):
+    with patch(
+        "cellprofiler_core.utilities.core.plugins._plugin_directories",
+        return_value=[ACTIVE_PLUGINS_DIRECTORY],
+    ):
+        import cellprofiler_core.modules
     cellprofiler_core.reader.fill_readers(check_config=True)
 
 @pytest.fixture(

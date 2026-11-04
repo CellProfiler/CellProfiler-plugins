@@ -254,14 +254,16 @@ Volumetric images will require volumetric structuring elements.
         )
 
         # Generate local peaks
-        seeds = skimage.feature.peak_local_max(
+        seed_coordinates = skimage.feature.peak_local_max(
             peak_image,
             min_distance=self.min_dist.value,
             threshold_rel=self.min_intensity.value,
             exclude_border=self.exclude_border.value,
             num_peaks=self.max_seeds.value if self.max_seeds.value != -1 else numpy.inf,
-            indices=False,
         )
+
+        seeds = numpy.zeros(peak_image.shape, dtype=bool)
+        seeds[tuple(seed_coordinates.T)] = True
 
         # Dilate seeds based on settings
         seeds = skimage.morphology.binary_dilation(
@@ -286,7 +288,7 @@ Volumetric images will require volumetric structuring elements.
         markers[seeds > 0] = -seeds[seeds > 0]
 
         # Perform the watershed
-        watershed_boundaries = skimage.morphology.watershed(
+        watershed_boundaries = skimage.segmentation.watershed(
             connectivity=self.connectivity.value,
             image=watershed_image,
             markers=markers,

@@ -24,9 +24,9 @@ from cellprofiler_core.setting.multichoice import MultiChoice
 from cellprofiler_core.setting.subscriber import ImageSubscriber, LabelSubscriber
 from cellprofiler_core.setting.text import Integer
 from cellprofiler_core.utilities.core.object import size_similarly
-from centrosome.cpmorphology import fixup_scipy_ndimage_result as fix
-from centrosome.haralick import Haralick, normalized_per_object
-from centrosome.filter import gabor, stretch
+from centriole.cpmorphology import fixup_scipy_ndimage_result as fix
+from centriole.haralick import Haralick, normalized_per_object
+from centriole.filter import gabor, stretch
 
 __version__ = "$Revision$"
 

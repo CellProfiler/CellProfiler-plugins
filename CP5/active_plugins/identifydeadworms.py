@@ -53,7 +53,7 @@ well as video tutorials.
 .. _Worm Toolbox: http://www.cellprofiler.org/wormtoolbox/
 """
 
-import matplotlib.cm
+import matplotlib
 import numpy
 from cellprofiler_core.constants.measurement import (
     COLTYPE_INTEGER,
@@ -77,9 +77,9 @@ from cellprofiler_core.preferences import get_default_colormap
 from cellprofiler_core.setting import Binary
 from cellprofiler_core.setting.subscriber import ImageSubscriber
 from cellprofiler_core.setting.text import LabelName, Integer, Float
-from centrosome.cpmorphology import all_connected_components
-from centrosome.cpmorphology import fixup_scipy_ndimage_result
-from centrosome.cpmorphology import get_line_pts
+from centriole.cpmorphology import all_connected_components
+from centriole.cpmorphology import fixup_scipy_ndimage_result
+from centriole.cpmorphology import get_line_pts
 from scipy.ndimage import binary_erosion, binary_fill_holes
 from scipy.ndimage import mean as mean_of_labels
 
@@ -389,7 +389,7 @@ degrees.
         color_image[mask, :] = MASK_ALPHA
         if count > 0:
             mappable = matplotlib.cm.ScalarMappable(
-                cmap=matplotlib.cm.get_cmap(get_default_colormap())
+                cmap=matplotlib.colormaps[get_default_colormap()]
             )
             numpy.random.seed(0)
             colors = mappable.to_rgba(numpy.random.permutation(numpy.arange(count)))

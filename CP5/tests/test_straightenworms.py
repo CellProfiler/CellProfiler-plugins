@@ -1,6 +1,6 @@
 import os
 
-import centrosome.cpmorphology
+import centriole.cpmorphology
 import numpy
 import six.moves
 
@@ -223,7 +223,7 @@ def rebuild_worm_from_control_points_approx(control_coords, worm_radii, labels, 
 
     Outputs:
     The coordinates of all pixels in the worm in an N x 2 array"""
-    index, count, i, j = centrosome.cpmorphology.get_line_pts(
+    index, count, i, j = centriole.cpmorphology.get_line_pts(
         control_coords[:-1, 0],
         control_coords[:-1, 1],
         control_coords[1:, 0],
